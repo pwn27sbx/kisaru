@@ -1,6 +1,7 @@
 import QtQuick
 import qs.Commons
 import qs.app
+import "../services/manga_card.js" as MangaCard
 
 // The poster tile shared by the manga / anime / novel grids: cover art with a
 // placeholder and bottom fade, an optional type badge, a solid info block with
@@ -25,12 +26,18 @@ ClickableRect {
     property url source: ""
     property string title: ""
     property string bodyFont: ""
-    // "classic" | "stitch" — see the header.
-    property string variant: "classic"
-    readonly property bool stitch: variant === "stitch"
+    // "classic" | "stitch" — the values live in services/manga_card.js
+    // (`VARIANTS`), which the view that configures the card also reads.
+    property string variant: MangaCard.VARIANTS.classic
+    readonly property bool stitch: variant === MangaCard.VARIANTS.stitch
     // Display text for the type badge ("MANHWA", "MANGA", …). Callers pass it
     // already localized and cased; an empty string hides the badge.
     property string typeBadge: ""
+    // Badge tint: "" keeps the neutral chip, "accent" asks for the theme
+    // accent. The CALLER decides from the work's type DATA (untranslated), not
+    // from `typeBadge`: sniffing the display text broke as soon as tData()
+    // localized it or the casing changed.
+    property string badgeTone: ""
     // The work's own metadata ("Cap. 105 · En curso"), never the reader's
     // progress: Library's CoverProgressBar owns that and lives in the footer.
     // It sits in the info block, under the title — painting it over the artwork
@@ -60,17 +67,14 @@ ClickableRect {
 
     // ── Stitch anatomy ────────────────────────────────────────────────────
     // Stitch's info block is p-2; the cover keeps the 3 / 4.4 poster ratio of
-    // the reference (`aspect-[3/4.4]`), so its height is the card's width
-    // times 4.4 / 3 and the card is one flush column.
+    // the reference (`aspect-[3/4.4]`, `MangaCard.COVER_RATIO`), so its height
+    // is the card's width times that ratio and the card is one flush column.
     readonly property int _infoPadding: root.stitch ? Style.space(8) : root.titlePadding
     readonly property int _infoInset: root.stitch ? Style.space(8) : Style.spacing.xl
     // "MANHWA" / "MANHUA" take the accent; MANGA and anything else stay
-    // neutral. The badge text is already uppercased and localized by the
-    // caller, and neither type name is translated.
-    readonly property bool _badgeAccent: {
-        const badge = String(root.typeBadge).toLowerCase()
-        return badge.indexOf("manhwa") === 0 || badge.indexOf("manhua") === 0
-    }
+    // neutral. The tint comes from `badgeTone`, which the caller sets from the
+    // type data; the badge text is only what gets painted.
+    readonly property bool _badgeAccent: root.badgeTone === "accent"
 
     // Qt caches a FAILED image load per URL for the engine's lifetime, so one
     // request that lands while the local backend is restarting would leave the
@@ -115,7 +119,7 @@ ClickableRect {
         // Stitch fixes the cover to the poster ratio instead and lets the info
         // block keep the rest of the cell, so the card has no gap under it.
         height: root.stitch
-            ? root.width * (4.4 / 3)
+            ? root.width * MangaCard.COVER_RATIO
             : root.height - root.inset - infoBlock.height - root.footerHeight
         source: root._coverUrl
         fillMode: Image.PreserveAspectCrop

@@ -160,6 +160,26 @@ Singleton {
 
     // ── Backend server ───────────────────────────────────────────────────────
     property bool serverReady: false
+    // The source that answers first, as the backend reports it in /health
+    // ("mangadex", "inmanga", … "weebcentral"). The header chip names it; an
+    // empty string means the health payload has not arrived yet, so the chip
+    // stays hidden rather than showing a placeholder nobody asked for.
+    property string activeSource: ""
+
+    // GET /health once per backend start: it is the only place the active
+    // chain is published, and it cannot change without a restart (the source
+    // is chosen from the environment).
+    function fetchHealth() {
+        Http.get(root.apiUrl + "/health", function(err, body) {
+            if (err) { console.warn("[ServiceManga] health fetch failed:", err); return }
+            try {
+                const data = JSON.parse(body)
+                root.activeSource = data.source || ""
+            } catch (e) {
+                console.warn("[ServiceManga] health parse error:", e)
+            }
+        })
+    }
 
     Process {
         id: serverProcess
@@ -192,6 +212,7 @@ Singleton {
         onReady: {
             root.serverReady = true
             console.log("[ServiceManga] Backend ready at", root.apiUrl)
+            fetchHealth()
             fetchByOrigin("", true)
             fetchFavorites()
         }

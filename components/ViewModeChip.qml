@@ -13,9 +13,13 @@ ClickableRect {
     property string label: ""
     property bool current: false
     property string bodyFont: ""
+    // Cell size. The default is the kit's control height, which is what the
+    // loose chips used; a caller that puts the chip inside a segmented box
+    // passes the compact cell Stitch draws.
+    property int cellSize: Style.spacing.controlHeight
 
-    implicitWidth: Style.spacing.controlHeight
-    implicitHeight: Style.spacing.controlHeight
+    implicitWidth: chip.cellSize
+    implicitHeight: chip.cellSize
     cursorShape: Qt.PointingHandCursor
     color: chip.pressed ? Style.pressedFillFor(Colors.text, Colors.primary)
         : chip.current ? Style.selectedFillFor(Colors.text, Colors.primary)

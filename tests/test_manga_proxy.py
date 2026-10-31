@@ -135,5 +135,61 @@ class ProxyImageTest(unittest.TestCase):
         self.assertTrue(data["chapters"][0]["id"].startswith("weebcentral:"))
 
 
+@unittest.skipUnless(HAVE_SERVER, "manga_server needs curl_cffi/requests")
+class HealthPayloadTest(unittest.TestCase):
+    """GET /health names the source that answers first, so the panel's source
+    chip shows real data instead of a hardcoded label."""
+
+    def test_payload_names_the_first_source_of_the_chain(self):
+        self.assertEqual(
+            manga_server.health_payload(["mangadex", "inmanga", "zonatmo"]),
+            {"ok": True, "source": "mangadex",
+             "chain": ["mangadex", "inmanga", "zonatmo"]})
+
+    def test_payload_keeps_the_single_source_chain_whole(self):
+        payload = manga_server.health_payload(["weebcentral"])
+        self.assertEqual(payload["source"], "weebcentral")
+        self.assertEqual(payload["chain"], ["weebcentral"])
+
+    def test_an_empty_chain_reports_no_source(self):
+        self.assertEqual(manga_server.health_payload([]),
+                         {"ok": True, "source": "", "chain": []})
+
+    def test_it_does_not_mutate_the_chain_it_is_given(self):
+        chain = ["mangadex", "inmanga"]
+        manga_server.health_payload(chain)
+        self.assertEqual(chain, ["mangadex", "inmanga"])
+
+    def test_without_an_argument_it_reads_the_active_chain(self):
+        original = manga_server.manga_chain.active_chain
+        manga_server.manga_chain.active_chain = lambda: ["zonatmo_org"]
+        try:
+            payload = manga_server.health_payload()
+        finally:
+            manga_server.manga_chain.active_chain = original
+        self.assertEqual(payload["source"], "zonatmo_org")
+        # The field /health already promised stays: the extension is additive,
+        # so a reader that only checks `ok` keeps working.
+        self.assertIs(payload["ok"], True)
+
+    def test_the_health_route_serves_the_same_payload(self):
+        """The route must not re-implement the body: one helper, one shape.
+
+        Calls do_GET on a handler built without a socket, so the real route
+        wiring is exercised without binding a port.
+        """
+        handler = manga_server.Handler.__new__(manga_server.Handler)
+        handler.path = "/health"
+        handler.answered = []
+        handler._json = lambda data, status=200: handler.answered.append(data)
+        handler.do_GET()
+        self.assertEqual(len(handler.answered), 1, handler.answered)
+        payload = handler.answered[0]
+        self.assertIs(payload["ok"], True)
+        self.assertEqual(payload["chain"], manga_server.manga_chain.active_chain())
+        self.assertEqual(payload["source"], payload["chain"][0])
+
+
+
 if __name__ == "__main__":
     unittest.main()

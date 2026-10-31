@@ -92,15 +92,6 @@ Rectangle {
             color: Colors.on_surface_variant
         }
 
-        StyledText {
-            Layout.alignment: Qt.AlignVCenter
-            visible: root.version !== ""
-            text: "v" + root.version
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            color: Colors.on_surface_variant
-            opacity: 0.6
-        }
     }
 
     // A key cap and its label, one per shortcut. The key names are not UI copy:
@@ -132,6 +123,16 @@ Rectangle {
             verticalCenter: parent.verticalCenter
         }
         spacing: Style.spacing.md
+
+        StyledText {
+            Layout.alignment: Qt.AlignVCenter
+            visible: root.version !== ""
+            text: "v" + root.version
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            font.bold: true
+            color: Colors.primary
+        }
 
         KeyCap {
             Layout.alignment: Qt.AlignVCenter

@@ -33,9 +33,6 @@ Item {
     property bool settingsMode: false
     readonly property int settingsPageIndex: 2   // third page of the content stack
 
-    // ── Search state ──────────────────────────────────────────────────────────
-    property bool searchOpen: false
-
     property int browseStack: 0
     property int libraryStack: 0
 
@@ -50,18 +47,27 @@ Item {
         visible = false
     }
 
-    function openSearch() {
-        searchOpen = true
-        Qt.callLater(function() { searchField.forceActiveFocus() })
+    // ── Search ────────────────────────────────────────────────────────────────
+    // The field is always on screen under the header (Stitch's sub-bar), so
+    // there is no open/closed state any more: "/" focuses it, Esc clears it and
+    // leaves, and the one debounce below stays the only path to
+    // Manga.searchManga.
+    function focusSearch() {
+        if (searchField) searchField.forceActiveFocus()
     }
 
+    // Clears the text only: Browse calls this when a filter invalidates the
+    // query, and the field must stay where the user is typing.
     function clearSearch() {
-        searchOpen = false
         if (searchField) searchField.text = ""
     }
 
+    // Esc: empty the field, hand the focus back and show the unfiltered list
+    // again — the end state the closed overlay used to leave.
     function closeSearch() {
-        clearSearch()
+        if (!searchField) return
+        searchField.text = ""
+        searchField.focus = false
         browseView.resetList()
     }
 
@@ -71,7 +77,6 @@ Item {
         const title = Manga.detailTitle || ""
         root.tabIndex = 0
         root.browseStack = 0
-        root.searchOpen = true
         if (searchField) {
             searchField.text = title
             searchField.forceActiveFocus()
@@ -82,15 +87,31 @@ Item {
             browseView.resetList()
     }
 
-    // "/" opens the header search. The panel stays loaded while minimized, so
-    // the visibility guard is what keeps it from opening over another panel;
-    // the search guard keeps a "/" typed in the field (or the settings page
+    // "/" focuses the search field. The panel stays loaded while minimized, so
+    // the visibility guard is what keeps it from firing over another panel; the
+    // focus guard is what keeps a "/" TYPED IN the field (or the settings page
     // showing) from being swallowed by the shortcut.
     Shortcut {
         sequence: "/"
         context: Qt.WindowShortcut
-        enabled: root.visible && !root.searchOpen && !root.settingsMode
-        onActivated: root.openSearch()
+        enabled: root.visible && !root.settingsMode && root.tabIndex === 0
+                 && !(searchField && searchField.activeFocus)
+        onActivated: root.focusSearch()
+    }
+
+    // The one debounce the field goes through. It sits at the panel's root, not
+    // inside a layout: it is not an Item, and the query must survive the search
+    // bar being hidden on the library tab. `Manga.searchManga` (reset) and
+    // `browseView.resetList` are the same calls the header overlay made.
+    Timer {
+        id: searchDebounce
+        interval: 350
+        onTriggered: {
+            if (searchField.text.trim().length > 0)
+                Manga.searchManga(searchField.text.trim(), true)
+            else
+                browseView.resetList()
+        }
     }
 
     // Header brand: the app glyph plus this panel's short name (decision 1).
@@ -100,13 +121,55 @@ Item {
         PanelBrand { title: I18n.t("brand.manga"); fontFamily: root.fontBody }
     }
 
+    // Source chip: the source that answers first, from the backend's /health,
+    // with a dot that follows the connection. No latency and no cache figure —
+    // the sources report neither, and Stitch's numbers there were invented.
+    Component {
+        id: sourceChipComponent
+
+        Rectangle {
+            implicitWidth: chipRow.implicitWidth + 2 * Style.spacing.sm
+            implicitHeight: Style.space(22)
+            radius: Style.cornerRadius
+            color: Colors.surface_container
+            border.width: Style.spacing.hairline
+            border.color: Colors.outline_variant
+
+            Row {
+                id: chipRow
+                anchors.centerIn: parent
+                spacing: Style.spacing.xs
+
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Style.space(6)
+                    height: width
+                    radius: width / 2 // style-ignore — status dot
+                    color: Manga.serverReady ? Colors.primary : Colors.error
+                }
+
+                StyledText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    // The display name of the source id the backend reports;
+                    // an id with no label falls back to the id itself.
+                    text: I18n.tSource(Manga.activeSource)
+                    color: Colors.on_surface_variant
+                    font.family: root.fontBody
+                    font.pixelSize: Style.font.caption
+                }
+            }
+        }
+    }
+
     Rectangle { anchors.fill: parent; color: Colors.background }
 
     ColumnLayout {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Header (tabs · search · language · minimize) ──────────────────────
+        // ── Header (brand · tabs · source chip · language · minimize) ─────────
+        // The search field moved out of the header: it is always visible below
+        // it now, so the header's own expanding search would only duplicate it.
         PanelHeader {
             Layout.fillWidth: true
             z: 2
@@ -114,7 +177,12 @@ Item {
             tabIndex: root.tabIndex
             brand: brandComponent
             tabCounts: [Manga.mangaList.length, Manga.libraryList.length]
-            searchOpen: root.searchOpen
+            segmentedTabs: true
+            showSearch: false
+            headerChip: sourceChipComponent
+            // The chip appears once the backend has reported a source: an empty
+            // chip would be a dot with nothing to name.
+            headerChipVisible: Manga.activeSource !== ""
             fontFamily: root.fontBody
             settingsMode: root.settingsMode
             onTabActivated: function(index) {
@@ -122,85 +190,111 @@ Item {
                 root.tabIndex = index
             }
             onSettingsClicked: root.settingsMode = !root.settingsMode
-            onSearchClicked: root.searchOpen ? root.closeSearch() : root.openSearch()
             onMinimizeClicked: root.minimize()
+        }
 
-            // Search field — occupies the left region while searching
-            Rectangle {
-                id: searchBar
-                visible: root.searchOpen
+        // ── Search field (always on screen, under the header) ─────────────────
+        // Stitch's sub-bar: one full-width pill with the search glyph on the
+        // left, the placeholder in the middle and the "/" key badge on the
+        // right. Browse only — the library is searched by itself, and the
+        // settings page has no list — which is exactly the scope the old
+        // header button had.
+        Rectangle {
+            id: searchBar
+            visible: root.tabIndex === 0 && !root.settingsMode
+            Layout.fillWidth: true
+            Layout.preferredHeight: Style.space(30)
+            Layout.leftMargin: Style.spacing.md
+            Layout.rightMargin: Style.spacing.md
+            Layout.topMargin: Style.spacing.sm
+            Layout.bottomMargin: Style.spacing.sm
+            radius: Style.cornerRadius
+            color: Colors.surface_container
+            border.color: searchField.activeFocus ? Colors.primary : Colors.outline_variant
+            border.width: searchField.activeFocus ? 1.5 : 1
+            Behavior on border.width { NumberAnimation { duration: Motion.fast } }
+
+            StyledText {
                 anchors {
-                    fill: parent
-                    leftMargin: Style.spacing.md
-                    rightMargin: Style.spacing.md
-                    topMargin: Style.spacing.md
-                    bottomMargin: Style.spacing.md
+                    left: parent.left; leftMargin: Style.spacing.md
+                    verticalCenter: parent.verticalCenter
                 }
-                radius: Style.cornerRadius
-                color: Colors.surface_container
-                border.color: searchField.activeFocus ? Colors.primary : Colors.outline_variant
-                border.width: searchField.activeFocus ? 1.5 : 1
-                Behavior on border.width { NumberAnimation { duration: Motion.fast } }
+                text: "⌕"
+                color: Colors.muted
+                font.family: root.fontBody
+                font.pixelSize: Style.font.body
+            }
 
-                TextInput {
-                    id: searchField
-                    anchors {
-                        verticalCenter: parent.verticalCenter
-                        left: parent.left; right: clearBtn.left
-                        leftMargin: Style.spacing.xxxl; rightMargin: Style.spacing.md
-                    }
-                    color: Colors.on_surface
-                    font.family: root.fontBody
-                    font.pixelSize: Style.font.subtitle
-                    clip: true
-                    onTextChanged: searchDebounce.restart()
-                    Keys.onEscapePressed: {
-                        searchField.text = ""
-                        root.closeSearch()
-                    }
+            TextInput {
+                id: searchField
+                anchors {
+                    verticalCenter: parent.verticalCenter
+                    left: parent.left; right: keyArea.left
+                    leftMargin: Style.space(26); rightMargin: Style.spacing.sm
                 }
+                color: Colors.on_surface
+                font.family: root.fontBody
+                font.pixelSize: Style.font.body
+                clip: true
+                onTextChanged: searchDebounce.restart()
+                Keys.onEscapePressed: root.closeSearch()
+            }
 
-                StyledText {
-                    anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: Style.spacing.xxxl }
-                    text: I18n.t("manga.search")
-                    color: Colors.on_surface_variant
-                    font.family: root.fontBody
-                    font.pixelSize: Style.font.subtitle
+            StyledText {
+                anchors { verticalCenter: parent.verticalCenter; left: searchField.left }
+                text: I18n.t("manga.search")
+                color: Colors.on_surface_variant
+                font.family: root.fontBody
+                font.pixelSize: Style.font.body
+                visible: searchField.text.length === 0
+                opacity: 0.6
+            }
+
+            // The "/" key hint. It doubles as the clear button once there is
+            // text, so the mouse keeps the affordance the old overlay had, in
+            // the same cell and without a second control in the row.
+            Item {
+                id: keyArea
+                anchors {
+                    right: parent.right; rightMargin: Style.spacing.sm
+                    verticalCenter: parent.verticalCenter
+                }
+                width: Style.space(16)
+                height: Style.space(16)
+
+                Rectangle {
+                    anchors.fill: parent
                     visible: searchField.text.length === 0
-                    opacity: 0.6
+                    radius: Style.cornerRadius
+                    color: Colors.surface_container_highest
+                    border.width: Style.spacing.hairline
+                    border.color: Colors.outline_variant
+
+                    StyledText {
+                        anchors.centerIn: parent
+                        text: "/"
+                        color: Colors.muted
+                        font.family: root.fontBody
+                        font.pixelSize: Style.font.caption
+                    }
                 }
 
-                Item {
-                    id: clearBtn
-                    anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: Style.spacing.xl }
-                    width: 22; height: 22
+                ClickableRect {
+                    anchors.fill: parent
                     visible: searchField.text.length > 0
-                    opacity: visible ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                    cursorShape: Qt.PointingHandCursor
+                    color: Colors.surface_container_highest
+                    border.width: Style.spacing.hairline
+                    border.color: Colors.outline_variant
+                    onClicked: searchField.text = ""
 
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: 18; height: 18; radius: Style.cornerRadius
-                        color: Colors.surface_container_highest
-                    }
                     StyledText {
                         anchors.centerIn: parent
                         text: "✕"
-                        color: Colors.on_surface_variant
-                        font.pixelSize: 9; font.bold: true // style-ignore — bespoke size
+                        color: Colors.muted
+                        font.family: root.fontBody
+                        font.pixelSize: Style.font.caption
                     }
-                    MouseArea { anchors.fill: parent; onClicked: searchField.text = "" }
-                }
-            }
-
-            Timer {
-                id: searchDebounce
-                interval: 350
-                onTriggered: {
-                    if (searchField.text.trim().length > 0)
-                        Manga.searchManga(searchField.text.trim(), true)
-                    else
-                        browseView.resetList()
                 }
             }
         }

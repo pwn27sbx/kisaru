@@ -11,6 +11,30 @@
 
 var SEPARATOR = " · ";
 
+// ---------------------------------------------------------------- geometry
+//
+// One source of truth for the manga card's box. BrowseView's grid and the
+// SkeletonGrid that stands in for it while the first page loads both read
+// these, so a ghost card and a real card are the same height and the panel
+// does not jump when the covers arrive.
+//
+// COVER_RATIO is Stitch's `aspect-[3/4.4]`: the cover is the card's width
+// times 4.4 / 3 tall. INFO_BASE is the content-sized band under it — two
+// title lines, the meta row and the p-2 padding — in DESIGN pixels at the
+// current font sizes. Callers scale it with Style.space(), exactly like the
+// card's own padding, so it follows the theme instead of being a second,
+// unscalable number.
+var COVER_RATIO = 4.4 / 3;
+var INFO_BASE = 66;
+
+// The two card anatomies CoverCard can draw. `variant` stays a plain string
+// (QML compares it in bindings), but the VALUES live here so the card and the
+// view that configures it cannot disagree about spelling.
+var VARIANTS = {
+    classic: "classic",
+    stitch: "stitch"
+};
+
 // null / undefined / whitespace-only all mean "no value".
 function clean(value) {
     if (value === undefined || value === null) return "";
@@ -124,11 +148,20 @@ function statusTone(status) {
     return typeof tone === "string" ? tone : "muted";
 }
 
+// The four tone names statusTone can answer with. The views map each one to a
+// `Colors.*` role, so a tone added here needs a colour there: keeping the list
+// exported lets the probe fail instead of an unknown tone silently painting.
+var TONES = ["done", "live", "warn", "muted"];
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         metaLine: metaLine,
         tSegment: tSegment,
         translator: translator,
-        statusTone: statusTone
+        statusTone: statusTone,
+        COVER_RATIO: COVER_RATIO,
+        INFO_BASE: INFO_BASE,
+        TONES: TONES,
+        VARIANTS: VARIANTS
     };
 }

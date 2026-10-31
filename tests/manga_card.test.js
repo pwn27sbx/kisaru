@@ -103,9 +103,48 @@ test("statusTone ignores case, accents and surrounding whitespace", () => {
 });
 
 test("statusTone only ever answers one of the four theme tones", () => {
-    const tones = new Set(["done", "live", "warn", "muted"]);
+    const tones = new Set(card.TONES);
     // Includes the inherited Object keys: a plain `TABLE[key]` lookup would
     // answer with Object.prototype.constructor for "constructor".
     for (const status of [0, false, {}, [], "En Curso", "???", "constructor", "x".repeat(40)])
         assert.ok(tones.has(card.statusTone(status)), String(status));
+});
+
+// ── card geometry: one source of truth for the grid and its skeleton ────────
+//
+// BrowseView's GridView and the SkeletonGrid that stands in for it while the
+// first page loads both build the card box from these constants. A ghost card
+// that is a different height than a real one is what makes the panel jump on
+// load, so the arithmetic below is the contract between them.
+
+test("COVER_RATIO is Stitch's 3 / 4.4 poster", () => {
+    assert.equal(card.COVER_RATIO, 4.4 / 3);
+    // "aspect-[3/4.4]": a 100 px card covers 146.67 px of height.
+    assert.ok(Math.abs(100 * card.COVER_RATIO - 146.6667) < 0.001);
+});
+
+test("INFO_BASE is the info band, in unscaled design pixels", () => {
+    // Two title lines + the meta row + the p-2 padding at today's font sizes.
+    // The views scale it with Style.space(), so the constant itself stays
+    // unscaled — a pre-scaled value would be scaled twice.
+    assert.equal(card.INFO_BASE, 66);
+});
+
+test("the grid formula derives the card height from the constants alone", () => {
+    const cellWidth = 100;
+    const height = cellWidth * card.COVER_RATIO + card.INFO_BASE;
+    assert.equal(height, cellWidth * (4.4 / 3) + 66);
+    assert.ok(Math.abs(height - 212.6667) < 0.001);
+});
+
+test("TONES is exactly the closed set statusTone can answer", () => {
+    assert.deepEqual(card.TONES.slice().sort(), ["done", "live", "muted", "warn"]);
+    for (const status of ["Completed", "Ongoing", "Hiatus", "desconocido", null])
+        assert.ok(card.TONES.includes(card.statusTone(status)), String(status));
+});
+
+test("VARIANTS names both card anatomies CoverCard draws", () => {
+    // Both views compare `variant` against these, so the values are shared
+    // strings, not a second opinion about spelling.
+    assert.deepEqual(card.VARIANTS, { classic: "classic", stitch: "stitch" });
 });

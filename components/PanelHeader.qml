@@ -12,8 +12,9 @@ import qs.Ui
 // Left: the Browse / Library tabs. The current one is a pill — the accent tint
 // behind its label — and the other stays plain muted text; neither has a
 // border.
-// Right: search, the optional SUB/DUB pair, the EN/ES chip and minimize, all
-// on the same baseline, with the free space in the middle.
+// Right: search, the optional SUB/DUB pair, the module action, the source chip,
+// the EN/ES chip and minimize, all on the same baseline, with the free space in
+// the middle.
 //
 // The search field itself belongs to each panel (it owns the debounce and the
 // backend call), so it is placed in the `overlay` slot: it covers the tabs
@@ -27,6 +28,12 @@ Item {
     // stays a string[], so the delegates keep rendering `String(modelData)`
     // instead of `[object Object]`.
     property var tabCounts: []
+    // Draw the tabs as one segmented box (the Stitch header): both live inside
+    // a faint surface with the theme radius and ~2 px padding, the current one
+    // a filled pill, each count a small muted number beside its label. Off by
+    // default, so the anime and the novel header keep the two loose labels
+    // they have today.
+    property bool segmentedTabs: false
     // Short panel name + glyph, supplied by the panel (Component). `null` here
     // is the default, so a caller without a brand is untouched.
     property Component brand: null
@@ -41,6 +48,12 @@ Item {
     // Module-specific action (the novel panel's provider dropdown), placed
     // between the SUB/DUB pair and the language chip.
     property Component extraAction: null
+    // Panel state chip (the manga source: a dot plus the active source's name),
+    // placed on the right, just before the gear. `null` adds nothing;
+    // `headerChipVisible` lets the panel keep it out of the row until it has
+    // something to say, without leaving an empty slot behind.
+    property Component headerChip: null
+    property bool headerChipVisible: true
     property string fontFamily: Style.font.family
 
     // Items declared as children land here (the panel's search field).
@@ -77,50 +90,114 @@ Item {
         sourceComponent: root.brand
     }
 
-    Row {
-        id: tabsRow
+    // Tabs. With `segmentedTabs` they share one container (the Stitch header):
+    // faint surface, theme radius, a hairline and ~2 px padding, with the
+    // current one a filled pill inside it. Without it the wrapper collapses to
+    // the bare Row these callers have always had — same position, same
+    // spacing, no paint — so anime and the novel panel do not move.
+    Rectangle {
+        id: tabsBox
         visible: !root.searchOpen
         anchors {
             left: brandLoader.active ? brandLoader.right : parent.left
             leftMargin: Style.spacing.md
             verticalCenter: parent.verticalCenter
         }
-        spacing: Style.spacing.md
+        width: tabsRow.implicitWidth + (root.segmentedTabs ? 2 * Style.spacing.xxs : 0)
+        height: tabsRow.implicitHeight + (root.segmentedTabs ? 2 * Style.spacing.xxs : 0)
+        radius: Style.cornerRadius
+        color: root.segmentedTabs ? Colors.surface_container : "transparent"
+        border.width: root.segmentedTabs ? Style.spacing.hairline : 0
+        border.color: Colors.outline_variant
 
-        Repeater {
-            model: root.tabs
+        Row {
+            id: tabsRow
+            x: root.segmentedTabs ? Style.spacing.xxs : 0
+            y: root.segmentedTabs ? Style.spacing.xxs : 0
+            spacing: root.segmentedTabs ? Style.spacing.xxs : Style.spacing.md
 
-            delegate: Button {
-                required property var modelData
-                required property int index
+            Repeater {
+                model: root.tabs
 
-                // Not `active`: that name belongs to Button and drives its own
-                // selected fill, so overriding it (as this delegate used to)
-                // would tint the pill a second time.
-                readonly property bool isCurrent: index === root.tabIndex
-                // -1 / missing entry: this tab carries no counter.
-                readonly property int count: {
-                    var counts = root.tabCounts
-                    if (!counts || index >= counts.length)
-                        return -1
-                    var value = Number(counts[index])
-                    return isFinite(value) ? value : -1
+                // The tab pill. qs.Ui's Button draws ONE text run, and Stitch's
+                // tabs need two (the label plus a smaller, muted count), so the
+                // pill is built here instead. Its box, fills and ring mirror
+                // Button's own: same paddings, same reserved state border (so a
+                // hover ring never relayouts the row), same state precedence
+                // (pressed → hover → current) and the same 120 ms colour fade.
+                // Orientation, position and spacing are unchanged, so a caller
+                // that does not pass `segmentedTabs` (anime, the novel panel)
+                // keeps the tabs it has today.
+                delegate: ClickableRect {
+                    id: tab
+
+                    required property var modelData
+                    required property int index
+
+                    readonly property bool isCurrent: index === root.tabIndex
+                    // -1 / missing entry: this tab carries no counter.
+                    readonly property int count: {
+                        var counts = root.tabCounts
+                        if (!counts || index >= counts.length)
+                            return -1
+                        var value = Number(counts[index])
+                        return isFinite(value) ? value : -1
+                    }
+                    // The ring Button reserves for its widest state border and
+                    // paints on hover-cursor; taken from the same tokens so a
+                    // theme that changes them moves this pill with it.
+                    readonly property int _ring: Math.max(Style.hoverBorderWidth,
+                                                         Style.selectedBorderWidth)
+                    readonly property color _foreground: isCurrent ? Colors.text : Colors.muted
+
+                    implicitWidth: tabRow.implicitWidth + 2 * Style.spacing.controlPaddingX + 2 * _ring
+                    implicitHeight: tabRow.implicitHeight + 2 * Style.spacing.controlPaddingY + 2 * _ring
+                    cursorShape: Qt.PointingHandCursor
+                    color: tab.pressed ? Style.pressedFillFor(tab._foreground, Colors.primary)
+                         : tab.hovered ? Style.hoverFillFor(tab._foreground, Colors.primary)
+                         : tab.isCurrent ? Style.selectedFillFor(Colors.primary)
+                         : "transparent"
+                    border.width: tab.hovered ? tab._ring : 0
+                    border.color: Style.hoverBorderFor(tab._foreground, Colors.primary)
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+
+                    Row {
+                        id: tabRow
+                        anchors.centerIn: parent
+                        // Only a segmented tab with a counter has two runs, so
+                        // the gap exists only there (no stray space in the pill).
+                        spacing: root.segmentedTabs && tab.count >= 0
+                            ? Style.spacing.xs : 0
+
+                        StyledText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            // Without the segmented box the count stays inside
+                            // the one string, exactly as it always was.
+                            text: root.segmentedTabs
+                                ? String(tab.modelData)
+                                : (tab.count >= 0
+                                    ? String(tab.modelData) + " · " + tab.count
+                                    : String(tab.modelData))
+                            color: tab._foreground
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.body
+                        }
+
+                        // Stitch's count: a small muted number beside the label,
+                        // not part of it.
+                        StyledText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: root.segmentedTabs && tab.count >= 0
+                            width: visible ? implicitWidth : 0
+                            text: tab.count >= 0 ? String(tab.count) : ""
+                            color: Colors.muted
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.caption
+                        }
+                    }
+
+                    onClicked: root.tabActivated(tab.index)
                 }
-
-                text: count >= 0 ? String(modelData) + " · " + count : String(modelData)
-                bordered: false
-                // The current tab is a pill: the accent tint behind the label,
-                // with the label itself at full strength. `selected` and `active`
-                // stay off on purpose — both paint Button's own text-coloured
-                // fill, which would stack a second tint over this one. Radius is
-                // the shared token, so the pill stays square while the theme's
-                // Hyprland rounding is 0.
-                background: isCurrent ? Style.selectedFillFor(Colors.primary) : "transparent"
-                radius: Style.cornerRadius
-                foreground: isCurrent ? Colors.text : Colors.muted
-                fontFamily: root.fontFamily
-                fontSize: Style.font.body
-                onClicked: root.tabActivated(index)
             }
         }
     }
@@ -186,6 +263,15 @@ Item {
         LanguageToggle {
             visible: !root.settingsMode
             anchors.verticalCenter: parent.verticalCenter
+        }
+
+        // Panel state chip (the manga source), on the right and just before
+        // the gear, as the Stitch header places it.
+        Loader {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: !root.settingsMode && root.headerChip !== null
+                     && root.headerChipVisible && root.tabIndex === 0 && !root.searchOpen
+            sourceComponent: root.headerChip
         }
 
         PanelActionButton {

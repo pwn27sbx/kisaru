@@ -674,6 +674,21 @@ def _img_put(url, body, ctype):
         _img_cache[url] = (body, ctype)
 
 
+def health_payload(chain=None):
+    """Body of GET /health: the source that answers first, and the whole chain.
+
+    ``source`` is the active chain's first id ("mangadex", "weebcentral", …),
+    which is what the panel's header chip names; ``chain`` is kept so a reader
+    can see the order. No latency and no cache figure: the sources report
+    neither, and a made-up number is worse than a missing one.
+
+    Pure (no network, no env read when ``chain`` is given), so the route and
+    the tests share one body instead of two opinions about its shape.
+    """
+    order = list(manga_chain.active_chain() if chain is None else chain)
+    return {"ok": True, "source": order[0] if order else "", "chain": order}
+
+
 def _send_image(handler, body, ctype):
     handler.send_response(200)
     handler.send_header("Content-Type", ctype)
@@ -891,7 +906,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self._error("missing chapterId", 400)
                 self._json(dl_pages(cid))
             elif p == "/health":
-                self._json({"ok": True})
+                # `chain` is the one computed above, so /health can never
+                # disagree with the source the other routes use.
+                self._json(health_payload(chain))
             else:
                 self._error("not found", 404)
 

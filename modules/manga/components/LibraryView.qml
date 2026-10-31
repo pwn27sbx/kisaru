@@ -69,25 +69,47 @@ Item {
                 maximumLineCount: 1
             }
 
-            // Grid/list toggle. Its twin lives in BrowseView.qml: the shared
+            // Grid/list toggle, inside one segmented box — the same surface,
+            // hairline and radius as Browse's results row, so the two headers
+            // read as one panel. Its twin lives in BrowseView.qml: the shared
             // section header is a bare Text in qs.Ui, and giving it children
             // would reach into a component every panel uses.
-            ViewModeChip {
+            Rectangle {
                 Layout.alignment: Qt.AlignVCenter
-                glyph: "▦"
-                label: I18n.t("view.grid")
-                current: !libraryView.listMode
-                bodyFont: libraryView.fontBody
-                onClicked: UiPrefs.setViewMode("grid")
-            }
+                // Implicit (not width/height): a RowLayout sizes a child from
+                // its implicitWidth, and an explicit width would be overridden
+                // to zero.
+                implicitWidth: cellsRow.implicitWidth + 2 * Style.spacing.xxs
+                implicitHeight: cellsRow.implicitHeight + 2 * Style.spacing.xxs
+                radius: Style.cornerRadius
+                color: Colors.surface_container
+                border.width: Style.spacing.hairline
+                border.color: Colors.outline_variant
 
-            ViewModeChip {
-                Layout.alignment: Qt.AlignVCenter
-                glyph: "☰"
-                label: I18n.t("view.list")
-                current: libraryView.listMode
-                bodyFont: libraryView.fontBody
-                onClicked: UiPrefs.setViewMode("list")
+                Row {
+                    id: cellsRow
+                    x: Style.spacing.xxs
+                    y: Style.spacing.xxs
+                    spacing: Style.spacing.xxs
+
+                    ViewModeChip {
+                        glyph: "▦"
+                        label: I18n.t("view.grid")
+                        current: !libraryView.listMode
+                        bodyFont: libraryView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("grid")
+                    }
+
+                    ViewModeChip {
+                        glyph: "☰"
+                        label: I18n.t("view.list")
+                        current: libraryView.listMode
+                        bodyFont: libraryView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("list")
+                    }
+                }
             }
         }
 

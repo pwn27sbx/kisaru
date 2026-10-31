@@ -23,6 +23,15 @@ Item {
     // One number for the grid and its skeleton: they must not disagree.
     readonly property int columnCount: 3
 
+    // The card's box, from the constants in services/manga_card.js: the cover
+    // ratio plus the info band under it. The GridView and the SkeletonGrid
+    // that stands in for it both read these, so the ghosts sit exactly where
+    // the covers land and the panel does not jump on load.
+    readonly property real cardWidth:
+        Math.max(0, (width - 2 * Style.spacing.xl) / columnCount)
+    readonly property real cardHeight:
+        cardWidth * MangaCard.COVER_RATIO + Style.space(MangaCard.INFO_BASE)
+
     // The layout the user picked (persisted in settings.json). Both branches
     // below read this one value, so the toggle in the section header and the
     // model wiring can never disagree about which one is showing.
@@ -107,25 +116,48 @@ Item {
                 maximumLineCount: 1
             }
 
-            // Grid/list toggle. Its twin lives in LibraryView.qml: the shared
-            // section header is a bare Text in qs.Ui, and giving it children
-            // would reach into a component every panel uses.
-            ViewModeChip {
+            // Grid/list toggle, inside one segmented box (the Stitch results
+            // row): a faint surface with a hairline and the theme radius
+            // around both cells, instead of two loose chips. Its twin lives in
+            // LibraryView.qml: the shared section header is a bare Text in
+            // qs.Ui, and giving it children would reach into a component every
+            // panel uses.
+            Rectangle {
                 Layout.alignment: Qt.AlignVCenter
-                glyph: "▦"
-                label: I18n.t("view.grid")
-                current: !browseView.listMode
-                bodyFont: browseView.fontBody
-                onClicked: UiPrefs.setViewMode("grid")
-            }
+                // Implicit (not width/height): a RowLayout sizes a child from
+                // its implicitWidth, and an explicit width would be overridden
+                // to zero.
+                implicitWidth: cellsRow.implicitWidth + 2 * Style.spacing.xxs
+                implicitHeight: cellsRow.implicitHeight + 2 * Style.spacing.xxs
+                radius: Style.cornerRadius
+                color: Colors.surface_container
+                border.width: Style.spacing.hairline
+                border.color: Colors.outline_variant
 
-            ViewModeChip {
-                Layout.alignment: Qt.AlignVCenter
-                glyph: "☰"
-                label: I18n.t("view.list")
-                current: browseView.listMode
-                bodyFont: browseView.fontBody
-                onClicked: UiPrefs.setViewMode("list")
+                Row {
+                    id: cellsRow
+                    x: Style.spacing.xxs
+                    y: Style.spacing.xxs
+                    spacing: Style.spacing.xxs
+
+                    ViewModeChip {
+                        glyph: "▦"
+                        label: I18n.t("view.grid")
+                        current: !browseView.listMode
+                        bodyFont: browseView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("grid")
+                    }
+
+                    ViewModeChip {
+                        glyph: "☰"
+                        label: I18n.t("view.list")
+                        current: browseView.listMode
+                        bodyFont: browseView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("list")
+                    }
+                }
             }
         }
 
@@ -136,14 +168,16 @@ Item {
 
             // Loading state: ghost cards where the first page will land. The
             // cell width comes from SkeletonGrid's own padding, which matches
-            // the grid's margins below. In list mode the grid shape does not
-            // apply, so the row skeleton takes over.
+            // the grid's margins below; the cell HEIGHT is the card's real one
+            // (browseView.cardHeight), so the rows do not shrink when the
+            // covers arrive. In list mode the grid shape does not apply, so the
+            // row skeleton takes over.
             SkeletonGrid {
                 anchors.fill: parent
                 z: 10
                 active: !browseView.listMode && Manga.isFetchingManga && Manga.mangaList.length === 0
                 columns: browseView.columnCount
-                ratio: 1.58
+                cellHeight: browseView.cardHeight
             }
 
             SkeletonList {
@@ -199,13 +233,11 @@ Item {
                 visible: !browseView.listMode
                 // `width` already excludes the margins above, so the three
                 // columns share it whole (the old `(width - 10) / 4` left a
-                // stray 10 px on the right).
-                cellWidth: width / browseView.columnCount
-                // A stitch card is the cover (width × 4.4 / 3) plus the info
-                // block under it: two title lines, the meta row and the p-2
-                // padding, 66 px all told. The skeleton above still uses the
-                // old ratio and is reconciled separately.
-                cellHeight: cellWidth * (4.4 / 3) + Style.space(66)
+                // stray 10 px on the right). Both numbers come from
+                // browseView.cardWidth / cardHeight, which the skeleton above
+                // reads too.
+                cellWidth: browseView.cardWidth
+                cellHeight: browseView.cardHeight
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
                 // A ScriptModel diffs each new array against the last, so appending a
@@ -233,8 +265,16 @@ Item {
                         // card's edges and fades into the surface under it, so
                         // the cover inset and the leading badge of the old
                         // inset tile no longer apply.
-                        variant: "stitch"
+                        variant: MangaCard.VARIANTS.stitch
                         typeBadge: I18n.tData(modelData.type || "").toUpperCase()
+                        // The badge tint comes from the type DATA, not from the
+                        // badge text above: tData() may localize it and the
+                        // casing is a display choice. Manhwa/manhua are the
+                        // long-form formats Stitch tints with the accent.
+                        badgeTone: {
+                            const type = String(modelData.type || "").toLowerCase()
+                            return (type === "manhwa" || type === "manhua") ? "accent" : ""
+                        }
                         // The work's chapter · state, split into the row Stitch
                         // draws. metaLine with an empty status gives just the
                         // chapter ("Cap. 179"), so an absent chapter leaves the

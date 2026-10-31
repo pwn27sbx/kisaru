@@ -13,14 +13,21 @@ Rectangle {
 
     property bool active: false
     property int columns: 4
-    // Cell height / cell width, as the real grid's cellHeight.
+    // Cell height / cell width, as the real grid's cellHeight. Ignored when
+    // `cellHeight` is set.
     property real ratio: 1.58
+    // Explicit cell height, in real pixels. `0` (the default) derives it from
+    // `ratio`, which is every caller but one. A card that is not a plain ratio
+    // — the manga Browse grid: a cover ratio plus a content-sized info band —
+    // passes the height its real grid uses, so a loading row and a loaded row
+    // are the same and the panel does not jump when the covers arrive.
+    property real cellHeight: 0
     property real padding: Style.spacing.xl
     property real cellWidth: (width - padding * 2) / columns
     // Height of an extra bottom strip (the library's progress row).
     property int footerHeight: 0
 
-    readonly property real _cellHeight: cellWidth * ratio
+    readonly property real _cellHeight: cellHeight > 0 ? cellHeight : cellWidth * ratio
     readonly property int _rows: _cellHeight > 0
         ? Math.ceil((height - padding) / _cellHeight) : 0
 
