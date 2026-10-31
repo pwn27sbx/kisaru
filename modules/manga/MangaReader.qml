@@ -114,50 +114,15 @@ Item {
         }
     }
 
-    // Header brand: the app glyph plus this panel's short name (decision 1).
-    // The other two panels pass their own; the shared PanelHeader renders it.
+    // Header brand: this panel's name only, no glyph (owner, round 2: the text
+    // is "MangaReader" exactly like that, without an icon). The other two
+    // panels keep their glyph; `showGlyph` is per caller for that reason.
     Component {
         id: brandComponent
-        PanelBrand { title: I18n.t("brand.manga"); fontFamily: root.fontBody }
-    }
-
-    // Source chip: the source that answers first, from the backend's /health,
-    // with a dot that follows the connection. No latency and no cache figure —
-    // the sources report neither, and Stitch's numbers there were invented.
-    Component {
-        id: sourceChipComponent
-
-        Rectangle {
-            implicitWidth: chipRow.implicitWidth + 2 * Style.spacing.sm
-            implicitHeight: Style.space(22)
-            radius: Style.cornerRadius
-            color: Colors.surface_container
-            border.width: Style.spacing.hairline
-            border.color: Colors.outline_variant
-
-            Row {
-                id: chipRow
-                anchors.centerIn: parent
-                spacing: Style.spacing.xs
-
-                Rectangle {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Style.space(6)
-                    height: width
-                    radius: width / 2 // style-ignore — status dot
-                    color: Manga.serverReady ? Colors.primary : Colors.error
-                }
-
-                StyledText {
-                    anchors.verticalCenter: parent.verticalCenter
-                    // The display name of the source id the backend reports;
-                    // an id with no label falls back to the id itself.
-                    text: I18n.tSource(Manga.activeSource)
-                    color: Colors.on_surface_variant
-                    font.family: root.fontBody
-                    font.pixelSize: Style.font.caption
-                }
-            }
+        PanelBrand {
+            title: I18n.t("brand.manga")
+            fontFamily: root.fontBody
+            showGlyph: false
         }
     }
 
@@ -167,7 +132,7 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Header (brand · tabs · source chip · language · minimize) ─────────
+        // ── Header (brand · tabs · settings · minimize) ───────────────────────
         // The search field moved out of the header: it is always visible below
         // it now, so the header's own expanding search would only duplicate it.
         PanelHeader {
@@ -179,10 +144,8 @@ Item {
             tabCounts: [Manga.mangaList.length, Manga.libraryList.length]
             segmentedTabs: true
             showSearch: false
-            headerChip: sourceChipComponent
-            // The chip appears once the backend has reported a source: an empty
-            // chip would be a dot with nothing to name.
-            headerChipVisible: Manga.activeSource !== ""
+            // The language moved into the settings page (owner, round 2).
+            showLanguage: false
             fontFamily: root.fontBody
             settingsMode: root.settingsMode
             onTabActivated: function(index) {

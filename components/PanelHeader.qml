@@ -12,8 +12,8 @@ import qs.Ui
 // Left: the Browse / Library tabs. The current one is a pill — the accent tint
 // behind its label — and the other stays plain muted text; neither has a
 // border.
-// Right: search, the optional SUB/DUB pair, the module action, the source chip,
-// the EN/ES chip and minimize, all on the same baseline, with the free space in
+// Right: search, the optional SUB/DUB pair, the module action, the optional
+// EN/ES chip, and minimize, all on the same baseline, with the free space in
 // the middle.
 //
 // The search field itself belongs to each panel (it owns the debounce and the
@@ -48,12 +48,10 @@ Item {
     // Module-specific action (the novel panel's provider dropdown), placed
     // between the SUB/DUB pair and the language chip.
     property Component extraAction: null
-    // Panel state chip (the manga source: a dot plus the active source's name),
-    // placed on the right, just before the gear. `null` adds nothing;
-    // `headerChipVisible` lets the panel keep it out of the row until it has
-    // something to say, without leaving an empty slot behind.
-    property Component headerChip: null
-    property bool headerChipVisible: true
+    // The header's EN/ES chip. Anime and the novel panel keep it; the manga
+    // panel sets it to false because the language lives in its settings page
+    // now (owner, round 2: "it is a setting").
+    property bool showLanguage: true
     property string fontFamily: Style.font.family
 
     // Items declared as children land here (the panel's search field).
@@ -104,7 +102,9 @@ Item {
             verticalCenter: parent.verticalCenter
         }
         width: tabsRow.implicitWidth + (root.segmentedTabs ? 2 * Style.spacing.xxs : 0)
-        height: tabsRow.implicitHeight + (root.segmentedTabs ? 2 * Style.spacing.xxs : 0)
+        height: root.segmentedTabs
+            ? Style.spacing.controlHeight + 2 * Style.spacing.xxs
+            : tabsRow.implicitHeight
         radius: Style.cornerRadius
         color: root.segmentedTabs ? Colors.surface_container : "transparent"
         border.width: root.segmentedTabs ? Style.spacing.hairline : 0
@@ -151,7 +151,15 @@ Item {
                     readonly property color _foreground: isCurrent ? Colors.text : Colors.muted
 
                     implicitWidth: tabRow.implicitWidth + 2 * Style.spacing.controlPaddingX + 2 * _ring
-                    implicitHeight: tabRow.implicitHeight + 2 * Style.spacing.controlPaddingY + 2 * _ring
+                    // Segmented: the cell fills the container's interior, so the
+                    // active pill and the inactive label are the same height.
+                    implicitHeight: root.segmentedTabs
+                        ? Style.spacing.controlHeight
+                        : tabRow.implicitHeight + 2 * Style.spacing.controlPaddingY + 2 * _ring
+                    // Segmented: the cell sits inside the container's padding
+                    // and takes its curve, so a rounded theme never shows a
+                    // square fill poking through the corner.
+                    radius: root.segmentedTabs ? Style.cornerRadius : 0
                     cursorShape: Qt.PointingHandCursor
                     color: tab.pressed ? Style.pressedFillFor(tab._foreground, Colors.primary)
                          : tab.hovered ? Style.hoverFillFor(tab._foreground, Colors.primary)
@@ -261,17 +269,8 @@ Item {
         }
 
         LanguageToggle {
-            visible: !root.settingsMode
+            visible: root.showLanguage && !root.settingsMode
             anchors.verticalCenter: parent.verticalCenter
-        }
-
-        // Panel state chip (the manga source), on the right and just before
-        // the gear, as the Stitch header places it.
-        Loader {
-            anchors.verticalCenter: parent.verticalCenter
-            visible: !root.settingsMode && root.headerChip !== null
-                     && root.headerChipVisible && root.tabIndex === 0 && !root.searchOpen
-            sourceComponent: root.headerChip
         }
 
         PanelActionButton {

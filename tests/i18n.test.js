@@ -136,10 +136,13 @@ test("tn() pluralizes the loaded-results count", () => {
 });
 
 test("t() names each panel's header brand", () => {
-    assert.equal(i18n.t("es", "brand.manga"), "Manga");
+    // The manga panel's brand is the product name, not the section (owner,
+    // round 2), and it reads the same in both languages. Anime and novel keep
+    // their section names.
+    assert.equal(i18n.t("es", "brand.manga"), "MangaReader");
     assert.equal(i18n.t("es", "brand.anime"), "Anime");
     assert.equal(i18n.t("es", "brand.novel"), "Novela");
-    assert.equal(i18n.t("en", "brand.manga"), "Manga");
+    assert.equal(i18n.t("en", "brand.manga"), "MangaReader");
     assert.equal(i18n.t("en", "brand.anime"), "Anime");
     assert.equal(i18n.t("en", "brand.novel"), "Novel");
 });

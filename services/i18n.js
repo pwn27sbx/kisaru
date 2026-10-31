@@ -15,7 +15,7 @@ var tables = {
         "tab.browse": "Explorar",
         "tab.library": "Biblioteca",
         // ── Header (brand per panel + section counters) ──────────────────
-        "brand.manga": "Manga",
+        "brand.manga": "MangaReader",
         "brand.anime": "Anime",
         "brand.novel": "Novela",
         "header.results": "Resultados",
@@ -112,7 +112,7 @@ var tables = {
         "tab.browse": "Browse",
         "tab.library": "Library",
         // ── Header (brand per panel + section counters) ──────────────────
-        "brand.manga": "Manga",
+        "brand.manga": "MangaReader",
         "brand.anime": "Anime",
         "brand.novel": "Novel",
         "header.results": "Results",

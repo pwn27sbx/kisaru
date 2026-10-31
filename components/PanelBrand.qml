@@ -12,11 +12,16 @@ Row {
 
     property string title: ""
     property string fontFamily: Style.font.family
+    // The manga panel asked for text only ("MangaReader", no icon); the other
+    // two keep the glyph, so it is a per-caller switch.
+    property bool showGlyph: true
 
     spacing: Style.spacing.sm
 
     MaterialIcon {
         anchors.verticalCenter: parent.verticalCenter
+        visible: root.showGlyph
+        width: visible ? implicitWidth : 0
         text: "󰂺"
         font.pixelSize: Style.font.icon
         color: Colors.primary
