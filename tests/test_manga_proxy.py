@@ -190,6 +190,50 @@ class HealthPayloadTest(unittest.TestCase):
         self.assertEqual(payload["source"], payload["chain"][0])
 
 
+    def test_an_html_challenge_is_not_an_image(self):
+        """A bot check must read as a failure, not as a broken cover.
+
+        MangaDex answers 200 with an HTML "Browser verification" page when it
+        gates the IP. The proxy used to hand those bytes to Qt as an image: the
+        grid filled with placeholders and the log said "Unsupported image
+        format". This is the rule that keeps that from being silent.
+        """
+        challenge = b"<!doctype html><html><head><title>MangaDex - Browser verification</title>"
+        self.assertFalse(manga_server.is_image_response("text/html", challenge))
+        self.assertFalse(manga_server.is_image_response("text/html; charset=utf-8", challenge))
+        self.assertFalse(manga_server.is_image_response("", challenge))
+        self.assertFalse(manga_server.is_image_response("application/octet-stream", challenge))
+
+    def test_real_image_bytes_pass_the_check(self):
+        jpeg = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+        png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+        webp = b"RIFF\x00\x00\x00\x00WEBP" + b"\x00" * 32
+        gif = b"GIF89a" + b"\x00" * 32
+        # A declared image type is enough, even with junk bytes.
+        self.assertTrue(manga_server.is_image_response("image/jpeg", jpeg))
+        self.assertTrue(manga_server.is_image_response("image/webp; charset=binary", webp))
+        # A host that mislabels a cover must not lose it: the bytes decide
+        # whenever the type is not an image.
+        for body in (jpeg, png, webp, gif):
+            self.assertTrue(manga_server.is_image_response("", body), body[:6])
+            self.assertTrue(manga_server.is_image_response("application/octet-stream", body), body[:6])
+        self.assertFalse(manga_server.is_image_response("", b"{\"error\": \"nope\"}"))
+
+    def test_a_failed_cover_is_not_asked_again_for_a_minute(self):
+        """32 covers x 2 retries per panel open is what got the IP challenged.
+
+        The window is per URL and expires on its own, so a cover that comes
+        back is fetched again without a restart.
+        """
+        url = "https://example.invalid/cover.jpg"
+        self.assertFalse(manga_server.img_blocked(url, now=1000.0))
+        manga_server.img_mark_failed(url, now=1000.0)
+        self.assertTrue(manga_server.img_blocked(url, now=1000.0))
+        self.assertTrue(manga_server.img_blocked(url, now=1000.0 + manga_server.IMG_FAIL_TTL - 1))
+        self.assertFalse(manga_server.img_blocked(url, now=1000.0 + manga_server.IMG_FAIL_TTL))
+        # Expired entries are dropped as they are read, not accumulated.
+        self.assertFalse(manga_server.img_blocked(url, now=1000.0 + manga_server.IMG_FAIL_TTL))
+
 
 if __name__ == "__main__":
     unittest.main()

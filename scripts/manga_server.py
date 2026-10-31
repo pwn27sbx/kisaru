@@ -667,6 +667,37 @@ def _img_get(url):
         return _img_cache.get(url)
 
 
+# When an upstream answers with something that is not an image, remember it for
+# a minute. One panel open asks for ~32 covers with two retries each, so without
+# this a blocked CDN gets ~100 requests per open — which is how an IP gets
+# flagged harder instead of recovering.
+_img_failed      = {}
+_img_failed_lock = threading.Lock()
+IMG_FAIL_TTL     = 60
+
+
+def img_blocked(url, now=None):
+    """True while this URL is inside its failure window."""
+    now = time.monotonic() if now is None else now
+    with _img_failed_lock:
+        deadline = _img_failed.get(url)
+        if deadline is None:
+            return False
+        if now < deadline:
+            return True
+        _img_failed.pop(url, None)
+        return False
+
+
+def img_mark_failed(url, now=None):
+    """Start the failure window for this URL."""
+    now = time.monotonic() if now is None else now
+    with _img_failed_lock:
+        if len(_img_failed) >= _img_cache_max:
+            _img_failed.pop(next(iter(_img_failed)))
+        _img_failed[url] = now + IMG_FAIL_TTL
+
+
 def _img_put(url, body, ctype):
     with _img_cache_lock:
         if len(_img_cache) >= _img_cache_max:
@@ -758,10 +789,34 @@ def _retry_mangadex_page(chapter, page, old_url):
     return ""
 
 
+def is_image_response(content_type, body):
+    """True when the upstream answered with image bytes.
+
+    A CDN behind a bot check answers 200 with an HTML page ("MangaDex -
+    Browser verification"). Serving that as an image is what turns a browser
+    challenge into a grid of broken covers plus a confusing "Unsupported image
+    format" line in the panel's log, so the proxy asks first.
+    """
+    ctype = (content_type or "").split(";")[0].strip().lower()
+    if ctype.startswith("image/"):
+        return True
+    # Anything else (a challenge page, application/octet-stream, no type at
+    # all) is decided by the bytes: a host that forgets the header still serves
+    # a good cover, and HTML never passes.
+    head = bytes(body[:12])
+    return (head.startswith(b"\xff\xd8")
+            or head.startswith(b"\x89PNG")
+            or head.startswith(b"GIF8")
+            or (head[:4] == b"RIFF" and head[8:12] == b"WEBP"))
+
+
 def proxy_image(handler, img_url, chapter=None, page=None):
     cached = _img_get(img_url)
     if cached:
         _send_image(handler, *cached)
+        return
+    if img_blocked(img_url):
+        handler.send_error(502)
         return
 
     try:
@@ -782,6 +837,15 @@ def proxy_image(handler, img_url, chapter=None, page=None):
                 except Exception:  # noqa: BLE001 — fall through to the error
                     pass
         handler.send_error(upstream if upstream and 400 <= upstream < 500 else 502)
+        return
+
+    if not is_image_response(ctype, body):
+        # Not a cover: say so, and keep the page out of the cache. The panel
+        # shows its placeholder, which is the honest thing to show.
+        print("[manga-server] upstream returned %s, not an image: %s"
+              % (ctype or "no type", img_url[:90]), flush=True)
+        img_mark_failed(img_url)
+        handler.send_error(502, "upstream is not an image")
         return
 
     _img_put(img_url, body, ctype)
