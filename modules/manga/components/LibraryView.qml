@@ -40,40 +40,25 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Section header (+ grid/list toggle) ──────────────────────────────
-        // The library has an exact number (unlike Browse's loaded count).
+        // ── Grid/list toggle, alone on its row ───────────────────────────────
+        // The heading ("Library" plus its exact count) is gone: the tab already
+        // names the section and the count moved to the status bar (owner, round
+        // 4), so this row keeps the same shape as Browse's — the layout control
+        // pinned at the right, nothing else.
         RowLayout {
             Layout.fillWidth: true
-            Layout.leftMargin: Style.spacing.lg
-            Layout.rightMargin: Style.spacing.lg
+            Layout.rightMargin: Style.spacing.xl
             spacing: Style.spacing.sm
-            visible: Manga.libraryList.length > 0
 
-            PanelSectionHeader {
-                Layout.alignment: Qt.AlignVCenter
-                fontFamily: libraryView.fontBody
-                text: I18n.t("tab.library")
-            }
-
-            // The library's count is exact, so it is a plain number next to the
-            // heading. The stretch sits on the counter so the layout toggle
-            // stays on the right edge, as in Browse.
-            StyledText {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-                text: String(Manga.libraryList.length)
-                font.family: libraryView.fontBody
-                font.pixelSize: Style.font.caption
-                color: Colors.muted
-                elide: Text.ElideRight
-                maximumLineCount: 1
-            }
+            // The stretch holds the toggle against the right edge, exactly
+            // where Browse's filter row puts it.
+            Item { Layout.fillWidth: true }
 
             // Grid/list toggle, inside one segmented box — the same surface,
-            // hairline and radius as Browse's results row, so the two headers
-            // read as one panel. Its twin lives in BrowseView.qml: the shared
-            // section header is a bare Text in qs.Ui, and giving it children
-            // would reach into a component every panel uses.
+            // hairline and radius as Browse's, so the two rows read as one
+            // panel. Its twin lives in BrowseView.qml: the shared section
+            // header is a bare Text in qs.Ui, and giving it children would
+            // reach into a component every panel uses.
             Rectangle {
                 Layout.alignment: Qt.AlignVCenter
                 // Implicit (not width/height): a RowLayout sizes a child from

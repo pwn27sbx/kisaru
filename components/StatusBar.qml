@@ -24,6 +24,11 @@ Rectangle {
 
     // Manga server reachable; the panel sets this from its health check.
     property bool online: false
+    // The count segment that follows the connection state (owner, round 4:
+    // "● Online · 32 loaded"). Already formatted by the panel — this bar does
+    // not know what is being counted — and empty when there is nothing to
+    // count: the settings page, or a list that has not loaded yet.
+    property string countText: ""
     property string fontFamily: Style.font.family
 
     // install_config copies the plugin folder next to the running config, so
@@ -92,6 +97,25 @@ Rectangle {
             color: Colors.on_surface_variant
         }
 
+        // The same separator the card's meta row uses, so the bar reads as one
+        // sentence: "Online · 32 loaded".
+        StyledText {
+            Layout.alignment: Qt.AlignVCenter
+            visible: root.countText !== ""
+            text: "·"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            color: Colors.muted
+        }
+
+        StyledText {
+            Layout.alignment: Qt.AlignVCenter
+            visible: root.countText !== ""
+            text: root.countText
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            color: Colors.on_surface_variant
+        }
     }
 
     // A key cap and its label, one per shortcut. The key names are not UI copy:

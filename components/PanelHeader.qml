@@ -34,6 +34,14 @@ Item {
     // default, so the anime and the novel header keep the two loose labels
     // they have today.
     property bool segmentedTabs: false
+    // The header as a strip of cells (owner, round 4): the brand, the tabs and
+    // the two icon actions each fill the row's height, with no box inside a
+    // box — only the selected cell is tinted, the rest stay plain and tint on
+    // hover. Opt-in, so anime and the novel panel keep their current header.
+    property bool fullHeightCells: false
+    // Segmented AND boxed: the faint container is what `fullHeightCells`
+    // replaces, so the two cannot both paint.
+    readonly property bool _boxedTabs: root.segmentedTabs && !root.fullHeightCells
     // Short panel name + glyph, supplied by the panel (Component). `null` here
     // is the default, so a caller without a brand is untouched.
     property Component brand: null
@@ -101,20 +109,22 @@ Item {
             leftMargin: Style.spacing.md
             verticalCenter: parent.verticalCenter
         }
-        width: tabsRow.implicitWidth + (root.segmentedTabs ? 2 * Style.spacing.xxs : 0)
-        height: root.segmentedTabs
-            ? Style.spacing.controlHeight + 2 * Style.spacing.xxs
-            : tabsRow.implicitHeight
+        width: tabsRow.implicitWidth + (root._boxedTabs ? 2 * Style.spacing.xxs : 0)
+        height: root.fullHeightCells
+            ? root.implicitHeight
+            : (root.segmentedTabs
+                ? Style.spacing.controlHeight + 2 * Style.spacing.xxs
+                : tabsRow.implicitHeight)
         radius: Style.cornerRadius
-        color: root.segmentedTabs ? Colors.surface_container : "transparent"
-        border.width: root.segmentedTabs ? Style.spacing.hairline : 0
+        color: root._boxedTabs ? Colors.surface_container : "transparent"
+        border.width: root._boxedTabs ? Style.spacing.hairline : 0
         border.color: Colors.outline_variant
 
         Row {
             id: tabsRow
-            x: root.segmentedTabs ? Style.spacing.xxs : 0
-            y: root.segmentedTabs ? Style.spacing.xxs : 0
-            spacing: root.segmentedTabs ? Style.spacing.xxs : Style.spacing.md
+            x: root._boxedTabs ? Style.spacing.xxs : 0
+            y: root._boxedTabs ? Style.spacing.xxs : 0
+            spacing: root._boxedTabs ? Style.spacing.xxs : Style.spacing.md
 
             Repeater {
                 model: root.tabs
@@ -153,19 +163,28 @@ Item {
                     implicitWidth: tabRow.implicitWidth + 2 * Style.spacing.controlPaddingX + 2 * _ring
                     // Segmented: the cell fills the container's interior, so the
                     // active pill and the inactive label are the same height.
-                    implicitHeight: root.segmentedTabs
-                        ? Style.spacing.controlHeight
-                        : tabRow.implicitHeight + 2 * Style.spacing.controlPaddingY + 2 * _ring
+                    // Full height: the cell IS the header row, so the tint
+                    // reaches its top and bottom edges.
+                    implicitHeight: root.fullHeightCells
+                        ? root.implicitHeight
+                        : (root.segmentedTabs
+                            ? Style.spacing.controlHeight
+                            : tabRow.implicitHeight + 2 * Style.spacing.controlPaddingY + 2 * _ring)
                     // Segmented: the cell sits inside the container's padding
                     // and takes its curve, so a rounded theme never shows a
                     // square fill poking through the corner.
-                    radius: root.segmentedTabs ? Style.cornerRadius : 0
+                    radius: root.fullHeightCells
+                        ? 0
+                        : (root.segmentedTabs ? Style.cornerRadius : 0)
                     cursorShape: Qt.PointingHandCursor
                     color: tab.pressed ? Style.pressedFillFor(tab._foreground, Colors.primary)
                          : tab.hovered ? Style.hoverFillFor(tab._foreground, Colors.primary)
                          : tab.isCurrent ? Style.selectedFillFor(Colors.primary)
                          : "transparent"
-                    border.width: tab.hovered ? tab._ring : 0
+                    // Full height tints on hover instead of ringing: a ring
+                    // around a header-tall cell would read as a box, which is
+                    // what this layout removes.
+                    border.width: (tab.hovered && !root.fullHeightCells) ? tab._ring : 0
                     border.color: Style.hoverBorderFor(tab._foreground, Colors.primary)
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
 
@@ -193,10 +212,12 @@ Item {
 
                         // Stitch's count: a small muted number beside the label,
                         // not part of it.
+                        // No width override: a Row already skips invisible
+                        // items, and binding width to implicitWidth on Text is
+                        // the classic path to a binding loop (Qt logged one).
                         StyledText {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: root.segmentedTabs && tab.count >= 0
-                            width: visible ? implicitWidth : 0
                             text: tab.count >= 0 ? String(tab.count) : ""
                             color: Colors.muted
                             font.family: root.fontFamily
@@ -278,13 +299,13 @@ Item {
             tooltipText: I18n.t("settings.open")
             focusable: true
             hasCursor: root.settingsMode
-            size: Style.space(36)
+            size: root.fullHeightCells ? root.implicitHeight : Style.space(36)
             onClicked: root.settingsClicked()
         }
 
         PanelActionButton {
             iconText: "─"
-            size: Style.space(36)
+            size: root.fullHeightCells ? root.implicitHeight : Style.space(36)
             onClicked: root.minimizeClicked()
         }
     }

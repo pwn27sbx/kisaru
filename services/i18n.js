@@ -18,7 +18,6 @@ var tables = {
         "brand.manga": "MangaReader",
         "brand.anime": "Anime",
         "brand.novel": "Novela",
-        "header.results": "Resultados",
         "header.loaded": { one: "%1 cargado", other: "%1 cargados" },
         // ── View mode (Browse / Library) ────────────────────────────────
         "view.grid": "Cuadrícula",
@@ -115,7 +114,6 @@ var tables = {
         "brand.manga": "MangaReader",
         "brand.anime": "Anime",
         "brand.novel": "Novel",
-        "header.results": "Results",
         "header.loaded": { one: "%1 loaded", other: "%1 loaded" },
         // ── View mode (Browse / Library) ────────────────────────────────
         "view.grid": "Grid",

@@ -123,9 +123,12 @@ test("t() translates the no-Spanish notice keys", () => {
     assert.equal(i18n.t("en", "manga.sourcesTried", { 1: "MangaDex" }), "Sources checked: MangaDex");
 });
 
-test("t() labels the section headers above the grids", () => {
-    assert.equal(i18n.t("es", "header.results"), "Resultados");
-    assert.equal(i18n.t("en", "header.results"), "Results");
+test("the removed results heading leaves no key behind", () => {
+    // Round 4 deleted the "Results · 32 loaded" row and moved its count to the
+    // status bar, so the heading key must be gone from both tables: a leftover
+    // would be dead copy nobody reads.
+    assert.equal(i18n.t("es", "header.results"), "header.results");
+    assert.equal(i18n.t("en", "header.results"), "header.results");
 });
 
 test("tn() pluralizes the loaded-results count", () => {

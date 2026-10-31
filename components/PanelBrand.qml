@@ -15,13 +15,18 @@ Row {
     // The manga panel asked for text only ("MangaReader", no icon); the other
     // two keep the glyph, so it is a per-caller switch.
     property bool showGlyph: true
+    // The manga panel also sets its brand in caps (owner, round 4). It is a
+    // rendering transform, not a different string: the i18n table keeps the
+    // product's own spelling and letter-spacing follows the caps look.
+    property bool uppercaseTitle: false
 
     spacing: Style.spacing.sm
 
+    // `visible` alone is enough: a Row does not allocate space for an
+    // invisible item, and binding width to implicitWidth only risks a loop.
     MaterialIcon {
         anchors.verticalCenter: parent.verticalCenter
         visible: root.showGlyph
-        width: visible ? implicitWidth : 0
         text: "󰂺"
         font.pixelSize: Style.font.icon
         color: Colors.primary
@@ -34,5 +39,7 @@ Row {
         font.family: root.fontFamily
         font.pixelSize: Style.font.title
         font.bold: true
+        font.capitalization: root.uppercaseTitle ? Font.AllUppercase : Font.MixedCase
+        font.letterSpacing: root.uppercaseTitle ? 0.6 : 0
     }
 }

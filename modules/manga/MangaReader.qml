@@ -7,6 +7,7 @@ import qs.services
 import qs.modules.manga.components
 import qs.components
 import qs.Ui
+import "../../services/status_line.js" as StatusLine
 
 Item {
     id: root
@@ -22,11 +23,12 @@ Item {
         bottom: parent.bottom
         left: parent.left
     }
-    // The owner's width for this panel (round 3): 430 with three columns puts a
-    // card at (430 - 2 * 10) / 3 = 136.7 px, against 192 at the old 600, and
-    // its ratio lands at ~1.95 — Stitch's 113 x 226 is 1.99. The anime and
-    // novel panels keep their own widths; nothing here is shared.
-    implicitWidth: 430
+    // The owner's width for this panel (round 4): 550 with three columns puts a
+    // card at (550 - 2 * 10) / 3 = 176.7 px. 430 was good for browsing and too
+    // narrow for reading, and the reader opens in this same panel; 550 trades
+    // some of Stitch's card proportion for a readable page. The anime and novel
+    // panels keep their own widths; nothing here is shared.
+    implicitWidth: 550
     visible: false
 
     readonly property string fontBody: Style.font.family
@@ -127,6 +129,7 @@ Item {
             title: I18n.t("brand.manga")
             fontFamily: root.fontBody
             showGlyph: false
+            uppercaseTitle: true
         }
     }
 
@@ -147,6 +150,9 @@ Item {
             brand: brandComponent
             tabCounts: [Manga.mangaList.length, Manga.libraryList.length]
             segmentedTabs: true
+            // The round-4 top zone: brand, tabs and the two icon actions are
+            // cells of the header row itself.
+            fullHeightCells: true
             showSearch: false
             // The language moved into the settings page (owner, round 2).
             showLanguage: false
@@ -369,6 +375,17 @@ Item {
         StatusBar {
             Layout.fillWidth: true
             online: Manga.serverReady
+            // The count moved out of the grid's heading (owner, round 4): the
+            // rules live in services/status_line.js, where they are tested.
+            countText: StatusLine.format(
+                StatusLine.visibleCount({
+                    settingsMode: root.settingsMode,
+                    tabIndex: root.tabIndex,
+                    browseCount: Manga.mangaList.length,
+                    libraryCount: Manga.libraryList.length
+                }),
+                root.tabIndex,
+                I18n.tn)
             fontFamily: root.fontBody
         }
     }

@@ -1,0 +1,63 @@
+"use strict";
+
+// The status bar's count segment (owner, round 4): "● Online · 32 loaded".
+//
+// The count moved out of the grid's heading row, so these probes pin the two
+// things the move could break: which count the bar shows (Browse = loaded,
+// Library = its size, settings = none) and the wording (Browse keeps the
+// existing "N loaded" key, Library its bare number).
+//
+// Run with:  node --test
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const line = require("../services/status_line.js");
+const i18n = require("../services/i18n.js");
+
+const translate = (key, n) => i18n.tn("en", key, n);
+
+test("Browse shows the loaded count", () => {
+    const state = { tabIndex: 0, browseCount: 32, libraryCount: 1 };
+    assert.equal(line.visibleCount(state), 32);
+    assert.equal(line.format(line.visibleCount(state), 0, translate), "32 loaded");
+});
+
+test("Library shows its own size as a bare number", () => {
+    const state = { tabIndex: 1, browseCount: 32, libraryCount: 1 };
+    assert.equal(line.visibleCount(state), 1);
+    assert.equal(line.format(line.visibleCount(state), 1, translate), "1");
+});
+
+test("the settings page shows no count at all", () => {
+    const state = { settingsMode: true, tabIndex: 0, browseCount: 32, libraryCount: 1 };
+    assert.equal(line.visibleCount(state), line.NONE);
+    assert.equal(line.format(line.NONE, 0, translate), "");
+});
+
+test("zero is a real count, not an empty one", () => {
+    const state = { tabIndex: 0, browseCount: 0, libraryCount: 0 };
+    assert.equal(line.visibleCount(state), 0);
+    assert.equal(line.format(0, 0, translate), "0 loaded");
+    assert.equal(line.format(0, 1, translate), "0");
+});
+
+test("a count that has not arrived yet says nothing", () => {
+    assert.equal(line.visibleCount({ tabIndex: 0 }), line.NONE);
+    assert.equal(line.visibleCount({ tabIndex: 1, libraryCount: undefined }), line.NONE);
+    assert.equal(line.visibleCount({ tabIndex: 0, browseCount: -1 }), line.NONE);
+    assert.equal(line.visibleCount(), line.NONE);
+});
+
+test("the number is an integer, whatever the model hands over", () => {
+    assert.equal(line.visibleCount({ tabIndex: 0, browseCount: 12.7 }), 12);
+    assert.equal(line.visibleCount({ tabIndex: 0, browseCount: "8" }), 8);
+});
+
+test("the Browse wording is the one the results row used", () => {
+    // Same key and the same singular/plural pair, so the move cannot change
+    // what the reader sees; es and en are both exercised.
+    assert.equal(i18n.tn("en", "header.loaded", 1), "1 loaded");
+    assert.equal(i18n.tn("en", "header.loaded", 7), "7 loaded");
+    assert.equal(i18n.tn("es", "header.loaded", 1), "1 cargado");
+    assert.equal(i18n.tn("es", "header.loaded", 7), "7 cargados");
+});

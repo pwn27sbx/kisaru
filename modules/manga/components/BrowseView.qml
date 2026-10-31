@@ -58,72 +58,50 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Tag filter bar (tinted chips, scroll-x) ──────────────────────────
-        FilterBar {
-            Layout.fillWidth: true
-            fontFamily: browseView.fontBody
-            options: [
-                { label: I18n.t("manga.filter.hot") },
-                { label: I18n.t("manga.filter.latest") },
-                // Origin tags are data values, identical in both languages.
-                { label: "Manga" }, // i18n-ignore — origin tag
-                { label: "Manhwa" }, // i18n-ignore — origin tag
-                { label: "Manhua" } // i18n-ignore — origin tag
-            ]
-            currentIndex: {
-                if (browseView.currentTagId === "") return 0
-                if (browseView.currentTagId === "latest") return 1
-                if (browseView.currentTagId === "ja") return 2
-                if (browseView.currentTagId === "ko") return 3
-                if (browseView.currentTagId === "zh") return 4
-                return -1
-            }
-            onActivated: function(index) {
-                var tagId = ["", "latest", "ja", "ko", "zh"][index]
-                browseView.currentTagId = tagId
-                browseView.searchCleared()
-                Manga.fetchByOrigin(tagId, true)
-            }
-        }
-
-        // ── Section header (+ grid/list toggle) ──────────────────────────────
-        // How many results are already in. The contract only exposes `hasMore`,
-        // so this is the loaded count — never a catalogue total.
+        // ── Row 3: filter chips + grid/list toggle ───────────────────────────
+        // One row, as the owner drew it (round 4): the chips at the left and
+        // scroll horizontally when they do not fit, the two-cell layout toggle
+        // pinned at the right. The results heading that used to sit under it is
+        // gone — its count now lives in the status bar.
         RowLayout {
             Layout.fillWidth: true
-            Layout.leftMargin: Style.spacing.xl
-            Layout.rightMargin: Style.spacing.xl
             spacing: Style.spacing.sm
-            visible: Manga.mangaList.length > 0
 
-            PanelSectionHeader {
-                Layout.alignment: Qt.AlignVCenter
-                fontFamily: browseView.fontBody
-                text: I18n.t("header.results")
-            }
-
-            // The counter is its own, muted line: it is a number that moves,
-            // the label is a fixed heading. The stretch sits on the counter so
-            // the layout toggle stays on the right edge.
-            StyledText {
+            FilterBar {
                 Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-                text: I18n.tn("header.loaded", Manga.mangaList.length)
-                font.family: browseView.fontBody
-                font.pixelSize: Style.font.caption
-                color: Colors.muted
-                elide: Text.ElideRight
-                maximumLineCount: 1
+                fontFamily: browseView.fontBody
+                options: [
+                    { label: I18n.t("manga.filter.hot") },
+                    { label: I18n.t("manga.filter.latest") },
+                    // Origin tags are data values, identical in both languages.
+                    { label: "Manga" }, // i18n-ignore — origin tag
+                    { label: "Manhwa" }, // i18n-ignore — origin tag
+                    { label: "Manhua" } // i18n-ignore — origin tag
+                ]
+                currentIndex: {
+                    if (browseView.currentTagId === "") return 0
+                    if (browseView.currentTagId === "latest") return 1
+                    if (browseView.currentTagId === "ja") return 2
+                    if (browseView.currentTagId === "ko") return 3
+                    if (browseView.currentTagId === "zh") return 4
+                    return -1
+                }
+                onActivated: function(index) {
+                    var tagId = ["", "latest", "ja", "ko", "zh"][index]
+                    browseView.currentTagId = tagId
+                    browseView.searchCleared()
+                    Manga.fetchByOrigin(tagId, true)
+                }
             }
 
-            // Grid/list toggle, inside one segmented box (the Stitch results
-            // row): a faint surface with a hairline and the theme radius
-            // around both cells, instead of two loose chips. Its twin lives in
+            // Grid/list toggle, inside one segmented box: a faint surface with a
+            // hairline and the theme radius around both cells. Its twin lives in
             // LibraryView.qml: the shared section header is a bare Text in
             // qs.Ui, and giving it children would reach into a component every
             // panel uses.
             Rectangle {
                 Layout.alignment: Qt.AlignVCenter
+                Layout.rightMargin: Style.spacing.xl
                 // Implicit (not width/height): a RowLayout sizes a child from
                 // its implicitWidth, and an explicit width would be overridden
                 // to zero.
