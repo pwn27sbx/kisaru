@@ -169,9 +169,23 @@ Singleton {
     // GET /health once per backend start: it is the only place the active
     // chain is published, and it cannot change without a restart (the source
     // is chosen from the environment).
+    //
+    // One transient failure would hide the source chip for the whole run, so a
+    // failed attempt is retried twice with a short delay before giving up; a
+    // parse failure is not retried, because the payload will not fix itself.
+    property int _healthAttempts: 0
+
     function fetchHealth() {
         Http.get(root.apiUrl + "/health", function(err, body) {
-            if (err) { console.warn("[ServiceManga] health fetch failed:", err); return }
+            if (err) {
+                console.warn("[ServiceManga] health fetch failed:", err)
+                if (root._healthAttempts < 2) {
+                    root._healthAttempts += 1
+                    healthRetry.start()
+                }
+                return
+            }
+            root._healthAttempts = 0
             try {
                 const data = JSON.parse(body)
                 root.activeSource = data.source || ""
@@ -179,6 +193,12 @@ Singleton {
                 console.warn("[ServiceManga] health parse error:", e)
             }
         })
+    }
+
+    Timer {
+        id: healthRetry
+        interval: 1200
+        onTriggered: root.fetchHealth()
     }
 
     Process {
