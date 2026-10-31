@@ -3,6 +3,7 @@ import qs.app
 import qs.services
 import qs.Commons
 import qs.Ui
+import "../services/header_cell.js" as HeaderCell
 
 // One header row shared by the three panels (plan R2 §2.1).
 //
@@ -166,17 +167,24 @@ Item {
                     // accent. FilterBar passes Colors.text as the foreground of
                     // its current chip, so that is the pair used here — the
                     // same two calls, not a third tint invented for the header.
+                    //
+                    // WHICH paint applies is decided in services/header_cell.js
+                    // so the contract can be tested; this block only maps the
+                    // answer to the Style calls.
+                    readonly property var _style: HeaderCell.cellStyle({
+                        current: isCurrent,
+                        hovered: tab.hovered,
+                        pressed: tab.pressed,
+                        fullHeight: root.fullHeightCells
+                    })
                     readonly property color _selectedColor: Style.selectedStateColor(Colors.text, Colors.primary)
                     // What Button calls `foreground`: it drives the pressed and
                     // hover fills. Muted while the cell is not the current one,
                     // exactly like the chip.
                     readonly property color _fillBase: isCurrent ? Colors.text : Colors.muted
-                    // The label colour. Only the full-height header takes the
-                    // resolved state colour; the anime and novel headers keep
-                    // the plain Colors.text they have today.
-                    readonly property color _foreground: isCurrent
-                        ? (root.fullHeightCells ? tab._selectedColor : Colors.text)
-                        : Colors.muted
+                    readonly property color _foreground: tab._style.label === HeaderCell.LABEL.SELECTED
+                        ? tab._selectedColor
+                        : (tab._style.label === HeaderCell.LABEL.TEXT ? Colors.text : Colors.muted)
 
                     implicitWidth: tabRow.implicitWidth + 2 * Style.spacing.controlPaddingX + 2 * _ring
                     // Segmented: the cell fills the container's interior, so the
@@ -195,14 +203,17 @@ Item {
                         ? 0
                         : (root.segmentedTabs ? Style.cornerRadius : 0)
                     cursorShape: Qt.PointingHandCursor
-                    color: tab.pressed ? Style.pressedFillFor(tab._fillBase, Colors.primary)
-                         : tab.hovered ? Style.hoverFillFor(tab._fillBase, Colors.primary)
-                         : tab.isCurrent ? Style.selectedFillFor(Colors.text, Colors.primary)
-                         : "transparent"
-                    // Full height tints on hover instead of ringing: a ring
-                    // around a header-tall cell would read as a box, which is
-                    // what this layout removes.
-                    border.width: (tab.hovered && !root.fullHeightCells) ? tab._ring : 0
+                    color: tab._style.fill === HeaderCell.FILL.PRESSED
+                        ? Style.pressedFillFor(tab._fillBase, Colors.primary)
+                        : tab._style.fill === HeaderCell.FILL.HOVER
+                            ? Style.hoverFillFor(tab._fillBase, Colors.primary)
+                            : tab._style.fill === HeaderCell.FILL.SELECTED
+                                ? Style.selectedFillFor(Colors.text, Colors.primary)
+                                : "transparent"
+                    // The other headers ring on hover; the full-height one
+                    // tints instead (a ring around a header-tall cell reads as
+                    // a box, which is what this layout removes).
+                    border.width: tab._style.hoverRing ? tab._ring : 0
                     border.color: Style.hoverBorderFor(tab._foreground, Colors.primary)
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
 
@@ -212,7 +223,7 @@ Item {
                     // novel headers keep the plain pill they have today.
                     Rectangle {
                         anchors.fill: parent
-                        visible: root.fullHeightCells && tab.isCurrent
+                        visible: tab._style.ring
                         color: "transparent"
                         radius: tab.radius
                         border.width: Style.normalBorderWidth
