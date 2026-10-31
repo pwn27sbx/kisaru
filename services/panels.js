@@ -149,11 +149,11 @@ function opacityForSlot(slot) {
     var item = slot.item || null;
     if (!slot.open || item === null)
         return 1;
-    return opacityFor({
-        open: true,
-        loaded: true,
-        pointerInside: typeof item.pointerInside === "boolean" ? item.pointerInside : undefined
-    });
+    // A panel that cannot report its pointer stays visible: fading a panel
+    // whose hover state nobody can read would be a guess.
+    if (typeof item.pointerInside !== "boolean")
+        return 1;
+    return opacityFor({ open: true, loaded: true, pointerInside: item.pointerInside });
 }
 
 if (typeof module !== "undefined" && module.exports) {
