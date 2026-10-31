@@ -22,6 +22,14 @@ lost for a whole round without a single test going red.
 - [ ] The screen or row the round touched still does what the brief asked: open
       it with real data and photograph it.
 
+## Read the log, not just the screenshot
+
+- [ ] Grep the round's own log for new WARN/ERROR lines before closing:
+      `grep -aE "WARN|ERROR" <log> | sort | uniq -c | sort -rn`.
+      A wall of `Unsupported image format` means the art CDN is answering with
+      a bot challenge; a grid of placeholders looks like a layout bug and is
+      not one. Missing art is never "the capture is fine".
+
 ## Two rules learned the hard way
 
 - **Never edit `IDLE_OPACITY` (or any other runtime constant) to take a
