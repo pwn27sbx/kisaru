@@ -22,7 +22,11 @@ Item {
         bottom: parent.bottom
         left: parent.left
     }
-    implicitWidth: 600
+    // The owner's width for this panel (round 3): 430 with three columns puts a
+    // card at (430 - 2 * 10) / 3 = 136.7 px, against 192 at the old 600, and
+    // its ratio lands at ~1.95 — Stitch's 113 x 226 is 1.99. The anime and
+    // novel panels keep their own widths; nothing here is shared.
+    implicitWidth: 430
     visible: false
 
     readonly property string fontBody: Style.font.family
