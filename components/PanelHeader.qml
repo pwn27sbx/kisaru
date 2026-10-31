@@ -182,9 +182,11 @@ Item {
                     // hover fills. Muted while the cell is not the current one,
                     // exactly like the chip.
                     readonly property color _fillBase: isCurrent ? Colors.text : Colors.muted
-                    readonly property color _foreground: tab._style.label === HeaderCell.LABEL.SELECTED
-                        ? tab._selectedColor
-                        : (tab._style.label === HeaderCell.LABEL.TEXT ? Colors.text : Colors.muted)
+                    // Two roles, two colours: the resolved state colour for the
+                    // selected full-height cell, and otherwise exactly the fill
+                    // base (text when current, muted when not).
+                    readonly property color _foreground:
+                        tab._style.label === HeaderCell.LABEL.SELECTED ? tab._selectedColor : tab._fillBase
 
                     implicitWidth: tabRow.implicitWidth + 2 * Style.spacing.controlPaddingX + 2 * _ring
                     // Segmented: the cell fills the container's interior, so the
@@ -213,7 +215,7 @@ Item {
                     // The other headers ring on hover; the full-height one
                     // tints instead (a ring around a header-tall cell reads as
                     // a box, which is what this layout removes).
-                    border.width: tab._style.hoverRing ? tab._ring : 0
+                    border.width: tab._style.showHoverRing ? tab._ring : 0
                     border.color: Style.hoverBorderFor(tab._foreground, Colors.primary)
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
 
@@ -223,7 +225,7 @@ Item {
                     // novel headers keep the plain pill they have today.
                     Rectangle {
                         anchors.fill: parent
-                        visible: tab._style.ring
+                        visible: tab._style.showRing
                         color: "transparent"
                         radius: tab.radius
                         border.width: Style.normalBorderWidth

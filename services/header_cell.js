@@ -4,8 +4,13 @@
 // accent tint, 1 px accent ring, resolved state colour on the label. That is a
 // small state machine (pressed beats hover, hover beats selected, the ring
 // belongs to the selected full-height cell) and it lived as nested ternaries in
-// the delegate, where no test could see it. Pure, so it can be pinned; the
-// delegate only maps each answer to its Style call.
+// the delegate, where no test could see it.
+//
+// This module answers WHICH paint applies — a fill role, a label role and two
+// visibility flags. It does not choose colours or widths: the delegate maps each
+// answer to its Style call (selectedFillFor, selectedStateColor,
+// Style.normalBorderWidth in Colors.primary), which is where a theme change
+// still lands.
 
 var FILL = { NONE: "none", SELECTED: "selected", HOVER: "hover", PRESSED: "pressed" };
 var LABEL = { MUTED: "muted", TEXT: "text", SELECTED: "selected" };
@@ -20,8 +25,8 @@ function cellStyle(state) {
         label: !state.current ? LABEL.MUTED
             : state.fullHeight ? LABEL.SELECTED
             : LABEL.TEXT,
-        ring: !!state.fullHeight && !!state.current,
-        hoverRing: !!state.hovered && !state.fullHeight
+        showRing: !!state.fullHeight && !!state.current,
+        showHoverRing: !!state.hovered && !state.fullHeight
     };
 }
 

@@ -139,17 +139,20 @@ function opacityFor(state) {
 // `slot.item` is null while the Loader is inactive and the panel is loaded on
 // first use; a loaded panel always exposes `pointerInside` (a HoverHandler on
 // its root). A missing or non-boolean reading keeps the panel VISIBLE rather
-// than fading a panel nobody can see the state of.
+// than fading one whose hover state nobody can read.
+//
+// The "hidden means opaque" rule is spelled out here with its own early return
+// instead of being borrowed from `opacityFor`'s guard: this is the entry point
+// the shell calls, so the rule has to be readable at this level.
 function opacityForSlot(slot) {
     slot = slot || {};
     var item = slot.item || null;
-    var inside;
-    if (item && typeof item.pointerInside === "boolean")
-        inside = item.pointerInside;
+    if (!slot.open || item === null)
+        return 1;
     return opacityFor({
-        open: !!slot.open,
-        loaded: item !== null,
-        pointerInside: inside
+        open: true,
+        loaded: true,
+        pointerInside: typeof item.pointerInside === "boolean" ? item.pointerInside : undefined
     });
 }
 
