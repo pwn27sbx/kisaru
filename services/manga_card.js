@@ -52,10 +52,83 @@ function translator(t) {
     return tSegment(t);
 }
 
+// ---------------------------------------------------------------- status tone
+//
+// The stitch card colours the status on the right of its meta row by state.
+// The sources hand over the same state in English ("Ongoing", "Completed") or
+// in their own Spanish ("En curso", "Finalizado", "Cancelado"), so the lookup
+// normalises both sides before matching. The four answers are the only tone
+// names QML knows: `done` (the accent), `live` and `muted` (muted text) and
+// `warn` (the theme's urgent colour). An unknown status is `muted`: it must
+// still paint, just without a claim.
+
+// Diacritics the Spanish statuses use, lowered before matching. Kept as a
+// table instead of String.prototype.normalize() because the QML JS engine is
+// not guaranteed to implement it.
+var ACCENTS = {
+    "á": "a", "à": "a", "ä": "a", "â": "a",
+    "é": "e", "è": "e", "ë": "e", "ê": "e",
+    "í": "i", "ì": "i", "ï": "i", "î": "i",
+    "ó": "o", "ò": "o", "ö": "o", "ô": "o",
+    "ú": "u", "ù": "u", "ü": "u", "û": "u",
+    "ñ": "n", "ç": "c"
+};
+
+// One tone per known status, keyed by the normalised value.
+var TONE_BY_STATUS = {
+    // Finished.
+    "completed": "done",
+    "finished": "done",
+    "completado": "done",
+    "completada": "done",
+    "finalizado": "done",
+    "finalizada": "done",
+    // Still publishing.
+    "ongoing": "live",
+    "on going": "live",
+    "publishing": "live",
+    "up to date": "live",
+    "en curso": "live",
+    "publicandose": "live", // "Publicándose"
+    "al dia": "live",       // "Al día"
+    // Stopped, one way or another.
+    "hiatus": "warn",
+    "paused": "warn",
+    "pausado": "warn",
+    "pausada": "warn",
+    "en pausa": "warn",
+    "cancelled": "warn",
+    "canceled": "warn",
+    "cancelado": "warn",
+    "cancelada": "warn",
+    "dropped": "warn"
+};
+
+// Lower-case, strip the accents and collapse the spacing, so "Publicándose "
+// and "PUBLICANDOSE" are the same key.
+function normalizeStatus(value) {
+    var raw = clean(value).toLowerCase();
+    var out = "";
+    for (var i = 0; i < raw.length; i++) {
+        var ch = raw.charAt(i);
+        out += ACCENTS[ch] || ch;
+    }
+    return out.replace(/\s+/g, " ").trim();
+}
+
+// statusTone("En curso") -> "live"; statusTone("desconocido") -> "muted".
+function statusTone(status) {
+    var tone = TONE_BY_STATUS[normalizeStatus(status)];
+    // A plain lookup would hand back Object.prototype members for a status
+    // like "constructor"; only the four strings above are tones.
+    return typeof tone === "string" ? tone : "muted";
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         metaLine: metaLine,
         tSegment: tSegment,
-        translator: translator
+        translator: translator,
+        statusTone: statusTone
     };
 }

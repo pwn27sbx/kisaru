@@ -201,7 +201,11 @@ Item {
                 // columns share it whole (the old `(width - 10) / 4` left a
                 // stray 10 px on the right).
                 cellWidth: width / browseView.columnCount
-                cellHeight: cellWidth * 1.58
+                // A stitch card is the cover (width × 4.4 / 3) plus the info
+                // block under it: two title lines, the meta row and the p-2
+                // padding, 66 px all told. The skeleton above still uses the
+                // old ratio and is reconciled separately.
+                cellHeight: cellWidth * (4.4 / 3) + Style.space(66)
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
                 // A ScriptModel diffs each new array against the last, so appending a
@@ -225,22 +229,20 @@ Item {
                         source: modelData.thumbUrl || ""
                         title: modelData.title || ""
                         bodyFont: browseView.fontBody
-                        // Kept from the inline delegate this replaces: this grid
-                        // faded 56 px and padded the title bar 18 px, so the
-                        // cover stays exactly where it was.
-                        gradientHeight: 56
-                        titlePadding: 18
+                        // The Stitch anatomy: the cover runs flush to the
+                        // card's edges and fades into the surface under it, so
+                        // the cover inset and the leading badge of the old
+                        // inset tile no longer apply.
+                        variant: "stitch"
                         typeBadge: I18n.tData(modelData.type || "").toUpperCase()
-                        // The mockup's tile: the artwork does not bleed to the
-                        // card's edge, and the badge leads instead of trailing.
-                        inset: Style.space(6)
-                        badgeLeading: true
-                        // The work's chapter · status. The search of some
-                        // sources carries no chapter, and the line then drops
-                        // that segment instead of leaving an orphan dot.
-                        meta: MangaCard.metaLine(modelData.chapter,
-                                                 I18n.tData(modelData.status || ""),
-                                                 browseView.cardTranslator)
+                        // The work's chapter · state, split into the row Stitch
+                        // draws. metaLine with an empty status gives just the
+                        // chapter ("Cap. 179"), so an absent chapter leaves the
+                        // left slot empty instead of a bare "Cap.".
+                        metaChapter: MangaCard.metaLine(modelData.chapter, "",
+                                                        browseView.cardTranslator)
+                        metaStatus: I18n.tData(modelData.status || "")
+                        metaTone: MangaCard.statusTone(modelData.status || "")
 
                         onClicked: {
                             Manga.fetchMangaDetail(modelData.id)

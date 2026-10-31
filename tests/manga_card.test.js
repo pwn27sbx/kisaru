@@ -67,3 +67,45 @@ test("tSegment turns one chapter segment into a translated label", () => {
     // A segment without a value is a plain key, not a half-built string.
     assert.equal(segment("plain"), "plain");
 });
+
+// ── statusTone: the status colour of the stitch card's meta row ─────────────
+//
+// The values below are verbatim from the sources: English from MangaDex /
+// ManhwaWeb, Spanish from zonatmo / zonatmo.org / ManhwaWeb's localized
+// labels. The pure function answers with one of four theme tones; QML maps
+// each tone to a `Colors.*` role, so no colour literal lives in the views.
+
+test("statusTone paints a finished work with the done tone", () => {
+    for (const status of ["Completed", "finished", "completado", "Finalizado", "COMPLETADA"])
+        assert.equal(card.statusTone(status), "done", status);
+});
+
+test("statusTone paints a publishing work with the live tone", () => {
+    for (const status of ["Ongoing", "OnGoing", "publishing", "up to date", "en curso", "Publicándose", "al día"])
+        assert.equal(card.statusTone(status), "live", status);
+});
+
+test("statusTone paints an interrupted work with the warn tone", () => {
+    for (const status of ["Hiatus", "paused", "cancelled", "canceled", "dropped", "en pausa", "Cancelado"])
+        assert.equal(card.statusTone(status), "warn", status);
+});
+
+test("statusTone falls back to muted for a status it does not know", () => {
+    for (const status of ["", "   ", null, undefined, "desconocido", "en emisión pronto", "Manga"])
+        assert.equal(card.statusTone(status), "muted", JSON.stringify(status));
+});
+
+test("statusTone ignores case, accents and surrounding whitespace", () => {
+    assert.equal(card.statusTone("  PUBLICÁNDOSE  "), "live");
+    assert.equal(card.statusTone("Al DÍA"), "live");
+    assert.equal(card.statusTone(" Finalizado "), "done");
+    assert.equal(card.statusTone("EN PAUSA"), "warn");
+});
+
+test("statusTone only ever answers one of the four theme tones", () => {
+    const tones = new Set(["done", "live", "warn", "muted"]);
+    // Includes the inherited Object keys: a plain `TABLE[key]` lookup would
+    // answer with Object.prototype.constructor for "constructor".
+    for (const status of [0, false, {}, [], "En Curso", "???", "constructor", "x".repeat(40)])
+        assert.ok(tones.has(card.statusTone(status)), String(status));
+});
