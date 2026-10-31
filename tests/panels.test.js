@@ -80,6 +80,23 @@ test("shouldUnload: el minimizado se queda, el cerrado a mano se va, el item nul
     assert.equal(p.shouldUnload({ open: true, minimized: false }), false);
 });
 
+test("opacityForSlot: el camino real (slot abierto, item y hover)", () => {
+    // The exact shape shell.qml hands over: the Loader's `open` flag and its
+    // loaded item. These are the cases a fade regression walks through.
+    assert.equal(p.opacityForSlot({ open: true, item: { pointerInside: false } }), 0.15);
+    assert.equal(p.opacityForSlot({ open: true, item: { pointerInside: true } }), 1);
+    // Loaded but closed: the shell shows nothing, so it must not fade.
+    assert.equal(p.opacityForSlot({ open: false, item: { pointerInside: false } }), 1);
+    // Not loaded yet (first use): the item is null.
+    assert.equal(p.opacityForSlot({ open: true, item: null }), 1);
+    assert.equal(p.opacityForSlot({ open: true }), 1);
+    assert.equal(p.opacityForSlot(), 1);
+    // A panel that stops publishing pointerInside must stay visible rather
+    // than fade behind the user's back.
+    assert.equal(p.opacityForSlot({ open: true, item: {} }), 1);
+    assert.equal(p.opacityForSlot({ open: true, item: { pointerInside: "no" } }), 1);
+});
+
 test("opacityFor: 1 / 0.15 / guarda de tipo", () => {
     assert.equal(p.IDLE_OPACITY, 0.15);
     assert.equal(p.opacityFor({ open: false, loaded: true, pointerInside: true }), 1);

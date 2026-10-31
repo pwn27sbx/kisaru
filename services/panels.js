@@ -127,6 +127,32 @@ function opacityFor(state) {
     return state.pointerInside ? 1 : IDLE_OPACITY;
 }
 
+// The shell's own call: the slot is the Loader that hosts one panel.
+//
+// shell.qml used to assemble this object inline, which meant the fade had no
+// test at the level the shell actually runs at — the probe only ever saw a
+// hand-written state, never the `slot.open` / `slot.item` pair that decides it.
+// Keeping the assembly here makes the real path testable, including the two
+// cases that cost hours once: a slot whose item is gone, and an item that is
+// there but does not report hover.
+//
+// `slot.item` is null while the Loader is inactive and the panel is loaded on
+// first use; a loaded panel always exposes `pointerInside` (a HoverHandler on
+// its root). A missing or non-boolean reading keeps the panel VISIBLE rather
+// than fading a panel nobody can see the state of.
+function opacityForSlot(slot) {
+    slot = slot || {};
+    var item = slot.item || null;
+    var inside;
+    if (item && typeof item.pointerInside === "boolean")
+        inside = item.pointerInside;
+    return opacityFor({
+        open: !!slot.open,
+        loaded: item !== null,
+        pointerInside: inside
+    });
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         IDLE_OPACITY: IDLE_OPACITY,
@@ -138,6 +164,7 @@ if (typeof module !== "undefined" && module.exports) {
         shouldUnload: shouldUnload,
         othersToClose: othersToClose,
         closePatch: closePatch,
-        opacityFor: opacityFor
+        opacityFor: opacityFor,
+        opacityForSlot: opacityForSlot
     };
 }

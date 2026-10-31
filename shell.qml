@@ -133,7 +133,7 @@ ShellRoot {
                 }
                 sourceComponent: MangaReader {}
                 onOpened: root.closeOthers(mangaSlot)
-                opacity: root.panelOpacity(mangaSlot)
+                opacity: Panels.opacityForSlot(mangaSlot)
                 Behavior on opacity { NumberAnimation { duration: Motion.fast } }
             }
 
@@ -146,7 +146,7 @@ ShellRoot {
                 }
                 sourceComponent: NovelReader {}
                 onOpened: root.closeOthers(novelSlot)
-                opacity: root.panelOpacity(novelSlot)
+                opacity: Panels.opacityForSlot(novelSlot)
                 Behavior on opacity { NumberAnimation { duration: Motion.fast } }
             }
 
@@ -159,7 +159,7 @@ ShellRoot {
                 }
                 sourceComponent: AnimePanel {}
                 onOpened: root.closeOthers(animeSlot)
-                opacity: root.panelOpacity(animeSlot)
+                opacity: Panels.opacityForSlot(animeSlot)
                 Behavior on opacity { NumberAnimation { duration: Motion.fast } }
             }
 
@@ -190,13 +190,8 @@ ShellRoot {
     // Ghost mode: painted over the whole screen, so when the pointer is
     // elsewhere it drops to Panels.IDLE_OPACITY. No delay, and the mask is
     // untouched, which is what lets the panel notice the pointer coming back.
-    function panelOpacity(slot) {
-        return Panels.opacityFor({
-            open: slot.open,
-            loaded: !!slot.item,
-            pointerInside: slot.item ? slot.item.pointerInside : undefined
-        })
-    }
+    // The decision itself lives in services/panels.js (`opacityForSlot`), where
+    // a test covers the slot shape this file really passes.
 
     function maskItem(slot) {
         return slot.open ? slot.item : null;

@@ -158,7 +158,25 @@ Item {
                     // theme that changes them moves this pill with it.
                     readonly property int _ring: Math.max(Style.hoverBorderWidth,
                                                          Style.selectedBorderWidth)
-                    readonly property color _foreground: isCurrent ? Colors.text : Colors.muted
+                    // The active filter chip's exact recipe (owner, round 5:
+                    // "the same look as the active chip, reused, not copied as
+                    // new values"). Button with `selected` resolves one state
+                    // colour from (foreground, accent) and paints both the text
+                    // and the fill with it, and FilterBar rings it in the
+                    // accent. FilterBar passes Colors.text as the foreground of
+                    // its current chip, so that is the pair used here — the
+                    // same two calls, not a third tint invented for the header.
+                    readonly property color _selectedColor: Style.selectedStateColor(Colors.text, Colors.primary)
+                    // What Button calls `foreground`: it drives the pressed and
+                    // hover fills. Muted while the cell is not the current one,
+                    // exactly like the chip.
+                    readonly property color _fillBase: isCurrent ? Colors.text : Colors.muted
+                    // The label colour. Only the full-height header takes the
+                    // resolved state colour; the anime and novel headers keep
+                    // the plain Colors.text they have today.
+                    readonly property color _foreground: isCurrent
+                        ? (root.fullHeightCells ? tab._selectedColor : Colors.text)
+                        : Colors.muted
 
                     implicitWidth: tabRow.implicitWidth + 2 * Style.spacing.controlPaddingX + 2 * _ring
                     // Segmented: the cell fills the container's interior, so the
@@ -177,9 +195,9 @@ Item {
                         ? 0
                         : (root.segmentedTabs ? Style.cornerRadius : 0)
                     cursorShape: Qt.PointingHandCursor
-                    color: tab.pressed ? Style.pressedFillFor(tab._foreground, Colors.primary)
-                         : tab.hovered ? Style.hoverFillFor(tab._foreground, Colors.primary)
-                         : tab.isCurrent ? Style.selectedFillFor(Colors.primary)
+                    color: tab.pressed ? Style.pressedFillFor(tab._fillBase, Colors.primary)
+                         : tab.hovered ? Style.hoverFillFor(tab._fillBase, Colors.primary)
+                         : tab.isCurrent ? Style.selectedFillFor(Colors.text, Colors.primary)
                          : "transparent"
                     // Full height tints on hover instead of ringing: a ring
                     // around a header-tall cell would read as a box, which is
@@ -187,6 +205,19 @@ Item {
                     border.width: (tab.hovered && !root.fullHeightCells) ? tab._ring : 0
                     border.color: Style.hoverBorderFor(tab._foreground, Colors.primary)
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
+
+                    // The active chip's ring, drawn the way FilterBar draws it
+                    // (not as `border`, which Button derives from its own state
+                    // machine). Only the full-height header has it: the anime and
+                    // novel headers keep the plain pill they have today.
+                    Rectangle {
+                        anchors.fill: parent
+                        visible: root.fullHeightCells && tab.isCurrent
+                        color: "transparent"
+                        radius: tab.radius
+                        border.width: Style.normalBorderWidth
+                        border.color: Colors.primary
+                    }
 
                     Row {
                         id: tabRow
