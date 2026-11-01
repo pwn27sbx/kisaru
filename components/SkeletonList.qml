@@ -10,21 +10,27 @@ import "../services/list_metrics.js" as ListMetrics
 // row: `cover: true` draws the cover of a ListRow, otherwise a chapter row's
 // number pill and title (plus a subtitle line when `subtitle` is set).
 //
-// A-9: the Browse and Library ghosts stand in for ListRow, so they draw the
-// same 64 x 90 cover from services/list_metrics.js — a ghost of the wrong shape
-// makes the panel jump the moment the data lands.
+// The Browse and Library ghosts stand in for ListRow, so they draw the same
+// cover and the same two text lines, all read from services/list_metrics.js —
+// a ghost of the wrong shape, or with its own copy of the row's type scale,
+// makes the panel jump the moment the data lands (A-9 review debt).
 Rectangle {
     id: root
 
     property bool active: false
     property int rowHeight: 58
     property bool subtitle: true
-    property int dividerInset: 72
+    // The divider's inset. The content inset is its own property: one name,
+    // one meaning (A-9 review debt).
+    property int dividerInset: root.inset
+    // Where the row's content starts, matching the ListRow it stands in for.
+    property int inset: Style.spacing.xl
     // True for the lists whose real row is a ListRow (cover on the left).
     property bool cover: false
-    // The list row's own type scale, so the ghost's bars are the row's lines.
-    property real titleHeight: Style.font.heading
-    property real datumHeight: Style.font.caption
+    // The row's own type scale, from the shared metrics, so the ghost's bars
+    // are the row's lines and stay so when the row changes.
+    property real titleHeight: Math.round(Style.font.body * ListMetrics.TITLE_SCALE)
+    property real datumHeight: Math.round(Style.font.body * ListMetrics.DATUM_SCALE)
 
     color: Colors.background
     clip: true
@@ -49,7 +55,7 @@ Rectangle {
                     id: content
                     anchors {
                         fill: parent
-                        leftMargin: root.cover ? root.dividerInset : Style.space(16)
+                        leftMargin: root.cover ? root.inset : Style.space(16)
                         rightMargin: Style.space(16)
                     }
 
@@ -76,11 +82,11 @@ Rectangle {
                     Column {
                         anchors {
                             left: root.cover ? coverGhost.right : pill.right
-                            leftMargin: root.cover ? Style.spacing.xl : Style.spacing.xxxl
+                            leftMargin: root.cover ? root.inset : Style.spacing.xxxl
                             right: parent.right; rightMargin: Style.space(24)
                             verticalCenter: parent.verticalCenter
                         }
-                        spacing: root.cover ? Style.spacing.md : Style.space(7)
+                        spacing: root.cover ? Style.space(ListMetrics.TEXT_GAP_BASE) : Style.space(7)
 
                         Rectangle {
                             // Varied so the rows don't read as a barcode.

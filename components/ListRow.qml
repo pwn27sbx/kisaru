@@ -6,12 +6,12 @@ import "../services/list_metrics.js" as ListMetrics
 // One row of a manga list view: a cover thumbnail, the title, the work's
 // metadata line and — when the caller has one — the reader's own progress.
 //
-// Round 8 (A-9) is the owner's sketch: a tall 64 x 90 cover that nearly spans
-// the row, a large bold title (Style.font.heading, ~1.35x the body size) on up
-// to two lines, and under it the datum — the chapter, the score run, the author
-// — small and muted, with a clear gap between the two. The text block is
-// centred against the cover. Every size comes from services/list_metrics.js,
-// which the loading skeleton reads too.
+// Round 9 (A-10) is the middle ground the owner asked for after finding A-9 too
+// big: a 48 x 68 cover, a title one step over the body size (bold, up to two
+// lines) and under it the datum — the chapter, the score run, the author —
+// small but legible, not faint. The text block is centred against the cover.
+// Every size, and the gap between title and datum, comes from
+// services/list_metrics.js, which the loading skeleton reads too.
 //
 // It is the row twin of CoverCard, and it takes the SAME `meta` string instead
 // of composing it: both views build it with services/manga_card.js, so the
@@ -40,6 +40,12 @@ ClickableRect {
     // caller matches it to its own header/grid inset (Browse uses xl, Library
     // lg, like the two grids do).
     property int inset: Style.spacing.xl
+
+    // The datum is secondary, not faint: the muted role lifted toward the
+    // foreground (A-10). One place, so the score's companions and the author
+    // line cannot drift.
+    readonly property color datumColor:
+        Colors.mix(Colors.on_surface_variant, Colors.on_surface, 0.35)
 
     // Qt caches a FAILED image load per URL for the engine's lifetime (see
     // CoverCard): one request that lands while the local backend restarts
@@ -127,15 +133,16 @@ ClickableRect {
             rightMargin: root.inset
             verticalCenter: parent.verticalCenter
         }
-        // A clear breath between the title and the datum, as in the sketch.
-        spacing: Style.spacing.md
+        // A short breath between the title and the datum (A-10: tighter than
+        // A-9, from the shared metrics).
+        spacing: Style.space(ListMetrics.TEXT_GAP_BASE)
 
         StyledText {
             width: parent.width
             text: root.title
             font.family: root.bodyFont
-            // The sketch's big title: ~1.35x the body size.
-            font.pixelSize: Style.font.heading
+            // One step over the body size, from the shared scale.
+            font.pixelSize: Math.round(Style.font.body * ListMetrics.TITLE_SCALE)
             font.bold: true
             font.letterSpacing: 0.2
             color: Colors.on_surface
@@ -159,7 +166,7 @@ ClickableRect {
                 visible: root.score !== ""
                 text: root.score
                 font.family: root.bodyFont
-                font.pixelSize: Style.font.caption
+                font.pixelSize: Math.round(Style.font.body * ListMetrics.DATUM_SCALE)
                 font.letterSpacing: 0.3
                 font.bold: true
                 color: Colors.primary
@@ -170,8 +177,8 @@ ClickableRect {
                 visible: root.score !== "" && root.meta !== ""
                 text: "·"
                 font.family: root.bodyFont
-                font.pixelSize: Style.font.caption
-                color: Colors.muted
+                font.pixelSize: Math.round(Style.font.body * ListMetrics.DATUM_SCALE)
+                color: root.datumColor
             }
 
             StyledText {
@@ -183,9 +190,9 @@ ClickableRect {
                     - (scoreSeparator.visible ? scoreSeparator.width + parent.spacing : 0))
                 text: root.meta
                 font.family: root.bodyFont
-                font.pixelSize: Style.font.caption
+                font.pixelSize: Math.round(Style.font.body * ListMetrics.DATUM_SCALE)
                 font.letterSpacing: 0.3
-                color: Colors.on_surface_variant
+                color: root.datumColor
                 elide: Text.ElideRight
                 maximumLineCount: 1
             }

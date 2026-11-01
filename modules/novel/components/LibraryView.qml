@@ -71,6 +71,7 @@ Item {
             active: libraryView.listMode && !Novel.libraryLoaded
             rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
             cover: true
+            inset: Style.spacing.lg
             dividerInset: Style.spacing.lg
         }
 

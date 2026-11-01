@@ -259,13 +259,15 @@ test("the list row is the owner's sketch: tall cover, big title, small datum", (
     assert.match(row, /Style\.space\(ListMetrics\.THUMB_WIDTH\)/);
     assert.match(row, /Style\.space\(ListMetrics\.THUMB_HEIGHT\)/);
     assert.ok(!row.includes("Math.round(height * 0.7)"), "the thumbnail is derived from the row again");
-    // Big bold title, two lines.
-    assert.match(row, /Style\.font\.heading\b[\s\S]{0,160}font\.bold: true/,
-        "the title is not a big bold line");
+    // Title one step over the body, from the shared scale, bold, two lines.
+    assert.match(row, /Style\.font\.body \* ListMetrics\.TITLE_SCALE/,
+        "the title does not read the shared type scale");
+    assert.match(row, /font\.bold: true/, "the title is not bold");
     assert.match(row, /maximumLineCount: 2/, "long titles still die on one line");
     assert.match(row, /wrapMode: Text\.Wrap/, "two lines do not wrap");
-    // The datum under it is small again.
-    assert.match(row, /Style\.font\.caption/, "the datum is not a caption");
+    // The datum under it is small, and brighter than the muted role.
+    assert.match(row, /Style\.font\.body \* ListMetrics\.DATUM_SCALE/, "the datum does not read the shared scale");
+    assert.match(row, /Colors\.mix\(Colors\.on_surface_variant, Colors\.on_surface/, "the datum is still faint");
     assert.match(row, /Colors\.outline_variant/, "no separator between rows");
 });
 
@@ -276,6 +278,14 @@ test("the list ghost has the list row's shape, not a chapter row's", () => {
     assert.match(skeleton, /property bool cover/);
     assert.match(skeleton, /Style\.space\(ListMetrics\.THUMB_WIDTH\)/);
     assert.match(skeleton, /Style\.space\(ListMetrics\.THUMB_HEIGHT\)/);
+    // A-10: the ghost reads the row's type scale and gap from the same module
+    // instead of copying the font tokens, and its content inset is its own
+    // property rather than a second meaning for dividerInset.
+    assert.match(skeleton, /ListMetrics\.TITLE_SCALE/);
+    assert.match(skeleton, /ListMetrics\.DATUM_SCALE/);
+    assert.match(skeleton, /ListMetrics\.TEXT_GAP_BASE/);
+    assert.match(skeleton, /property int inset:/);
+    assert.ok(!/cover \? root\.dividerInset/.test(skeleton), "the cover still borrows dividerInset as an inset");
     for (const file of [
         "modules/manga/components/BrowseView.qml",
         "modules/manga/components/LibraryView.qml",

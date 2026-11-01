@@ -7,20 +7,26 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const metrics = require("../services/list_metrics.js");
 
-test("a row is 106 base units and the skeleton reads the same number", () => {
-    // A-9 sketch: a 90 px cover plus a little air above and below.
-    assert.equal(metrics.ROW_HEIGHT_BASE, 106);
+test("a row is 80 base units and the skeleton reads the same number", () => {
+    // A-10 middle ground between A-8 (96) and A-9 (106): ~12 rows per screen.
+    assert.equal(metrics.ROW_HEIGHT_BASE, 80);
 });
 
-test("the thumbnail is the sketch's 64 x 90 and fits inside the row", () => {
-    assert.equal(metrics.THUMB_WIDTH, 64);
-    assert.equal(metrics.THUMB_HEIGHT, 90);
-    // 64/90 = 0.71: the same crop the grid's 2:3 poster takes.
-    assert.ok(metrics.THUMB_WIDTH / metrics.THUMB_HEIGHT > 0.69 && metrics.THUMB_WIDTH / metrics.THUMB_HEIGHT < 0.72);
+test("the thumbnail is 48 x 68 and fits inside the row", () => {
+    assert.equal(metrics.THUMB_WIDTH, 48);
+    assert.equal(metrics.THUMB_HEIGHT, 68);
     assert.ok(metrics.ROW_HEIGHT_BASE > metrics.THUMB_HEIGHT, "the cover is taller than its row");
     // Both sides are declared: nothing derives one from a ratio, which is what
     // the A-8 review flagged.
     assert.equal(metrics.THUMB_RATIO, undefined);
+});
+
+test("the row's type scale and gap are shared with the ghost", () => {
+    // A-10: the loading skeleton reads these instead of copying the row's
+    // font tokens, which is the A-9 review debt.
+    assert.ok(metrics.TITLE_SCALE > 1.1 && metrics.TITLE_SCALE < 1.2, "the title is not ~1.15x the body");
+    assert.ok(metrics.DATUM_SCALE < 1, "the datum is not smaller than the body");
+    assert.equal(metrics.TEXT_GAP_BASE, 3);
 });
 
 test("prefetch starts half a viewport before the end", () => {
