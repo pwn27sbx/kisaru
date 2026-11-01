@@ -1,6 +1,7 @@
 import QtQuick
 import qs.app
 import qs.Commons
+import qs.services
 import qs.Ui
 
 // The grid/list toggle, one control for the six views (owner, round 6).

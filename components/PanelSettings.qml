@@ -151,7 +151,12 @@ Item {
                         text: String(modelData.label || "")
                         bordered: false
                         selected: active
-                        foreground: active ? Colors.text : Colors.muted
+                        // Solid accent + on-accent label when it is the active
+                        // mode, the same reading as the rest of the app.
+                        color: active ? Colors.primary
+                            : hot ? Style.hoverFillFor(Colors.muted, Colors.primary)
+                            : "transparent"
+                        foreground: active ? Colors.on_primary : Colors.muted
                         fontFamily: root.fontFamily
                         fontSize: Style.font.body
                         onClicked: root.modeSelected(String(modelData.id || ""))

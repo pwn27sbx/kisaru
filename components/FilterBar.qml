@@ -64,24 +64,16 @@ Item {
                     text: root.labelOf(modelData)
                     bordered: false
                     selected: current
-                    foreground: current ? Colors.text : Colors.muted
+                    // Selected is the solid accent with the on-accent label; the
+                    // active ring is gone (owner, round 6). Hover on the rest
+                    // keeps Button's own tint.
+                    color: chip.current ? Colors.primary
+                        : chip.hot ? Style.hoverFillFor(Colors.muted, Colors.primary)
+                        : "transparent"
+                    foreground: current ? Colors.on_primary : Colors.muted
                     fontFamily: root.fontFamily
                     fontSize: Style.font.body
                     onClicked: root.activated(index)
-
-                    // The ring of the active chip. It is drawn instead of
-                    // assigned as `borderSpec` because Button derives that from
-                    // its own state machine (hover, focus, selected); overriding
-                    // it here would silently drop those borders. The ring is
-                    // inside the reserved border space, so nothing relayouts.
-                    Rectangle {
-                        anchors.fill: parent
-                        visible: chip.current
-                        color: "transparent"
-                        radius: chip.radius
-                        border.width: Style.normalBorderWidth
-                        border.color: Colors.primary
-                    }
                 }
             }
         }

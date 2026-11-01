@@ -16,20 +16,24 @@
 // one strip of full-height cells in all three panels, so the boxed/anime
 // variants this used to switch no longer exist.
 
-var FILL = { NONE: "none", SELECTED: "selected", HOVER: "hover", PRESSED: "pressed" };
-var LABEL = { MUTED: "muted", SELECTED: "selected" };
+var FILL = { NONE: "none", SELECTED: "selected", HOVER: "hover", PRESSED: "pressed", SOLID: "solid" };
+var LABEL = { MUTED: "muted", SELECTED: "selected", ON: "on" };
 
 // state: { current, hovered, pressed }
 function cellStyle(state) {
     state = state || {};
     return {
-        fill: state.pressed ? FILL.PRESSED
-            : state.hovered ? FILL.HOVER
-            : state.current ? FILL.SELECTED
-            : FILL.NONE,
-        label: state.current ? LABEL.SELECTED : LABEL.MUTED,
-        // The ring belongs to being selected, not to being hovered.
-        showRing: !!state.current
+        // Selected is a SOLID accent fill with the on-accent label, the Stow
+        // Sync look the owner picked (round 6): the tint-and-ring reading is
+        // gone, and hover keeps its own tint.
+        fill: state.current
+            ? (state.pressed ? FILL.PRESSED : FILL.SOLID)
+            : (state.pressed ? FILL.PRESSED
+                : state.hovered ? FILL.HOVER
+                : FILL.NONE),
+        label: state.current ? LABEL.ON : LABEL.MUTED,
+        // No ring: the solid fill is the selected state now.
+        showRing: false
     };
 }
 

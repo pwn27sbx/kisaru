@@ -14,24 +14,27 @@ const cell = require("../services/header_cell.js");
 const style = (over) => cell.cellStyle(
     Object.assign({ current: false, hovered: false, pressed: false }, over));
 
-test("the selected cell wears the chip: selected fill, selected colour, ring", () => {
-    assert.deepEqual(style({ current: true }), { fill: "selected", label: "selected", showRing: true });
+test("the selected cell is a solid accent with the on-accent label", () => {
+    // Owner, round 6: the tint-plus-ring reading is gone.
+    assert.deepEqual(style({ current: true }), { fill: "solid", label: "on", showRing: false });
 });
 
 test("an unselected cell is plain", () => {
     assert.deepEqual(style({}), { fill: "none", label: "muted", showRing: false });
 });
 
-test("hover tints and beats the selected fill, and keeps the ring", () => {
-    assert.equal(style({ current: true, hovered: true }).fill, cell.FILL.HOVER);
-    assert.equal(style({ current: true, hovered: true }).showRing, true);
-    assert.equal(style({ hovered: true }).showRing, false);
+test("hover tints the unselected cells and never overrides the solid selected one", () => {
+    assert.equal(style({ hovered: true }).fill, cell.FILL.HOVER);
+    assert.equal(style({ hovered: true }).label, cell.LABEL.MUTED);
+    // A selected cell stays selected while the pointer is on it.
+    assert.equal(style({ current: true, hovered: true }).fill, cell.FILL.SOLID);
+    assert.equal(style({ current: true, hovered: true }).label, cell.LABEL.ON);
 });
 
-test("pressed beats everything, and keeps the ring", () => {
-    const s = style({ current: true, hovered: true, pressed: true });
-    assert.equal(s.fill, cell.FILL.PRESSED);
-    assert.equal(s.showRing, true);
+test("pressed is its own fill in both cases", () => {
+    assert.equal(style({ current: true, pressed: true }).fill, cell.FILL.PRESSED);
+    assert.equal(style({ pressed: true }).fill, cell.FILL.PRESSED);
+    assert.equal(style({ pressed: true }).label, cell.LABEL.MUTED);
 });
 
 test("an empty state is a plain cell, never a crash", () => {

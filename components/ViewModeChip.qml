@@ -21,23 +21,21 @@ ClickableRect {
     implicitWidth: chip.cellSize
     implicitHeight: chip.cellSize
     cursorShape: Qt.PointingHandCursor
-    color: chip.pressed ? Style.pressedFillFor(Colors.text, Colors.primary)
-        : chip.current ? Style.selectedFillFor(Colors.text, Colors.primary)
+    // Selected is the solid accent; hover keeps its tint (owner, round 6).
+    color: chip.current ? Colors.primary
+        : chip.pressed ? Style.pressedFillFor(Colors.muted, Colors.primary)
+        : chip.hovered ? Style.hoverFillFor(Colors.muted, Colors.primary)
         : "transparent"
-    border.color: chip.hovered ? Style.hoverBorderFor(Colors.text, Colors.primary) : "transparent"
-    border.width: chip.hovered ? 1 : 0
+    border.width: 0
 
     StyledText {
         anchors.centerIn: parent
         text: chip.glyph
         font.family: chip.bodyFont
         font.pixelSize: Style.font.body
-        color: chip.current ? Style.selectedStateColor(Colors.text, Colors.primary) : Colors.muted
+        color: chip.current ? Colors.on_primary : Colors.muted
     }
 
-    PanelToolTip {
-        visible: chip.hovered
-        text: chip.label
-        fontFamily: chip.bodyFont
-    }
+    // No tooltip: the two glyphs say grid and list, and the bordered box it
+    // drew above the control read as a defect (owner, round 6).
 }

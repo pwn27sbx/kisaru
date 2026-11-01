@@ -74,39 +74,27 @@ Item {
         // resolves one state colour from (foreground, accent) and FilterBar
         // passes Colors.text as the foreground of its current chip, so that is
         // the pair used here — the same two calls, not a third tint.
-        readonly property color _selectedColor: Style.selectedStateColor(Colors.text, Colors.primary)
-        readonly property color _fillBase: cell.current ? Colors.text : Colors.muted
+        readonly property color _fillBase: cell.current ? Colors.on_primary : Colors.muted
+        // Selected reads as a solid accent cell with the on-accent label; the
+        // tint plus ring is gone (owner, round 6).
         readonly property color _foreground:
-            cell._style.label === HeaderCell.LABEL.SELECTED ? cell._selectedColor : cell._fillBase
+            cell._style.label === HeaderCell.LABEL.ON ? Colors.on_primary : cell._fillBase
 
         implicitWidth: content.implicitWidth + 2 * Style.spacing.controlPaddingX
         // The cell IS the header row, so the tint reaches its top and bottom.
         implicitHeight: root.implicitHeight
         radius: 0 // style-ignore — the header cells are square
         cursorShape: Qt.PointingHandCursor
-        color: cell._style.fill === HeaderCell.FILL.PRESSED
-            ? Style.pressedFillFor(cell._fillBase, Colors.primary)
-            : cell._style.fill === HeaderCell.FILL.HOVER
-                ? Style.hoverFillFor(cell._fillBase, Colors.primary)
-                : cell._style.fill === HeaderCell.FILL.SELECTED
-                    ? Style.selectedFillFor(Colors.text, Colors.primary)
+        color: cell._style.fill === HeaderCell.FILL.SOLID ? Colors.primary
+            : cell._style.fill === HeaderCell.FILL.PRESSED
+                ? Style.pressedFillFor(cell._fillBase, Colors.primary)
+                : cell._style.fill === HeaderCell.FILL.HOVER
+                    ? Style.hoverFillFor(cell._fillBase, Colors.primary)
                     : "transparent"
-        // No border of its own: a ring around a header-tall cell would read as
-        // a box, which is what this layout removes. The only ring is the
-        // overlay below, and only on the selected cell.
+        // No border at all: the solid fill is the selected state, hover is the
+        // tint, and nothing draws a ring (owner, round 6).
         border.width: 0
         Behavior on color { ColorAnimation { duration: Motion.fast } }
-
-        // The active chip's ring, drawn the way FilterBar draws it (not as
-        // `border`, which Button derives from its own state machine).
-        Rectangle {
-            anchors.fill: parent
-            visible: cell._style.showRing
-            color: "transparent"
-            radius: cell.radius
-            border.width: Style.normalBorderWidth
-            border.color: Colors.primary
-        }
 
         Row {
             id: content
@@ -130,7 +118,9 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: cell.count >= 0
                 text: cell.count >= 0 ? String(cell.count) : ""
-                color: Colors.muted
+                // On the solid accent the counter keeps contrast without
+                // competing with the label.
+                color: cell.current ? Colors.withAlpha(Colors.on_primary, 0.75) : Colors.muted
                 font.family: cell.bodyFont
                 font.pixelSize: Style.font.caption
             }
