@@ -95,7 +95,11 @@ Item {
             tabIndex: root.tabIndex
             brand: brandComponent
             searchOpen: root.searchOpen
-            showMode: true
+            // SUB/DUB as cells of the header row (owner, round 6, D1a).
+            modes: [
+                { id: "sub", label: "SUB" }, // i18n-ignore — key name, same in both languages
+                { id: "dub", label: "DUB" } // i18n-ignore — key name, same in both languages
+            ]
             mode: Anime.currentMode
             fontFamily: root.fontBody
             settingsMode: root.settingsMode

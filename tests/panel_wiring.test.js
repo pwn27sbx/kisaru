@@ -45,6 +45,32 @@ test("shell.qml takes every slot's opacity from the tested function", () => {
     assert.doesNotMatch(shell, /Panels\.opacityFor\s*\(/);
 });
 
+test("the three panels share one header: no per-panel look flags", () => {
+    // Owner, round 6: the redesigned header is the default of the shared
+    // component. A flag coming back would let one panel drift away from the
+    // other two, which is exactly what the shared-components plan removes.
+    const header = read("components/PanelHeader.qml");
+    for (const flag of ["segmentedTabs", "fullHeightCells", "showLanguage", "showMode", "extraAction"]) {
+        assert.doesNotMatch(header, new RegExp(flag), `PanelHeader still declares ${flag}`);
+    }
+    const brand = read("components/PanelBrand.qml");
+    for (const flag of ["showGlyph", "uppercaseTitle"]) {
+        assert.doesNotMatch(brand, new RegExp(flag), `PanelBrand still declares ${flag}`);
+    }
+    // The language chip lives in the settings page only.
+    assert.ok(!fs.existsSync(path.join(ROOT, "components/LanguageToggle.qml")),
+        "LanguageToggle.qml is back; the language is a setting");
+});
+
+test("anime and novel drive the shared cells instead of their own copies", () => {
+    // SUB/DUB and the provider used to be header internals; they are cells now.
+    const anime = read("modules/anime/AnimePanel.qml");
+    assert.match(anime, /modes:\s*\[/);
+    assert.match(anime, /onModeSelected/);
+    const novel = read("modules/novel/NovelReader.qml");
+    assert.match(novel, /extraCell:/);
+});
+
 test("every panel keeps publishing pointerInside from a HoverHandler", () => {
     for (const file of PANELS) {
         const qml = read(file);

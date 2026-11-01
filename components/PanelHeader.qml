@@ -5,21 +5,30 @@ import qs.Commons
 import qs.Ui
 import "../services/header_cell.js" as HeaderCell
 
-// One header row shared by the three panels (plan R2 §2.1).
+// The header row, shared by the three panels (owner, round 6: one look for all).
 //
-// Far left: the optional panel brand (`brand`, a Component); the tabs follow
-// it and shift right when it is present. Absent on callers that do not pass
-// one, which keeps their header exactly as it was.
-// Left: the Browse / Library tabs. The current one is a pill — the accent tint
-// behind its label — and the other stays plain muted text; neither has a
-// border.
-// Right: search, the optional SUB/DUB pair, the module action, the optional
-// EN/ES chip, and minimize, all on the same baseline, with the free space in
-// the middle.
+// One strip of full-height cells, no box inside a box:
+//
+//   [ BRAND ][ Browse 32 ][ Library 1 ][ SUB | DUB ][ provider ] … [⌕][⚙][─]
+//
+// The selected cell wears the active filter chip's recipe (accent tint, 1 px
+// accent ring, resolved state colour); the rest stay plain and tint on hover.
+// `services/header_cell.js` decides which paint applies and is tested; this file
+// only maps that answer to Style calls.
+//
+// Cells, in order:
+//   - `brand`, a Component supplied by the panel (PanelBrand in caps, no glyph);
+//   - the tabs, with an optional small muted counter each;
+//   - `modes`, a small switch for a panel-wide choice — anime's SUB/DUB — with
+//     `modeSelected` reported; only on the first tab, where it applies;
+//   - `extraCell`, one slot for a control that is not a pair (the novel panel's
+//     provider dropdown); also only on the first tab;
+//   - on the right, the search button (until the always-visible field lands),
+//     then the gear and close as plain icon cells.
 //
 // The search field itself belongs to each panel (it owns the debounce and the
-// backend call), so it is placed in the `overlay` slot: it covers the tabs
-// while the search is open and never overlaps the actions.
+// backend call), so it still arrives through the `overlay` slot while the panel
+// runs its own expanding search.
 Item {
     id: root
 
@@ -29,38 +38,20 @@ Item {
     // stays a string[], so the delegates keep rendering `String(modelData)`
     // instead of `[object Object]`.
     property var tabCounts: []
-    // Draw the tabs as one segmented box (the Stitch header): both live inside
-    // a faint surface with the theme radius and ~2 px padding, the current one
-    // a filled pill, each count a small muted number beside its label. Off by
-    // default, so the anime and the novel header keep the two loose labels
-    // they have today.
-    property bool segmentedTabs: false
-    // The header as a strip of cells (owner, round 4): the brand, the tabs and
-    // the two icon actions each fill the row's height, with no box inside a
-    // box — only the selected cell is tinted, the rest stay plain and tint on
-    // hover. Opt-in, so anime and the novel panel keep their current header.
-    property bool fullHeightCells: false
-    // Segmented AND boxed: the faint container is what `fullHeightCells`
-    // replaces, so the two cannot both paint.
-    readonly property bool _boxedTabs: root.segmentedTabs && !root.fullHeightCells
-    // Short panel name + glyph, supplied by the panel (Component). `null` here
-    // is the default, so a caller without a brand is untouched.
+    // `[{ id, label }]`: a panel-wide switch rendered as cells after the tabs.
+    // Anime passes SUB/DUB; a panel with nothing to switch passes none.
+    property var modes: []
+    property string mode: ""
     property Component brand: null
     property int tabIndex: 0
     property bool showSearch: true
     property bool searchOpen: false
-    property bool showMode: false
     // While the settings view is open the content controls step aside: search,
-    // SUB/DUB and the module action belong to the list, not to settings.
+    // modes and the extra cell belong to the list, not to settings.
     property bool settingsMode: false
-    property string mode: ""
-    // Module-specific action (the novel panel's provider dropdown), placed
-    // between the SUB/DUB pair and the language chip.
-    property Component extraAction: null
-    // The header's EN/ES chip. Anime and the novel panel keep it; the manga
-    // panel sets it to false because the language lives in its settings page
-    // now (owner, round 2: "it is a setting").
-    property bool showLanguage: true
+    // A control that is not a pair (the novel panel's provider dropdown),
+    // rendered as one full-height cell before the gear.
+    property Component extraCell: null
     property string fontFamily: Style.font.family
 
     // Items declared as children land here (the panel's search field).
@@ -75,17 +66,101 @@ Item {
     implicitHeight: Style.space(48)
     implicitWidth: parent ? parent.width : 0
 
-    // The brand is part of the tab row: it disappears with it while the
-    // search field covers the left region.
-    readonly property bool showBrand: root.brand !== null && !root.searchOpen
+    // The mode switch and the extra cell belong to the list on the first tab.
+    readonly property bool _listTab: root.tabIndex === 0 && !root.settingsMode
 
     Rectangle {
         anchors.fill: parent
         color: Colors.surface_container_low
     }
 
-    // Brand block. An inactive Loader has no width, so the tabs fall back to
-    // their original left margin when no brand is loaded.
+    // One cell of the row: full height, plain until it is current or hovered.
+    // Shared by the tabs and the modes so the two cannot drift apart.
+    component Cell: ClickableRect {
+        id: cell
+
+        required property string label
+        required property bool current
+        // -1 (the default) means "this cell carries no counter".
+        property int count: -1
+        property string bodyFont: root.fontFamily
+
+        // Button's own state precedence, resolved in header_cell.js.
+        readonly property var _style: HeaderCell.cellStyle({
+            current: cell.current,
+            hovered: cell.hovered,
+            pressed: cell.pressed
+        })
+        // The ring Button reserves for its widest state border; taken from the
+        // same tokens so a theme that changes them moves the cell with it.
+        readonly property int _ring: Math.max(Style.hoverBorderWidth,
+                                             Style.selectedBorderWidth)
+        // The active filter chip's exact recipe: Button with `selected`
+        // resolves one state colour from (foreground, accent) and FilterBar
+        // passes Colors.text as the foreground of its current chip, so that is
+        // the pair used here — the same two calls, not a third tint.
+        readonly property color _selectedColor: Style.selectedStateColor(Colors.text, Colors.primary)
+        readonly property color _fillBase: cell.current ? Colors.text : Colors.muted
+        readonly property color _foreground:
+            cell._style.label === HeaderCell.LABEL.SELECTED ? cell._selectedColor : cell._fillBase
+
+        implicitWidth: content.implicitWidth + 2 * Style.spacing.controlPaddingX + 2 * cell._ring
+        // The cell IS the header row, so the tint reaches its top and bottom.
+        implicitHeight: root.implicitHeight
+        radius: 0 // style-ignore — the header cells are square
+        cursorShape: Qt.PointingHandCursor
+        color: cell._style.fill === HeaderCell.FILL.PRESSED
+            ? Style.pressedFillFor(cell._fillBase, Colors.primary)
+            : cell._style.fill === HeaderCell.FILL.HOVER
+                ? Style.hoverFillFor(cell._fillBase, Colors.primary)
+                : cell._style.fill === HeaderCell.FILL.SELECTED
+                    ? Style.selectedFillFor(Colors.text, Colors.primary)
+                    : "transparent"
+        // A ring around a header-tall cell would read as a box, which is what
+        // this layout removes; the tint says it.
+        border.width: 0
+        Behavior on color { ColorAnimation { duration: Motion.fast } }
+
+        // The active chip's ring, drawn the way FilterBar draws it (not as
+        // `border`, which Button derives from its own state machine).
+        Rectangle {
+            anchors.fill: parent
+            visible: cell._style.showRing
+            color: "transparent"
+            radius: cell.radius
+            border.width: Style.normalBorderWidth
+            border.color: Colors.primary
+        }
+
+        Row {
+            id: content
+            anchors.centerIn: parent
+            // The gap exists only when there is a counter to separate.
+            spacing: cell.count >= 0 ? Style.spacing.xs : 0
+
+            StyledText {
+                anchors.verticalCenter: parent.verticalCenter
+                text: cell.label
+                color: cell._foreground
+                font.family: cell.bodyFont
+                font.pixelSize: Style.font.body
+            }
+
+            // The counter: a small muted number beside the label, not part of
+            // it. `visible` alone is enough — a Row skips invisible items, and
+            // binding width to implicitWidth on Text is the classic path to a
+            // binding loop (Qt logged one).
+            StyledText {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: cell.count >= 0
+                text: cell.count >= 0 ? String(cell.count) : ""
+                color: Colors.muted
+                font.family: cell.bodyFont
+                font.pixelSize: Style.font.caption
+            }
+        }
+    }
+
     Loader {
         id: brandLoader
         anchors {
@@ -93,184 +168,47 @@ Item {
             leftMargin: Style.spacing.md
             verticalCenter: parent.verticalCenter
         }
-        active: root.showBrand
         sourceComponent: root.brand
     }
 
-    // Tabs. With `segmentedTabs` they share one container (the Stitch header):
-    // faint surface, theme radius, a hairline and ~2 px padding, with the
-    // current one a filled pill inside it. Without it the wrapper collapses to
-    // the bare Row these callers have always had — same position, same
-    // spacing, no paint — so anime and the novel panel do not move.
-    Rectangle {
-        id: tabsBox
+    Row {
+        id: cellsRow
         visible: !root.searchOpen
         anchors {
             left: brandLoader.active ? brandLoader.right : parent.left
             leftMargin: Style.spacing.md
-            verticalCenter: parent.verticalCenter
+            top: parent.top
+            bottom: parent.bottom
         }
-        width: tabsRow.implicitWidth + (root._boxedTabs ? 2 * Style.spacing.xxs : 0)
-        height: root.fullHeightCells
-            ? root.implicitHeight
-            : (root.segmentedTabs
-                ? Style.spacing.controlHeight + 2 * Style.spacing.xxs
-                : tabsRow.implicitHeight)
-        radius: Style.cornerRadius
-        color: root._boxedTabs ? Colors.surface_container : "transparent"
-        border.width: root._boxedTabs ? Style.spacing.hairline : 0
-        border.color: Colors.outline_variant
 
-        Row {
-            id: tabsRow
-            x: root._boxedTabs ? Style.spacing.xxs : 0
-            y: root._boxedTabs ? Style.spacing.xxs : 0
-            spacing: root._boxedTabs ? Style.spacing.xxs : Style.spacing.md
+        Repeater {
+            model: root.tabs
 
-            Repeater {
-                model: root.tabs
+            delegate: Cell {
+                required property var modelData
+                required property int index
 
-                // The tab pill. qs.Ui's Button draws ONE text run, and Stitch's
-                // tabs need two (the label plus a smaller, muted count), so the
-                // pill is built here instead. Its box, fills and ring mirror
-                // Button's own: same paddings, same reserved state border (so a
-                // hover ring never relayouts the row), same state precedence
-                // (pressed → hover → current) and the same 120 ms colour fade.
-                // Orientation, position and spacing are unchanged, so a caller
-                // that does not pass `segmentedTabs` (anime, the novel panel)
-                // keeps the tabs it has today.
-                delegate: ClickableRect {
-                    id: tab
-
-                    required property var modelData
-                    required property int index
-
-                    readonly property bool isCurrent: index === root.tabIndex
-                    // -1 / missing entry: this tab carries no counter.
-                    readonly property int count: {
-                        var counts = root.tabCounts
-                        if (!counts || index >= counts.length)
-                            return -1
-                        var value = Number(counts[index])
-                        return isFinite(value) ? value : -1
-                    }
-                    // The ring Button reserves for its widest state border and
-                    // paints on hover-cursor; taken from the same tokens so a
-                    // theme that changes them moves this pill with it.
-                    readonly property int _ring: Math.max(Style.hoverBorderWidth,
-                                                         Style.selectedBorderWidth)
-                    // The active filter chip's exact recipe (owner, round 5:
-                    // "the same look as the active chip, reused, not copied as
-                    // new values"). Button with `selected` resolves one state
-                    // colour from (foreground, accent) and paints both the text
-                    // and the fill with it, and FilterBar rings it in the
-                    // accent. FilterBar passes Colors.text as the foreground of
-                    // its current chip, so that is the pair used here — the
-                    // same two calls, not a third tint invented for the header.
-                    //
-                    // WHICH paint applies is decided in services/header_cell.js
-                    // so the contract can be tested; this block only maps the
-                    // answer to the Style calls.
-                    readonly property var _style: HeaderCell.cellStyle({
-                        current: isCurrent,
-                        hovered: tab.hovered,
-                        pressed: tab.pressed,
-                        fullHeight: root.fullHeightCells
-                    })
-                    readonly property color _selectedColor: Style.selectedStateColor(Colors.text, Colors.primary)
-                    // What Button calls `foreground`: it drives the pressed and
-                    // hover fills. Muted while the cell is not the current one,
-                    // exactly like the chip.
-                    readonly property color _fillBase: isCurrent ? Colors.text : Colors.muted
-                    // Two roles, two colours: the resolved state colour for the
-                    // selected full-height cell, and otherwise exactly the fill
-                    // base (text when current, muted when not).
-                    readonly property color _foreground:
-                        tab._style.label === HeaderCell.LABEL.SELECTED ? tab._selectedColor : tab._fillBase
-
-                    implicitWidth: tabRow.implicitWidth + 2 * Style.spacing.controlPaddingX + 2 * _ring
-                    // Segmented: the cell fills the container's interior, so the
-                    // active pill and the inactive label are the same height.
-                    // Full height: the cell IS the header row, so the tint
-                    // reaches its top and bottom edges.
-                    implicitHeight: root.fullHeightCells
-                        ? root.implicitHeight
-                        : (root.segmentedTabs
-                            ? Style.spacing.controlHeight
-                            : tabRow.implicitHeight + 2 * Style.spacing.controlPaddingY + 2 * _ring)
-                    // Segmented: the cell sits inside the container's padding
-                    // and takes its curve, so a rounded theme never shows a
-                    // square fill poking through the corner.
-                    radius: root.fullHeightCells
-                        ? 0
-                        : (root.segmentedTabs ? Style.cornerRadius : 0)
-                    cursorShape: Qt.PointingHandCursor
-                    color: tab._style.fill === HeaderCell.FILL.PRESSED
-                        ? Style.pressedFillFor(tab._fillBase, Colors.primary)
-                        : tab._style.fill === HeaderCell.FILL.HOVER
-                            ? Style.hoverFillFor(tab._fillBase, Colors.primary)
-                            : tab._style.fill === HeaderCell.FILL.SELECTED
-                                ? Style.selectedFillFor(Colors.text, Colors.primary)
-                                : "transparent"
-                    // The other headers ring on hover; the full-height one
-                    // tints instead (a ring around a header-tall cell reads as
-                    // a box, which is what this layout removes).
-                    border.width: tab._style.showHoverRing ? tab._ring : 0
-                    border.color: Style.hoverBorderFor(tab._foreground, Colors.primary)
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
-
-                    // The active chip's ring, drawn the way FilterBar draws it
-                    // (not as `border`, which Button derives from its own state
-                    // machine). Only the full-height header has it: the anime and
-                    // novel headers keep the plain pill they have today.
-                    Rectangle {
-                        anchors.fill: parent
-                        visible: tab._style.showRing
-                        color: "transparent"
-                        radius: tab.radius
-                        border.width: Style.normalBorderWidth
-                        border.color: Colors.primary
-                    }
-
-                    Row {
-                        id: tabRow
-                        anchors.centerIn: parent
-                        // Only a segmented tab with a counter has two runs, so
-                        // the gap exists only there (no stray space in the pill).
-                        spacing: root.segmentedTabs && tab.count >= 0
-                            ? Style.spacing.xs : 0
-
-                        StyledText {
-                            anchors.verticalCenter: parent.verticalCenter
-                            // Without the segmented box the count stays inside
-                            // the one string, exactly as it always was.
-                            text: root.segmentedTabs
-                                ? String(tab.modelData)
-                                : (tab.count >= 0
-                                    ? String(tab.modelData) + " · " + tab.count
-                                    : String(tab.modelData))
-                            color: tab._foreground
-                            font.family: root.fontFamily
-                            font.pixelSize: Style.font.body
-                        }
-
-                        // Stitch's count: a small muted number beside the label,
-                        // not part of it.
-                        // No width override: a Row already skips invisible
-                        // items, and binding width to implicitWidth on Text is
-                        // the classic path to a binding loop (Qt logged one).
-                        StyledText {
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: root.segmentedTabs && tab.count >= 0
-                            text: tab.count >= 0 ? String(tab.count) : ""
-                            color: Colors.muted
-                            font.family: root.fontFamily
-                            font.pixelSize: Style.font.caption
-                        }
-                    }
-
-                    onClicked: root.tabActivated(tab.index)
+                label: String(modelData)
+                current: index === root.tabIndex
+                count: {
+                    var counts = root.tabCounts
+                    if (!counts || index >= counts.length) return -1
+                    var value = Number(counts[index])
+                    return isFinite(value) ? value : -1
                 }
+                onClicked: root.tabActivated(index)
+            }
+        }
+
+        Repeater {
+            model: root._listTab ? root.modes : []
+
+            delegate: Cell {
+                required property var modelData
+
+                label: String(modelData.label || "")
+                current: String(modelData.id || "") === root.mode
+                onClicked: root.modeSelected(String(modelData.id || ""))
             }
         }
     }
@@ -303,39 +241,15 @@ Item {
             onClicked: root.searchClicked()
         }
 
-        Row {
-            visible: !root.settingsMode && root.showMode && root.tabIndex === 0
-            spacing: Style.spacing.xs
-
-            Repeater {
-                model: ["sub", "dub"]
-
-                delegate: Button {
-                    required property string modelData
-
-                    readonly property bool active: modelData === root.mode
-
-                    text: modelData.toUpperCase()
-                    bordered: false
-                    selected: active
-                    foreground: active ? Colors.text : Colors.muted
-                    fontFamily: root.fontFamily
-                    fontSize: Style.font.caption
-                    horizontalPadding: Style.spacing.lg
-                    onClicked: root.modeSelected(modelData)
-                }
-            }
-        }
-
+        // The panel's own control (novel's provider dropdown), one cell tall —
+        // the control inside is expected to be one cell of the row.
         Loader {
+            id: extraLoader
             anchors.verticalCenter: parent.verticalCenter
-            visible: !root.settingsMode && root.extraAction !== null && root.tabIndex === 0 && !root.searchOpen
-            sourceComponent: root.extraAction
-        }
-
-        LanguageToggle {
-            visible: root.showLanguage && !root.settingsMode
-            anchors.verticalCenter: parent.verticalCenter
+            visible: root._listTab && root.extraCell !== null && !root.searchOpen
+            height: root.implicitHeight
+            width: item ? item.implicitWidth : 0
+            sourceComponent: root.extraCell
         }
 
         PanelActionButton {
@@ -343,13 +257,13 @@ Item {
             tooltipText: I18n.t("settings.open")
             focusable: true
             hasCursor: root.settingsMode
-            size: root.fullHeightCells ? root.implicitHeight : Style.space(36)
+            size: root.implicitHeight
             onClicked: root.settingsClicked()
         }
 
         PanelActionButton {
             iconText: "─"
-            size: root.fullHeightCells ? root.implicitHeight : Style.space(36)
+            size: root.implicitHeight
             onClicked: root.minimizeClicked()
         }
     }

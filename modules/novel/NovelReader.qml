@@ -176,14 +176,16 @@ Item {
                 }
             }
 
-            extraAction: Item {
+            extraCell: Item {
                 id: providerButton
                 implicitWidth: providerRow.implicitWidth + Style.spacing.xl * 2
-                implicitHeight: Style.space(36)
 
+                // One cell of the header row: plain until hovered, like the
+                // tabs beside it (owner, round 6, D1a).
                 Rectangle {
-                    anchors.fill: parent; radius: Style.cornerRadius
-                    color: providerDropArea.containsMouse ? Colors.surface_container_highest : Colors.surface_container
+                    anchors.fill: parent
+                    color: providerDropArea.containsMouse
+                        ? Style.hoverFillFor(Colors.muted, Colors.primary) : "transparent"
                     Behavior on color { ColorAnimation { duration: Motion.base } }
                 }
 

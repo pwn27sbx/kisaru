@@ -120,16 +120,13 @@ Item {
         }
     }
 
-    // Header brand: this panel's name only, no glyph (owner, round 2: the text
-    // is "MangaReader" exactly like that, without an icon). The other two
-    // panels keep their glyph; `showGlyph` is per caller for that reason.
+    // Header brand: the panel's name; PanelBrand sets it in caps without a
+    // glyph for all three panels now (owner, round 6).
     Component {
         id: brandComponent
         PanelBrand {
             title: I18n.t("brand.manga")
             fontFamily: root.fontBody
-            showGlyph: false
-            uppercaseTitle: true
         }
     }
 
@@ -149,13 +146,7 @@ Item {
             tabIndex: root.tabIndex
             brand: brandComponent
             tabCounts: [Manga.mangaList.length, Manga.libraryList.length]
-            segmentedTabs: true
-            // The round-4 top zone: brand, tabs and the two icon actions are
-            // cells of the header row itself.
-            fullHeightCells: true
             showSearch: false
-            // The language moved into the settings page (owner, round 2).
-            showLanguage: false
             fontFamily: root.fontBody
             settingsMode: root.settingsMode
             onTabActivated: function(index) {
