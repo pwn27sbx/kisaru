@@ -63,9 +63,6 @@ function normalizeViewMode(value) {
     return VIEW_MODES.indexOf(mode) >= 0 ? mode : DEFAULT_VIEW_MODE;
 }
 
-// Same document with ONE key set and everything else left alone. This is the
-// only writer shape the app uses: the language row and the scroll slider each
-// own their key, and neither may drop the other's.
 // "sub" | "dub" and nothing else: a hand-edited file or a missing key falls
 // back to the default instead of leaving the panel asking for an unknown mode.
 function normalizeAnimeMode(value) {
@@ -73,6 +70,16 @@ function normalizeAnimeMode(value) {
     return ANIME_MODES.indexOf(mode) >= 0 ? mode : DEFAULT_ANIME_MODE;
 }
 
+// The rows the anime settings page draws, built from the same table the
+// normalizer validates: a mode added in one place cannot go missing in the
+// other. The labels are key caps, not UI copy, so they do not go through i18n.
+var ANIME_MODE_OPTIONS = ANIME_MODES.map(function (id) {
+    return { id: id, label: id.toUpperCase() };
+});
+
+// Same document with ONE key set and everything else left alone. This is the
+// only writer shape the app uses: the language row and the scroll slider each
+// own their key, and neither may drop the other's.
 function withSetting(text, key, value) {
     var data = parseSettings(text);
     data[String(key)] = value;
@@ -91,6 +98,7 @@ if (typeof module !== "undefined" && module.exports) {
         DEFAULT_VIEW_MODE: DEFAULT_VIEW_MODE,
         normalizeViewMode: normalizeViewMode,
         DEFAULT_ANIME_MODE: DEFAULT_ANIME_MODE,
+        ANIME_MODE_OPTIONS: ANIME_MODE_OPTIONS,
         normalizeAnimeMode: normalizeAnimeMode
     };
 }

@@ -11,7 +11,8 @@ import qs.Commons
 //
 // The field does not search: the panel owns its debounce and its service call,
 // so `edited()` is emitted on every keystroke and the panel decides what to do.
-// `cleared()` fires after Esc or the clear cell, for the focus bookkeeping.
+// `cleared()` fires only when a person clears (Esc or the clear cell): the
+// panel hangs "leave the search" off it. A programmatic `clear()` is silent.
 Rectangle {
     id: root
 
@@ -27,15 +28,22 @@ Rectangle {
         input.forceActiveFocus()
     }
 
-    // Programmatic clear: no `edited()`, so a filter change that invalidates
-    // the query does not also kick the panel's debounce into a second fetch.
-    // `cleared()` still fires, for the focus bookkeeping.
+    // Programmatic clear: no `edited()` (a filter that invalidates the query
+    // must not also kick the panel's debounce into a second fetch) and no
+    // `cleared()` either (the panel's handler blurs the field and resets the
+    // list — a side effect only a person asking to clear should trigger).
     property bool _silent: false
 
     function clear() {
         root._silent = true
         input.text = ""
         root._silent = false
+    }
+
+    // What Esc and the clear cell do: empty the field and TELL the panel, which
+    // is where "leave the search" lives.
+    function userClear() {
+        root.clear()
         root.cleared()
     }
 
@@ -76,9 +84,9 @@ Rectangle {
         font.pixelSize: Style.font.body
         clip: true
         onTextChanged: if (!root._silent) root.edited()
-        // Esc clears and leaves; the panel restores its list from `edited()`
-        // when the text ends up empty.
-        Keys.onEscapePressed: root.clear()
+        // Esc clears and leaves: `cleared()` is what tells the panel to
+        // restore its list and hand the focus back.
+        Keys.onEscapePressed: root.userClear()
     }
 
     StyledText {
@@ -130,7 +138,7 @@ Rectangle {
             color: Colors.surface_container_highest
             border.width: Style.spacing.hairline
             border.color: Colors.outline_variant
-            onClicked: root.clear()
+            onClicked: root.userClear()
 
             StyledText {
                 anchors.centerIn: parent

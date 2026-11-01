@@ -8,6 +8,7 @@ import qs.modules.anime.components
 import qs.components
 import qs.Ui
 import "../../services/status_line.js" as StatusLine
+import "../../services/prefs.js" as Prefs
 
 Item {
     id: root
@@ -214,11 +215,9 @@ Item {
                 showScroll: false
                 active: root.settingsMode
                 // SUB/DUB lives here now (owner, round 6): a preference like the
-                // language, persisted with the rest.
-                modes: [
-                    { id: "sub", label: "SUB" }, // i18n-ignore — key cap; `id` is the value
-                    { id: "dub", label: "DUB" } // i18n-ignore — key cap; `id` is the value
-                ]
+                // language, persisted with the rest. The rows come from
+                // services/prefs.js, the same table that validates the value.
+                modes: Prefs.ANIME_MODE_OPTIONS
                 mode: Anime.currentMode
                 onModeSelected: function(id) { Anime.setMode(id) }
                 onCloseRequested: root.settingsMode = false

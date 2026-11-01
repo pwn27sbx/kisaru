@@ -102,6 +102,20 @@ test("normalizeAnimeMode() defaults to sub and accepts only the two modes", () =
     assert.equal(prefs.normalizeAnimeMode(" DUB "), "dub");
 });
 
+test("the settings rows and the validator share one table", () => {
+    // The anime settings page draws ANIME_MODE_OPTIONS; setMode persists an id
+    // and normalizeAnimeMode keeps it only if it is in the same list. A row
+    // added to one and not the other would save a value the next launch drops.
+    const ids = prefs.ANIME_MODE_OPTIONS.map((option) => option.id);
+    assert.deepEqual(ids, ["sub", "dub"]);
+    for (const id of ids) {
+        assert.equal(prefs.normalizeAnimeMode(id), id, id);
+        // The label is a key cap, and it is what the panel paints.
+        const option = prefs.ANIME_MODE_OPTIONS.find((o) => o.id === id);
+        assert.equal(option.label, id.toUpperCase());
+    }
+});
+
 test("withSetting() persists animeMode without dropping the other keys", () => {
     const before = JSON.stringify({ language: "es", scrollFactor: 4, viewMode: "list", animeMode: "sub" });
     const after = JSON.parse(prefs.withSetting(before, "animeMode", "dub"));
