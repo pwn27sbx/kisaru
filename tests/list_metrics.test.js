@@ -7,8 +7,18 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const metrics = require("../services/list_metrics.js");
 
-test("a row is 72 base units and the skeleton reads the same number", () => {
-    assert.equal(metrics.ROW_HEIGHT_BASE, 72);
+test("a row is 96 base units and the skeleton reads the same number", () => {
+    // A-8: 72 could not hold a 56 px thumbnail plus a two-line title.
+    assert.equal(metrics.ROW_HEIGHT_BASE, 96);
+});
+
+test("the thumbnail is 56 wide and the row still has room around it", () => {
+    assert.equal(metrics.THUMB_WIDTH, 56);
+    assert.equal(metrics.THUMB_RATIO, 0.7);
+    // 2:3 of the width, plus a little air top and bottom.
+    const thumbHeight = Math.round(metrics.THUMB_WIDTH / metrics.THUMB_RATIO);
+    assert.equal(thumbHeight, 80);
+    assert.ok(metrics.ROW_HEIGHT_BASE > thumbHeight, "the cover is taller than its row");
 });
 
 test("prefetch starts half a viewport before the end", () => {

@@ -9,12 +9,15 @@ import "../services/header_cell.js" as HeaderCell
 //
 // One strip of full-height cells, no box inside a box:
 //
-//   [ BRAND ][ Browse 32 ][ Library 1 ] … [ provider ] [⚙][─]
+//   [ BRAND ][ Browse ][ Library ▢1 ] …[ provider ][⚙][─]
 //
-// The selected cell wears the active filter chip's recipe (accent tint, 1 px
-// accent ring, resolved state colour); the rest stay plain and tint on hover.
-// `services/header_cell.js` decides which paint applies and is tested; this file
-// only maps that answer to Style calls.
+// The selected cell is a solid accent block with the dark bold label; the rest
+// stay plain and tint on hover. `services/header_cell.js` decides which paint
+// applies and is tested; this file only maps that answer to Style calls.
+//
+// A tab's count is a badge, and only the panels that want one pass it: Browse
+// carries no number (the status bar already counts the loaded list) and an
+// empty Library hides its badge instead of showing a zero (owner, A-8).
 //
 // The search is not here: each panel puts the always-visible `SearchField` under
 // this row (owner, round 6), so the header has no search state and no overlay.
@@ -25,9 +28,10 @@ Item {
 
     property var tabs: []
     // Counters for the tabs above, one entry per tab. A `-1` (or a missing
-    // entry) means "no counter". Kept parallel and separate on purpose: `tabs`
-    // stays a string[], so the delegates keep rendering `String(modelData)`
-    // instead of `[object Object]`.
+    // entry) means "no counter", and a `0` means "nothing to count yet": both
+    // draw no badge. Kept parallel and separate on purpose: `tabs` stays a
+    // string[], so the delegates keep rendering `String(modelData)` instead of
+    // `[object Object]`.
     property var tabCounts: []
     property Component brand: null
     property int tabIndex: 0
@@ -78,8 +82,8 @@ Item {
         readonly property color _foreground:
             cell._style.label === HeaderCell.LABEL.ON ? Colors.on_primary : cell._fillBase
 
-        // How much of the on-accent colour the counter keeps.
-        readonly property real counterOpacity: 0.75
+        // How much of the on-accent colour the badge keeps behind its number.
+        readonly property real badgeFillOpacity: 0.18
 
         implicitWidth: content.implicitWidth + 2 * Style.spacing.controlPaddingX
         // The cell IS the header row, so the tint reaches its top and bottom.
@@ -100,8 +104,8 @@ Item {
         Row {
             id: content
             anchors.centerIn: parent
-            // The gap exists only when there is a counter to separate.
-            spacing: cell.count >= 0 ? Style.spacing.xs : 0
+            // The gap exists only when there is a badge to separate.
+            spacing: HeaderCell.showBadge(cell.count) ? Style.spacing.xs : 0
 
             StyledText {
                 anchors.verticalCenter: parent.verticalCenter
@@ -109,23 +113,36 @@ Item {
                 color: cell._foreground
                 font.family: cell.bodyFont
                 font.pixelSize: Style.font.body
+                // Current is bold here too: one recipe for every selected label.
+                font.bold: cell._style.strong
             }
 
-            // The counter: a small muted number beside the label, not part of
-            // it. `visible` alone is enough — a Row skips invisible items, and
-            // binding width to implicitWidth on Text is the classic path to a
-            // binding loop (Qt logged one).
-            StyledText {
+            // The count is a badge, not loose digits after the word: a small box
+            // with a faint fill, so "Library ▢3" reads as one control and stays
+            // legible on both the solid accent and the idle cell. Zero is not
+            // shown at all (owner, A-8).
+            Rectangle {
+                id: badge
                 anchors.verticalCenter: parent.verticalCenter
-                visible: cell.count >= 0
-                text: cell.count >= 0 ? String(cell.count) : ""
-                // On the solid accent the counter keeps contrast without
-                // competing with the label.
+                visible: HeaderCell.showBadge(cell.count)
+                width: Math.max(Style.space(16),
+                    badgeText.implicitWidth + 2 * Style.spacing.xs)
+                height: Math.max(Style.space(16),
+                    badgeText.implicitHeight + Style.spacing.xs)
+                radius: Style.cornerRadius
                 color: cell.current
-                    ? Colors.withAlpha(Colors.on_primary, cell.counterOpacity)
-                    : Colors.muted
-                font.family: cell.bodyFont
-                font.pixelSize: Style.font.caption
+                    ? Colors.withAlpha(Colors.on_primary, cell.badgeFillOpacity)
+                    : Colors.surface_container_high
+
+                StyledText {
+                    id: badgeText
+                    anchors.centerIn: parent
+                    text: HeaderCell.showBadge(cell.count) ? String(cell.count) : ""
+                    color: cell.current ? Colors.on_primary : Colors.on_surface
+                    font.family: cell.bodyFont
+                    font.pixelSize: Style.font.caption
+                    font.bold: true
+                }
             }
         }
     }

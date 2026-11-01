@@ -105,7 +105,8 @@ Item {
             z: 2
             tabs: [I18n.t("tab.browse"), I18n.t("tab.library")]
             tabIndex: root.tabIndex
-            tabCounts: [Anime.animeList.length, Anime.libraryList.length]
+            // Browse carries no number; Library shows a badge, hidden at 0 (A-8).
+            tabCounts: [-1, Anime.libraryList.length]
             brand: brandComponent
             fontFamily: root.fontBody
             settingsMode: root.settingsMode

@@ -1,13 +1,13 @@
 import QtQuick
 import qs.app
 import qs.Commons
-import qs.Ui
 
 // Horizontal filter chips shared by the three Browse views (plan R2 §2.2).
 //
-// The active chip is TINTED (`selected`, the Style selected fill) with the
-// foreground text and carries a 1 px accent ring; the rest are muted and have
-// no background and no border at all.
+// The active chip is a SOLID accent block with the dark bold label; the rest are
+// muted with no fill and no border. Both readings come from components/Chip and
+// the tested recipe in services/header_cell.js (owner, round 6 for the fill,
+// A-8 for the dark bold label).
 //
 // `options` is a string[] or an array of { label } objects; `currentIndex`
 // marks the active one and `activated(index)` reports a click. `label` is
@@ -53,26 +53,16 @@ Item {
             Repeater {
                 model: root.options
 
-                delegate: Button {
-                    id: chip
-
+                // components/Chip, not a kit Button: Button paints the selected
+                // label from the theme's light `selected-color`, which is why
+                // the active chip read light on orange (owner, A-8).
+                delegate: Chip {
                     required property var modelData
                     required property int index
 
-                    readonly property bool current: index === root.currentIndex
-
                     text: root.labelOf(modelData)
-                    bordered: false
-                    selected: current
-                    // Selected is the solid accent with the on-accent label; the
-                    // active ring is gone (owner, round 6). Hover on the rest
-                    // keeps Button's own tint.
-                    color: chip.current ? Colors.primary
-                        : chip.hot ? Style.hoverFillFor(Colors.muted, Colors.primary)
-                        : "transparent"
-                    foreground: current ? Colors.on_primary : Colors.muted
-                    fontFamily: root.fontFamily
-                    fontSize: Style.font.body
+                    current: index === root.currentIndex
+                    bodyFont: root.fontFamily
                     onClicked: root.activated(index)
                 }
             }

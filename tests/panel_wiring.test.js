@@ -130,12 +130,20 @@ test("the audio setting is the same card as the language row", () => {
     assert.match(card, /Border\.controlSpec\("normal"/);
 });
 
-test("every header shows its tab counters", () => {
-    // Owner, round 6: anime and novel get the same "Browse 32 · Library 1" the
-    // manga header has had since round 4.
+test("Browse carries no number and Library shows its count as a badge", () => {
+    // Owner, round 6 gave every header its counters; A-8 refined the rule:
+    // the loaded count already lives in the status bar, so Browse passes `-1`
+    // (no counter) and only Library carries a number.
     for (const file of PANELS) {
-        assert.match(read(file), /tabCounts:\s*\[/, `${file}: no tab counts`);
+        const panel = read(file);
+        assert.match(panel, /tabCounts:\s*\[-1,/, `${file}: Browse still carries a number`);
+        assert.match(panel, /tabCounts:\s*\[-1,\s*\w+\.libraryList\.length\]/,
+            `${file}: Library does not count its list`);
     }
+    // The badge, and the rule that hides it at zero, are in one place.
+    const header = read("components/PanelHeader.qml");
+    assert.match(header, /HeaderCell\.showBadge\(cell\.count\)/, "the header does not hide an empty badge");
+    assert.match(header, /font\.bold: true/, "the badge number is not bold");
 });
 
 test("a library cell reserves its footer on top of the shared box", () => {
@@ -241,6 +249,19 @@ test("all three panels are 550 wide, and the novel keeps fullscreen", () => {
     assert.match(read("modules/manga/MangaReader.qml"), /implicitWidth: 550/);
     assert.match(read("modules/anime/AnimePanel.qml"), /implicitWidth: 550/);
     assert.match(read("modules/novel/NovelReader.qml"), /implicitWidth: fullscreen \?.*: 550/);
+});
+
+test("the list row is readable: big thumbnail, bold two-line title, normal meta", () => {
+    // Owner, A-8: the list was legible only if you squinted.
+    const row = read("components/ListRow.qml");
+    // One thumbnail size, shared with the skeleton that stands in for rows.
+    assert.match(row, /Style\.space\(ListMetrics\.THUMB_WIDTH\)/);
+    assert.ok(!row.includes("Math.round(height * 0.7)"), "the thumbnail is derived from the row again");
+    assert.match(row, /Style\.font\.body\b[\s\S]{0,120}font\.bold: true/,
+        "the title is not a bold body-size line");
+    assert.match(row, /maximumLineCount: 2/, "long titles still die on one line");
+    assert.match(row, /wrapMode: Text\.Wrap/, "two lines do not wrap");
+    assert.match(row, /Colors\.outline_variant/, "no separator between rows");
 });
 
 test("the anime list row carries the score the grid shows", () => {

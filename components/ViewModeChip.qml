@@ -41,6 +41,9 @@ ClickableRect {
         text: chip.glyph
         font.family: chip.bodyFont
         font.pixelSize: Style.font.body
+        // One recipe with the header cells and the chips: dark and bold when
+        // selected (owner, A-8).
+        font.bold: chip._style.strong
         color: chip._style.label === HeaderCell.LABEL.ON ? Colors.on_primary : Colors.muted
     }
 

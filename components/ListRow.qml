@@ -3,8 +3,13 @@ import qs.Commons
 import qs.app
 import "../services/list_metrics.js" as ListMetrics
 
-// One row of a manga list view: a small cover, the title, the work's metadata
-// line and — when the caller has one — the reader's own progress.
+// One row of a manga list view: a cover thumbnail, the title, the work's
+// metadata line and — when the caller has one — the reader's own progress.
+//
+// Round 7 (A-8) made the row readable at a glance: a 56 px thumbnail (it was
+// 40), a bold body-size title that wraps to two lines, a normal-size meta line
+// instead of a caption, more height and a hairline between rows. The sizes come
+// from services/list_metrics.js, which the loading skeleton reads too.
 //
 // It is the row twin of CoverCard, and it takes the SAME `meta` string instead
 // of composing it: both views build it with services/manga_card.js, so the
@@ -64,13 +69,13 @@ ClickableRect {
         id: coverBox
         anchors {
             left: parent.left
-            top: parent.top
-            bottom: parent.bottom
+            verticalCenter: parent.verticalCenter
             leftMargin: root.inset
-            topMargin: Style.spacing.sm
-            bottomMargin: Style.spacing.sm
         }
-        width: Math.round(height * 0.7)
+        // The thumbnail's size is a decision, not a consequence of the row
+        // height: it is shared with the skeleton through list_metrics.
+        width: Style.space(ListMetrics.THUMB_WIDTH)
+        height: Math.round(width / ListMetrics.THUMB_RATIO)
         radius: root.radius
         color: Colors.surface_container
         clip: true
@@ -125,11 +130,15 @@ ClickableRect {
             width: parent.width
             text: root.title
             font.family: root.bodyFont
-            font.pixelSize: Style.font.bodySmall
+            font.pixelSize: Style.font.body
+            font.bold: true
             font.letterSpacing: 0.2
             color: Colors.on_surface
+            // Two lines instead of one: a long title is worth more than a tidy
+            // column (owner, A-8). Elide still cuts the second line.
+            wrapMode: Text.Wrap
+            maximumLineCount: 2
             elide: Text.ElideRight
-            maximumLineCount: 1
         }
 
         // The score and the metadata share one line: "★ 8.8 · 4 ep". The score
@@ -144,7 +153,7 @@ ClickableRect {
                 visible: root.score !== ""
                 text: root.score
                 font.family: root.bodyFont
-                font.pixelSize: Style.font.caption
+                font.pixelSize: Style.font.body
                 font.letterSpacing: 0.3
                 font.bold: true
                 color: Colors.primary
@@ -155,7 +164,7 @@ ClickableRect {
                 visible: root.score !== "" && root.meta !== ""
                 text: "·"
                 font.family: root.bodyFont
-                font.pixelSize: Style.font.caption
+                font.pixelSize: Style.font.body
                 color: Colors.muted
             }
 
@@ -168,13 +177,28 @@ ClickableRect {
                     - (scoreSeparator.visible ? scoreSeparator.width + parent.spacing : 0))
                 text: root.meta
                 font.family: root.bodyFont
-                font.pixelSize: Style.font.caption
+                font.pixelSize: Style.font.body
                 font.letterSpacing: 0.3
                 color: Colors.on_surface_variant
                 elide: Text.ElideRight
                 maximumLineCount: 1
             }
         }
+    }
+
+    // The hairline between rows: inset like the content, so the list reads as
+    // rows and not as a wall of text (owner, A-8).
+    Rectangle {
+        anchors {
+            left: parent.left
+            right: parent.right
+            bottom: parent.bottom
+            leftMargin: root.inset
+            rightMargin: root.inset
+        }
+        height: 1
+        color: Colors.outline_variant
+        opacity: 0.6
     }
 
     StyledText {

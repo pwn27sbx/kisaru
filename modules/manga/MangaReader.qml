@@ -144,7 +144,9 @@ Item {
             tabs: [I18n.t("tab.browse"), I18n.t("tab.library")]
             tabIndex: root.tabIndex
             brand: brandComponent
-            tabCounts: [Manga.mangaList.length, Manga.libraryList.length]
+            // Browse carries no number (the bar counts it); Library shows a badge,
+            // and hides it at 0 (owner, A-8).
+            tabCounts: [-1, Manga.libraryList.length]
             fontFamily: root.fontBody
             settingsMode: root.settingsMode
             onTabActivated: function(index) {

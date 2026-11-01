@@ -143,22 +143,14 @@ Item {
                 Repeater {
                     model: root.modes
 
-                    delegate: Button {
+                    delegate: Chip {
                         required property var modelData
 
                         readonly property bool active: String(modelData.id || "") === root.mode
 
                         text: String(modelData.label || "")
-                        bordered: false
-                        selected: active
-                        // Solid accent + on-accent label when it is the active
-                        // mode, the same reading as the rest of the app.
-                        color: active ? Colors.primary
-                            : hot ? Style.hoverFillFor(Colors.muted, Colors.primary)
-                            : "transparent"
-                        foreground: active ? Colors.on_primary : Colors.muted
-                        fontFamily: root.fontFamily
-                        fontSize: Style.font.body
+                        current: active
+                        bodyFont: root.fontFamily
                         onClicked: root.modeSelected(String(modelData.id || ""))
                     }
                 }
