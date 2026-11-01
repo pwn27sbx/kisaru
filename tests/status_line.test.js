@@ -22,10 +22,18 @@ test("Browse shows the loaded count", () => {
     assert.equal(line.format(line.visibleCount(state), 0, translate), "32 loaded");
 });
 
-test("Library shows its own size as a bare number", () => {
+test("Library names what the number is", () => {
+    // Owner, round 6: a bare "0" next to the online dot said nothing.
     const state = { tabIndex: 1, browseCount: 32, libraryCount: 1 };
     assert.equal(line.visibleCount(state), 1);
-    assert.equal(line.format(line.visibleCount(state), 1, translate), "1");
+    assert.equal(line.format(line.visibleCount(state), 1, translate), "1 in library");
+    assert.equal(
+        line.barText({ ...state, libraryCount: 0, translate }),
+        "0 in library"
+    );
+    // Spanish singular/plural share the wording on purpose: "1 en la biblioteca".
+    const es = (key, n) => i18n.tn("es", key, n);
+    assert.equal(line.barText({ tabIndex: 1, libraryCount: 3, translate: es }), "3 en la biblioteca");
 });
 
 test("the settings page shows no count at all", () => {
@@ -38,7 +46,7 @@ test("zero is a real count, not an empty one", () => {
     const state = { tabIndex: 0, browseCount: 0, libraryCount: 0 };
     assert.equal(line.visibleCount(state), 0);
     assert.equal(line.format(0, 0, translate), "0 loaded");
-    assert.equal(line.format(0, 1, translate), "0");
+    assert.equal(line.format(0, 1, translate), "0 in library");
 });
 
 test("a count that has not arrived yet says nothing", () => {
@@ -56,7 +64,7 @@ test("the number is an integer, whatever the model hands over", () => {
 test("barText() is the one expression the three panels call", () => {
     const state = { tabIndex: 0, browseCount: 32, libraryCount: 1, translate };
     assert.equal(line.barText(state), "32 loaded");
-    assert.equal(line.barText({ ...state, tabIndex: 1 }), "1");
+    assert.equal(line.barText({ ...state, tabIndex: 1 }), "1 in library");
     assert.equal(line.barText({ ...state, settingsMode: true }), "");
     // A panel passes its own numbers and the same translator; nothing else.
     assert.equal(line.barText({ tabIndex: 0, browseCount: 0, translate }), "0 loaded");

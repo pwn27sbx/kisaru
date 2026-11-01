@@ -43,7 +43,7 @@ Item {
             visible: !Anime.libraryLoaded
             active: !Anime.libraryLoaded
             padding: Style.spacing.lg
-            ratio: 1.78
+            cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns)
             footerHeight: 28
         }
 
@@ -53,8 +53,8 @@ Item {
             Layout.fillWidth: true; Layout.fillHeight: true
             visible: Anime.libraryList.length > 0
             topMargin: Style.spacing.xl; leftMargin: Style.spacing.lg; rightMargin: Style.spacing.lg; bottomMargin: Style.spacing.xl
-            cellWidth: Math.floor((width - leftMargin - rightMargin) / 4)
-            cellHeight: cellWidth * 1.78
+            cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
+            cellHeight: CardMetrics.cellHeight(cellWidth)
             clip: true; boundsBehavior: Flickable.StopAtBounds
             model: Anime.libraryList
 
@@ -69,39 +69,15 @@ Item {
 
                 CoverCard {
                     anchors.fill: parent
+                    // Same gate as the grid: the local backend must be up.
                     source: entry.thumbnail || ""
                     title: entry.englishName || entry.name || ""
                     bodyFont: libraryView.fontBody
                     footerHeight: 28
-
-                    // Score badge
-                    Rectangle {
-                        visible: entry.score !== null && entry.score !== undefined
-                        anchors { top: parent.top; left: parent.left; topMargin: Style.spacing.lg; leftMargin: Style.spacing.lg }
-                        height: 20; radius: Style.cornerRadius; width: libScoreText.implicitWidth + 12
-                        color: Qt.rgba(0, 0, 0, 0.72)
-
-                        StyledText {
-                            id: libScoreText; anchors.centerIn: parent
-                            text: entry.score ? "★ " + (entry.score).toFixed(1) : ""
-                            font.family: libraryView.fontBody
-                            font.pixelSize: 8; font.bold: true // style-ignore — bespoke size
-                            color: "#f5c518"
-                        }
-                    }
-
-                    // Bookmark indicator
-                    Rectangle {
-                        visible: entry.bookmarked
-                        anchors { top: parent.top; right: parent.right; topMargin: Style.spacing.lg; rightMargin: Style.spacing.lg }
-                        width: 22; height: 22; radius: Style.cornerRadius
-                        color: Qt.rgba(0, 0, 0, 0.65)
-
-                        Text {
-                            anchors.centerIn: parent; text: "♥"
-                            font.pixelSize: 9; color: Colors.primary // style-ignore — bespoke size
-                        }
-                    }
+                    // The slots the anime panel needs, from data it already has.
+                    cornerText: entry.score !== null && entry.score !== undefined
+                        ? "★ " + Number(entry.score || 0).toFixed(1) : ""
+                    bookmarked: !!entry.bookmarked
 
                     CoverProgressBar {
                         height: 28

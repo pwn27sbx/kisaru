@@ -143,8 +143,11 @@ test("TONES is exactly the closed set statusTone can answer", () => {
         assert.ok(card.TONES.includes(card.statusTone(status)), String(status));
 });
 
-test("VARIANTS names both card anatomies CoverCard draws", () => {
-    // Both views compare `variant` against these, so the values are shared
-    // strings, not a second opinion about spelling.
-    assert.deepEqual(card.VARIANTS, { classic: "classic", stitch: "stitch" });
+test("the card has one anatomy now, and its geometry is what the grids read", () => {
+    // Round 6 removed the classic/stitch switch: the stitch card is the only
+    // one, so the plan retired VARIANTS. What still has to hold is the box the
+    // six grids and their ghosts compute from these two constants.
+    assert.equal(card.VARIANTS, undefined);
+    assert.equal(card.COVER_RATIO, 4.4 / 3);
+    assert.equal(card.INFO_BASE, 66);
 });

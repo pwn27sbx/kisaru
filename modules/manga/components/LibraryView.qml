@@ -118,12 +118,11 @@ Item {
             Layout.fillHeight: true
             visible: !Manga.libraryLoaded && !libraryView.listMode
             active: !Manga.libraryLoaded && !libraryView.listMode
-            // Three columns, like the grid below. The default stays at 4 for
-            // the anime and novel libraries, which keep their own 4-column
-            // grids; this panel passes its count explicitly.
-            columns: libraryView.columnCount
+            // Same columns and the same cell box as the grid below, from the
+            // one source the six grids share.
+            columns: CardMetrics.columns
             padding: Style.spacing.lg
-            ratio: 1.72
+            cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns)
             footerHeight: 30
         }
 
@@ -145,8 +144,8 @@ Item {
             leftMargin: Style.spacing.lg
             rightMargin: Style.spacing.lg
             bottomMargin: Style.spacing.xl
-            cellWidth: Math.floor((width - leftMargin - rightMargin) / libraryView.columnCount)
-            cellHeight: cellWidth * 1.72
+            cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
+            cellHeight: CardMetrics.cellHeight(cellWidth)
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             model: Manga.libraryList
@@ -168,16 +167,16 @@ Item {
                     source: Manga.serverReady ? (libEntry.coverUrl || "") : ""
                     title: libEntry.title || ""
                     bodyFont: libraryView.fontBody
-                    gradientHeight: 48
                     footerHeight: 30
-                    // The work's own metadata, NOT this reader's progress: the
-                    // progress bar below keeps "Cap. N" for the user. Today's
-                    // entries store no work metadata, so the line stays hidden
-                    // rather than inventing it; an entry that carries either
-                    // field shows it here.
-                    meta: MangaCard.metaLine(libEntry.chapter,
-                                             I18n.tData(libEntry.status || ""),
-                                             libraryView.cardTranslator)
+                    // The work's own chapter and state, NOT this reader's
+                    // progress: the progress bar below keeps "Cap. N" for the
+                    // user. Today's entries store no work metadata, so the row
+                    // stays hidden rather than inventing it; an entry that
+                    // carries either field shows it here.
+                    metaChapter: MangaCard.metaLine(libEntry.chapter, "",
+                                                    libraryView.cardTranslator)
+                    metaStatus: I18n.tData(libEntry.status || "")
+                    metaTone: MangaCard.statusTone(libEntry.status || "")
 
                     CoverProgressBar {
                         height: 30

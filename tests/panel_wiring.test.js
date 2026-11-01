@@ -130,6 +130,56 @@ test("the audio setting is the same card as the language row", () => {
     assert.match(card, /Border\.controlSpec\("normal"/);
 });
 
+test("every header shows its tab counters", () => {
+    // Owner, round 6: anime and novel get the same "Browse 32 · Library 1" the
+    // manga header has had since round 4.
+    for (const file of PANELS) {
+        assert.match(read(file), /tabCounts:\s*\[/, `${file}: no tab counts`);
+    }
+});
+
+test("the six grids and their ghosts share one cell box and three columns", () => {
+    const grids = [
+        "modules/manga/components/BrowseView.qml",
+        "modules/manga/components/LibraryView.qml",
+        "modules/anime/components/BrowseView.qml",
+        "modules/anime/components/LibraryView.qml",
+        "modules/novel/components/BrowseView.qml",
+        "modules/novel/components/LibraryView.qml",
+    ];
+    for (const file of grids) {
+        const qml = read(file);
+        assert.match(qml, /CardMetrics\.cellHeight\(/, `${file}: cell height is not the shared one`);
+        assert.match(qml, /CardMetrics\.columns/, `${file}: columns are not the shared count`);
+        // The old per-panel ratio literals are gone: they were five different
+        // numbers for the same box.
+        for (const ratio of ["1.58", "1.65", "1.72", "1.78"]) {
+            assert.ok(!qml.includes(`ratio: ${ratio}`), `${file}: still uses ratio ${ratio}`);
+        }
+    }
+});
+
+test("one card: no per-panel anatomy and no inline delegates left", () => {
+    const card = read("components/CoverCard.qml");
+    // Declarations, not words: "variant" also appears inside outline_variant.
+    for (const gone of [
+        "property string variant",
+        "property bool stitch",
+        "property int inset",
+        "property int titlePadding",
+        "property bool badgeLeading",
+        "property int gradientHeight"
+    ]) {
+        assert.ok(!card.includes(gone), `CoverCard still declares ${gone}`);
+    }
+    const constants = read("services/manga_card.js");
+    assert.ok(!constants.includes("VARIANTS"), "manga_card.js still exports VARIANTS");
+    // The anime and novel browse grids draw the shared card now.
+    for (const file of ["modules/anime/components/BrowseView.qml", "modules/novel/components/BrowseView.qml"]) {
+        assert.match(read(file), /CoverCard\s*\{/, `${file}: still draws its own card`);
+    }
+});
+
 test("every panel keeps publishing pointerInside from a HoverHandler", () => {
     for (const file of PANELS) {
         const qml = read(file);

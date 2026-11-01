@@ -32,14 +32,14 @@ function visibleCount(state) {
 // The text for that segment, or "" when there is none.
 //
 // Browse uses the wording it already had ("32 loaded" / "32 cargados"), so the
-// move does not introduce a second way to say the same thing; Library shows the
-// bare number it has always shown. `translate` is I18n.tn.
+// move does not introduce a second way to say the same thing. Library names
+// what the number is ("1 in library" / "1 en la biblioteca"): a bare "0" next
+// to the online dot said nothing about what was being counted (owner, round 6).
+// `translate` is I18n.tn.
 function format(count, tabIndex, translate) {
     if (count === NONE || count === null || count === undefined) return "";
-    if (tabIndex === 1) return String(count);
-    return typeof translate === "function"
-        ? String(translate("header.loaded", count))
-        : String(count);
+    if (typeof translate !== "function") return String(count);
+    return String(translate(tabIndex === 1 ? "status.inLibrary" : "header.loaded", count));
 }
 
 // The QML engine has no CommonJS `module`, so the same guard the other

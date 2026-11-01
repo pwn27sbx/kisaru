@@ -38,7 +38,7 @@ Item {
             visible: !Novel.libraryLoaded
             active: !Novel.libraryLoaded
             padding: Style.spacing.lg
-            ratio: 1.72
+            cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns)
             footerHeight: 30
         }
 
@@ -48,8 +48,8 @@ Item {
             visible: Novel.libraryList.length > 0
             topMargin: Style.spacing.xl; leftMargin: Style.spacing.lg
             rightMargin: Style.spacing.lg; bottomMargin: Style.spacing.xl
-            cellWidth: Math.floor((width - leftMargin - rightMargin) / 4)
-            cellHeight: cellWidth * 1.72
+            cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
+            cellHeight: CardMetrics.cellHeight(cellWidth)
             clip: true; boundsBehavior: Flickable.StopAtBounds
             model: Novel.libraryList
 
@@ -67,7 +67,6 @@ Item {
                     source: modelData.coverUrl || ""
                     title: modelData.title || ""
                     bodyFont: libraryView.fontBody
-                    gradientHeight: 52
                     footerHeight: 30
 
                     CoverProgressBar {

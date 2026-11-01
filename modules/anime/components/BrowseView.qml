@@ -66,8 +66,9 @@ Item {
             SkeletonGrid {
                 anchors.fill: parent; z: 10
                 active: Anime.isFetchingAnime && Anime.animeList.length === 0
-                cellWidth: (width - 30) / 4
-                ratio: 1.58
+                columns: CardMetrics.columns
+                padding: Style.spacing.xl
+                cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.xl) / CardMetrics.columns)
             }
 
             // More pages on the way
@@ -104,8 +105,8 @@ Item {
             GridView {
                 id: animeGrid
                 anchors.fill: parent; anchors.margins: Style.spacing.xl
-                cellWidth: (width - 10) / 4
-                cellHeight: cellWidth * 1.58
+                cellWidth: Math.floor(width / CardMetrics.columns)
+                cellHeight: CardMetrics.cellHeight(cellWidth)
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
                 // A ScriptModel diffs each new array against the last, so appending a
@@ -124,144 +125,25 @@ Item {
                     width: animeGrid.cellWidth
                     height: animeGrid.cellHeight
 
-                    ClickableRect {
-                        id: card
-                        anchors { fill: parent; margins: Style.space(5) }
-                        radius: Style.cornerRadius; color: Colors.surface_container; clip: true
-
-                        CoverPlaceholder {
-                            anchors.fill: coverImg
-                            status: coverImg.status
+                    CoverCard {
+                        anchors.fill: parent
+                        source: modelData.thumbnail || ""
+                        title: modelData.englishName || modelData.name || ""
+                        bodyFont: browseView.fontBody
+                        typeBadge: modelData.type
+                            ? I18n.tData(modelData.type).toUpperCase() : ""
+                        // The score lives in the trailing corner, where the
+                        // state sits on the other cards.
+                        cornerText: modelData.score !== null && modelData.score !== undefined
+                            ? "★ " + Number(modelData.score || 0).toFixed(1) : ""
+                        // What the source actually has, in the user's mode.
+                        episodesText: {
+                            var avail = modelData.availableEpisodes
+                            if (!avail) return ""
+                            var n = Anime.currentMode === "dub" ? avail.dub : avail.sub
+                            return n > 0 ? I18n.t("anime.epCount", { 1: n }) : ""
                         }
-
-                        // Cover
-                        Image {
-                            id: coverImg
-                            anchors { top: parent.top; left: parent.left; right: parent.right }
-                            height: parent.height - titleBar.height
-                            source: modelData.thumbnail || ""
-                            fillMode: Image.PreserveAspectCrop
-                            asynchronous: true; cache: true
-                            opacity: status === Image.Ready ? 1 : 0
-                            Behavior on opacity { NumberAnimation { duration: Motion.slow } }
-
-                            // Score badge
-                            Rectangle {
-                                visible: modelData.score !== null && modelData.score !== undefined
-                                anchors { top: parent.top; left: parent.left; topMargin: Style.spacing.lg; leftMargin: Style.spacing.lg }
-                                height: 20; radius: Style.cornerRadius
-                                width: scoreText.implicitWidth + 12
-                                color: Qt.rgba(0, 0, 0, 0.72)
-
-                                StyledText {
-                                    id: scoreText; anchors.centerIn: parent
-                                    text: modelData.score !== null
-                                        ? "★ " + (modelData.score || 0).toFixed(1) : ""
-                                    font.family: browseView.fontBody
-                                    font.pixelSize: 8; font.bold: true; font.letterSpacing: 0.5 // style-ignore — bespoke size
-                                    color: "#f5c518"
-                                }
-                            }
-
-                            // Type badge
-                            Rectangle {
-                                visible: modelData.type && modelData.type.length > 0
-                                anchors { top: parent.top; right: parent.right; topMargin: Style.spacing.lg; rightMargin: Style.spacing.lg }
-                                height: 20; radius: Style.cornerRadius
-                                width: typeText.implicitWidth + 12
-                                color: Qt.rgba(0, 0, 0, 0.7)
-
-                                StyledText {
-                                    id: typeText; anchors.centerIn: parent
-                                    text: I18n.tData(modelData.type || "").toUpperCase()
-                                    font.family: browseView.fontBody
-                                    font.pixelSize: 8; font.letterSpacing: 1; font.bold: true // style-ignore — bespoke size
-                                    color: Colors.primary_fixed_dim
-                                }
-                            }
-
-                            // Episode count badge (bottom-right of cover)
-                            Rectangle {
-                                visible: modelData.availableEpisodes
-                                    && (modelData.availableEpisodes.sub > 0
-                                        || modelData.availableEpisodes.dub > 0)
-                                anchors {
-                                    bottom: parent.bottom; right: parent.right
-                                    bottomMargin: Style.spacing.lg; rightMargin: Style.spacing.lg
-                                }
-                                height: 20; radius: Style.cornerRadius
-                                width: epText.implicitWidth + 12
-                                color: Qt.rgba(0, 0, 0, 0.72)
-
-                                StyledText {
-                                    id: epText; anchors.centerIn: parent
-                                    text: {
-                                        var avail = modelData.availableEpisodes
-                                        var n = Anime.currentMode === "dub"
-                                            ? avail.dub : avail.sub
-                                        return I18n.t("anime.epCount", { 1: n })
-                                    }
-                                    font.family: browseView.fontBody
-                                    font.pixelSize: 8; font.letterSpacing: 0.5 // style-ignore — bespoke size
-                                    color: Qt.rgba(1, 1, 1, 0.85)
-                                }
-                            }
-
-                            // Gradient
-                            Rectangle {
-                                anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                                height: 48
-                                gradient: Gradient {
-                                    GradientStop { position: 0.0; color: "transparent" }
-                                    GradientStop { position: 1.0; color: Colors.surface_container }
-                                }
-                            }
-                        }
-
-                        // Title bar
-                        Rectangle {
-                            id: titleBar
-                            anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                            height: titleText.implicitHeight + 16
-                            color: Colors.surface_container; radius: Style.cornerRadius
-
-                            StyledText {
-                                id: titleText
-                                anchors {
-                                    left: parent.left; right: parent.right
-                                    verticalCenter: parent.verticalCenter
-                                    leftMargin: Style.spacing.xl; rightMargin: Style.spacing.xl
-                                }
-                                text: modelData.englishName || modelData.name || ""
-                                font.family: browseView.fontBody
-                                font.pixelSize: Style.font.bodySmall; font.letterSpacing: 0.2
-                                wrapMode: Text.Wrap; maximumLineCount: 2
-                                elide: Text.ElideRight; lineHeight: 1.3
-                            }
-                        }
-
-                        // Library bookmark dot
-                        Rectangle {
-                            visible: Anime.isInLibrary(modelData.id)
-                            anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: Style.spacing.md }
-                            width: 7; height: 7; radius: height / 2 // style-ignore — dot
-                            color: Colors.primary
-                            opacity: 0.9
-                        }
-
-                        Rectangle {
-                            anchors.fill: parent; radius: Style.cornerRadius; color: Colors.primary
-                            opacity: card.pressed ? Style.pressedFillAlpha : (card.hovered ? Style.hoverFillAlpha : 0)
-                            Behavior on opacity { NumberAnimation { duration: Motion.base } }
-                        }
-
-                        transform: Scale {
-                            origin.x: card.width / 2; origin.y: card.height / 2
-                            xScale: card.pressed ? 0.97 : 1.0
-                            yScale: card.pressed ? 0.97 : 1.0
-                            Behavior on xScale { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeOut } }
-                            Behavior on yScale { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeOut } }
-                        }
+                        bookmarked: Anime.isInLibrary(modelData.id)
 
                         onClicked: browseView.animeSelected(modelData)
                     }

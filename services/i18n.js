@@ -23,6 +23,7 @@ var tables = {
         "view.grid": "Cuadrícula",
         "view.list": "Lista",
         // ── Status bar (bottom of the manga panel) ──────────────────────
+        "status.inLibrary": { one: "%1 en la biblioteca", other: "%1 en la biblioteca" },
         "status.online": "En línea",
         "status.offline": "Sin conexión",
         "status.search": "Buscar",
@@ -121,6 +122,7 @@ var tables = {
         "view.grid": "Grid",
         "view.list": "List",
         // ── Status bar (bottom of the manga panel) ──────────────────────
+        "status.inLibrary": { one: "%1 in library", other: "%1 in library" },
         "status.online": "Online",
         "status.offline": "Offline",
         "status.search": "Search",

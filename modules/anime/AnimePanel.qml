@@ -105,6 +105,7 @@ Item {
             z: 2
             tabs: [I18n.t("tab.browse"), I18n.t("tab.library")]
             tabIndex: root.tabIndex
+            tabCounts: [Anime.animeList.length, Anime.libraryList.length]
             brand: brandComponent
             fontFamily: root.fontBody
             settingsMode: root.settingsMode

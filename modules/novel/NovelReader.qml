@@ -94,6 +94,7 @@ Item {
             Layout.fillWidth: true; z: 2
             tabs: [I18n.t("tab.browse"), I18n.t("tab.library")]
             tabIndex: root.tabIndex
+            tabCounts: [Novel.novelList.length, Novel.libraryList.length]
             brand: brandComponent
             fontFamily: root.fontBody
             settingsMode: root.settingsMode

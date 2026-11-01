@@ -8,6 +8,7 @@ import qs.services
 import qs.components
 import qs.Ui
 import "../../../services/manga_card.js" as MangaCard
+import qs.services
 import "../../../services/list_metrics.js" as ListMetrics
 
 Item {
@@ -20,8 +21,10 @@ Item {
     // manga_card.js, so both views share one adapter instead of copying it.
     readonly property var cardTranslator: MangaCard.translator(I18n.t)
 
-    // One number for the grid and its skeleton: they must not disagree.
-    readonly property int columnCount: 3
+    // One number for the grid and its skeleton: they must not disagree. Both
+    // come from services/CardMetrics.qml now, the single source the six grids
+    // share (owner, round 6).
+    readonly property int columnCount: CardMetrics.columns
 
     // The card's box, from the constants in services/manga_card.js: the cover
     // ratio plus the info band under it. The GridView and the SkeletonGrid
@@ -29,8 +32,7 @@ Item {
     // the covers land and the panel does not jump on load.
     readonly property real cardWidth:
         Math.max(0, (width - 2 * Style.spacing.xl) / columnCount)
-    readonly property real cardHeight:
-        cardWidth * MangaCard.COVER_RATIO + Style.space(MangaCard.INFO_BASE)
+    readonly property real cardHeight: CardMetrics.cellHeight(cardWidth)
 
     // The layout the user picked (persisted in settings.json). Both branches
     // below read this one value, so the toggle in the section header and the
@@ -239,11 +241,9 @@ Item {
                         source: modelData.thumbUrl || ""
                         title: modelData.title || ""
                         bodyFont: browseView.fontBody
-                        // The Stitch anatomy: the cover runs flush to the
-                        // card's edges and fades into the surface under it, so
-                        // the cover inset and the leading badge of the old
-                        // inset tile no longer apply.
-                        variant: MangaCard.VARIANTS.stitch
+                        // The work's format, leading corner. The tint comes
+                        // from the type DATA, not from the badge text: tData()
+                        // may localize it and the casing is a display choice.
                         typeBadge: I18n.tData(modelData.type || "").toUpperCase()
                         // The badge tint comes from the type DATA, not from the
                         // badge text above: tData() may localize it and the

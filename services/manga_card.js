@@ -27,14 +27,6 @@ var SEPARATOR = " · ";
 var COVER_RATIO = 4.4 / 3;
 var INFO_BASE = 66;
 
-// The two card anatomies CoverCard can draw. `variant` stays a plain string
-// (QML compares it in bindings), but the VALUES live here so the card and the
-// view that configures it cannot disagree about spelling.
-var VARIANTS = {
-    classic: "classic",
-    stitch: "stitch"
-};
-
 // null / undefined / whitespace-only all mean "no value".
 function clean(value) {
     if (value === undefined || value === null) return "";
@@ -161,7 +153,6 @@ if (typeof module !== "undefined" && module.exports) {
         statusTone: statusTone,
         COVER_RATIO: COVER_RATIO,
         INFO_BASE: INFO_BASE,
-        TONES: TONES,
-        VARIANTS: VARIANTS
+        TONES: TONES
     };
 }
