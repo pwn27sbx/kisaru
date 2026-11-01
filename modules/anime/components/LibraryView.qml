@@ -181,6 +181,8 @@ Item {
             }
 
             delegate: ListRow {
+                readonly property var entry: modelData
+
                 width: libRows.width
                 height: implicitHeight
                 source: entry.thumbnail || ""
