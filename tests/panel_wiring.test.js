@@ -195,6 +195,40 @@ test("one card: no per-panel anatomy and no inline delegates left", () => {
     }
 });
 
+test("every panel remembers its own grid/list choice", () => {
+    const views = [
+        ["modules/manga/components/BrowseView.qml", "manga"],
+        ["modules/manga/components/LibraryView.qml", "manga"],
+        ["modules/anime/components/BrowseView.qml", "anime"],
+        ["modules/anime/components/LibraryView.qml", "anime"],
+        ["modules/novel/components/BrowseView.qml", "novel"],
+        ["modules/novel/components/LibraryView.qml", "novel"],
+    ];
+    for (const [file, panel] of views) {
+        const qml = read(file);
+        assert.match(qml, new RegExp(`viewModeFor\\("${panel}"\\)`), `${file}: reads another panel's layout`);
+        assert.match(qml, /ViewModeChip\s*\{/, `${file}: no layout toggle`);
+        assert.match(qml, /ListRow\s*\{/, `${file}: no list rows`);
+        assert.ok(qml.includes(`setViewMode("${panel}", "grid")`), `${file}: writes another panel's layout`);
+    }
+});
+
+test("the anime score chip is legible: accent and bold", () => {
+    // Owner, round 6: the rating moved to the trailing corner and became dim;
+    // it takes the accent like the episodes chip so it reads on the artwork.
+    const card = read("components/CoverCard.qml");
+    assert.match(card, /property bool cornerAccent/);
+    // The chip's text is always bold; the accent is what makes a score read.
+    assert.match(card, /font\.bold: true/);
+    assert.match(card, /color: root\.cornerAccent \? Colors\.primary/);
+    for (const file of [
+        "modules/anime/components/BrowseView.qml",
+        "modules/anime/components/LibraryView.qml",
+    ]) {
+        assert.match(read(file), /cornerAccent: true/, `${file}: the score is still dim`);
+    }
+});
+
 test("every panel keeps publishing pointerInside from a HoverHandler", () => {
     for (const file of PANELS) {
         const qml = read(file);

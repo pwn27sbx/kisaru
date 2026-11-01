@@ -24,7 +24,7 @@ Item {
 
     // The layout the user picked (persisted in settings.json), shared with
     // Browse through UiPrefs: switching it in one view switches it in both.
-    readonly property bool listMode: UiPrefs.viewMode === "list"
+    readonly property bool listMode: UiPrefs.viewModeFor("manga") === "list"
 
     // Emitted when the user taps an entry — parent handles navigation
     signal mangaSelected(string mangaId)
@@ -83,7 +83,7 @@ Item {
                         current: !libraryView.listMode
                         bodyFont: libraryView.fontBody
                         cellSize: Style.space(22)
-                        onClicked: UiPrefs.setViewMode("grid")
+                        onClicked: UiPrefs.setViewMode("manga", "grid")
                     }
 
                     ViewModeChip {
@@ -92,7 +92,7 @@ Item {
                         current: libraryView.listMode
                         bodyFont: libraryView.fontBody
                         cellSize: Style.space(22)
-                        onClicked: UiPrefs.setViewMode("list")
+                        onClicked: UiPrefs.setViewMode("manga", "list")
                     }
                 }
             }

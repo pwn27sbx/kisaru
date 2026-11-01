@@ -7,12 +7,17 @@ import qs.Commons
 import qs.services
 import qs.components
 import qs.Ui
+import "../../../services/list_metrics.js" as ListMetrics
 import "../../../services/manga_card.js" as MangaCard
 
 Item {
     id: browseView
 
     readonly property string fontBody: Style.font.family
+
+    // Each panel remembers its own layout (owner, round 6): anime and novel
+    // stop sharing manga's choice.
+    readonly property bool listMode: UiPrefs.viewModeFor("novel") === "list"
 
     signal novelSelected(string novelId)
 
@@ -40,16 +45,58 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Filter bar (tinted chips, scroll-x) ───────────────────────────────
-        FilterBar {
+        // ── Filter chips + grid/list toggle, one row ──────────────────────────
+        RowLayout {
             Layout.fillWidth: true
-            fontFamily: browseView.fontBody
-            options: [
-                { label: I18n.t("novel.filter.hot") },
-                { label: I18n.t("novel.filter.latest") }
-            ]
-            currentIndex: browseView.currentFilter === "hot" ? 0 : browseView.currentFilter === "latest" ? 1 : -1
-            onActivated: function(index) { browseView._switchFilter(index === 0 ? "hot" : "latest") }
+            spacing: Style.spacing.sm
+
+            FilterBar {
+                Layout.fillWidth: true
+                fontFamily: browseView.fontBody
+                options: [
+                    { label: I18n.t("novel.filter.hot") },
+                    { label: I18n.t("novel.filter.latest") }
+                ]
+                currentIndex: browseView.currentFilter === "hot" ? 0 : browseView.currentFilter === "latest" ? 1 : -1
+                onActivated: function(index) { browseView._switchFilter(index === 0 ? "hot" : "latest") }
+            }
+            // The layout switch, in the same segmented box the manga
+            // panel uses, pinned to the right of the chips.
+            Rectangle {
+                Layout.alignment: Qt.AlignVCenter
+                Layout.rightMargin: Style.spacing.xl
+                implicitWidth: cellsRow.implicitWidth + 2 * Style.spacing.xxs
+                implicitHeight: cellsRow.implicitHeight + 2 * Style.spacing.xxs
+                radius: Style.cornerRadius
+                color: Colors.surface_container
+                border.width: Style.spacing.hairline
+                border.color: Colors.outline_variant
+
+                Row {
+                    id: cellsRow
+                    x: Style.spacing.xxs
+                    y: Style.spacing.xxs
+                    spacing: Style.spacing.xxs
+
+                    ViewModeChip {
+                        glyph: "▦"
+                        label: I18n.t("view.grid")
+                        current: !browseView.listMode
+                        bodyFont: browseView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("novel", "grid")
+                    }
+
+                    ViewModeChip {
+                        glyph: "☰"
+                        label: I18n.t("view.list")
+                        current: browseView.listMode
+                        bodyFont: browseView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("novel", "list")
+                    }
+                }
+            }
         }
 
         // ── Novel grid ────────────────────────────────────────────────────────
@@ -64,6 +111,15 @@ Item {
                 columns: CardMetrics.columns
                 padding: Style.spacing.xl
                 cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.xl) / CardMetrics.columns)
+            }
+
+            // Rows take over the same area in list mode.
+            SkeletonList {
+                anchors.fill: parent
+                z: 10
+                rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
+                dividerInset: Style.spacing.xl
+                active: browseView.listMode && Novel.novelList.length === 0
             }
 
             // More pages on the way
@@ -91,6 +147,7 @@ Item {
 
             GridView {
                 id: novelGrid
+                visible: !browseView.listMode
                 anchors.fill: parent; anchors.margins: Style.spacing.xl
                 cellWidth: Math.floor(width / CardMetrics.columns)
                 cellHeight: CardMetrics.cellHeight(cellWidth)
@@ -128,6 +185,42 @@ Item {
                             Novel.fetchNovelDetail(modelData.id)
                             browseView.novelSelected(modelData.id)
                         }
+                    }
+                }
+            }
+
+            // ── List ─────────────────────────────────────────────────────────
+            // Same model as the grid; the row keeps the author where the card
+            // keeps it.
+            ListView {
+                id: novelRows
+                anchors.fill: parent
+                anchors.topMargin: Style.spacing.xl
+                anchors.bottomMargin: Style.spacing.xl
+                visible: browseView.listMode
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                model: ScriptModel { values: Novel.novelList }
+
+                ScrollBar.vertical: StyledScrollBar {
+                }
+
+                onContentYChanged: {
+                    if (contentY + height > contentHeight - height / 2)
+                        Novel.fetchNextPage()
+                }
+
+                delegate: ListRow {
+                    width: novelRows.width
+                    height: implicitHeight
+                    source: modelData.coverUrl || ""
+                    title: modelData.title || ""
+                    bodyFont: browseView.fontBody
+                    meta: modelData.author || ""
+
+                    onClicked: {
+                        Novel.fetchNovelDetail(modelData.id)
+                        browseView.novelSelected(modelData.id)
                     }
                 }
             }

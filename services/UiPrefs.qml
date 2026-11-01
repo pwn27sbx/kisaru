@@ -49,9 +49,15 @@ Singleton {
     readonly property real scrollFactorMax: Core.MAX_SCROLL_FACTOR
     readonly property real scrollFactor: Core.normalizeScrollFactor(Core.parseSettings(root.raw).scrollFactor)
 
-    // "grid" | "list"; a missing or broken value normalizes to "grid", so the
-    // views never have to guard against anything else.
-    readonly property string viewMode: Core.normalizeViewMode(Core.parseSettings(root.raw).viewMode)
+    // "grid" | "list" per panel (owner, round 6). Manga falls back to the old
+    // single key, so the layout the user already had survives the upgrade.
+    function viewModeFor(panel) {
+        return Core.viewModeFor(Core.parseSettings(root.raw), panel)
+    }
+
+    // Manga's own value, kept as a property for the views that predate the
+    // per-panel split.
+    readonly property string viewMode: root.viewModeFor("manga")
 
     // "sub" | "dub": the anime panel's audio mode. It reads like the language —
     // one preference, one key — so a DUB choice survives a restart.
@@ -86,10 +92,11 @@ Singleton {
         root.setSetting("scrollFactor", Core.normalizeScrollFactor(value))
     }
 
-    // The views pass "grid" / "list"; normalizing here means a typo can never
-    // be what lands in the file (and the next read would ignore it anyway).
-    function setViewMode(value) {
-        root.setSetting("viewMode", Core.normalizeViewMode(value))
+    // The views pass their panel and "grid" / "list"; normalizing here means a
+    // typo can never be what lands in the file (and the next read would ignore
+    // it anyway).
+    function setViewMode(panel, value) {
+        root.setSetting(Core.viewModeKey(panel), Core.normalizeViewMode(value))
     }
 
     function setAnimeMode(value) {

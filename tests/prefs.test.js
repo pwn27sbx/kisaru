@@ -124,3 +124,27 @@ test("withSetting() persists animeMode without dropping the other keys", () => {
     assert.equal(after.scrollFactor, 4);
     assert.equal(after.viewMode, "list");
 });
+
+test("each panel keeps its own layout, and manga inherits the old key", () => {
+    // Owner, round 6: three panels, three layouts. The single `viewMode` key
+    // was manga's, so an upgrade must keep that layout and give the other two
+    // a clean default instead of copying it into them.
+    assert.deepEqual(prefs.VIEW_MODE_PANELS, ["manga", "anime", "novel"]);
+    assert.equal(prefs.viewModeKey("manga"), "viewMode.manga");
+
+    // Legacy file: only manga follows it.
+    const legacy = { viewMode: "list" };
+    assert.equal(prefs.viewModeFor(legacy, "manga"), "list");
+    assert.equal(prefs.viewModeFor(legacy, "anime"), "grid");
+    assert.equal(prefs.viewModeFor(legacy, "novel"), "grid");
+
+    // New file: each panel wins over the legacy key.
+    const both = { viewMode: "list", "viewMode.anime": "list", "viewMode.novel": "grid" };
+    assert.equal(prefs.viewModeFor(both, "manga"), "list");
+    assert.equal(prefs.viewModeFor(both, "anime"), "list");
+    assert.equal(prefs.viewModeFor(both, "novel"), "grid");
+
+    // Broken values fall back per panel, never to another panel's choice.
+    assert.equal(prefs.viewModeFor({ "viewMode.manga": "garbage" }, "manga"), "grid");
+    assert.equal(prefs.viewModeFor(undefined, "anime"), "grid");
+});

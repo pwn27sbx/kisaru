@@ -5,12 +5,16 @@ import qs.app
 import qs.Commons
 import qs.services
 import qs.components
+import "../../../services/list_metrics.js" as ListMetrics
 
 Item {
     id: libraryView
 
     readonly property string fontDisplay: Style.font.family
     readonly property string fontBody:    Style.font.family
+
+    // Each panel remembers its own layout (owner, round 6).
+    readonly property bool listMode: UiPrefs.viewModeFor("anime") === "list"
 
     signal animeSelected(var show)
 
@@ -24,10 +28,56 @@ Item {
         // names the section and the count lives in the status bar now, exactly
         // like the manga library after round 4 (owner, round 6).
 
+        // ── Grid/list toggle, alone on its row ───────────────────────────────
+        // The same segmented box the other two panels use; each panel keeps its
+        // own layout preference (owner, round 6).
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.rightMargin: Style.spacing.xl
+            spacing: Style.spacing.sm
+
+            Item { Layout.fillWidth: true }
+
+            Rectangle {
+                Layout.alignment: Qt.AlignVCenter
+                implicitWidth: viewCells.implicitWidth + 2 * Style.spacing.xxs
+                implicitHeight: viewCells.implicitHeight + 2 * Style.spacing.xxs
+                radius: Style.cornerRadius
+                color: Colors.surface_container
+                border.width: Style.spacing.hairline
+                border.color: Colors.outline_variant
+
+                Row {
+                    id: viewCells
+                    x: Style.spacing.xxs
+                    y: Style.spacing.xxs
+                    spacing: Style.spacing.xxs
+
+                    ViewModeChip {
+                        glyph: "▦"
+                        label: I18n.t("view.grid")
+                        current: !libraryView.listMode
+                        bodyFont: libraryView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("anime", "grid")
+                    }
+
+                    ViewModeChip {
+                        glyph: "☰"
+                        label: I18n.t("view.list")
+                        current: libraryView.listMode
+                        bodyFont: libraryView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("anime", "list")
+                    }
+                }
+            }
+        }
+
         // ── Empty state ───────────────────────────────────────────────────────
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: Anime.libraryList.length === 0 && Anime.libraryLoaded
+            visible: !libraryView.listMode && Anime.libraryList.length === 0 && Anime.libraryLoaded
 
             EmptyState {
                 title: I18n.t("empty.library")
@@ -40,8 +90,8 @@ Item {
         // ── Loading ───────────────────────────────────────────────────────────
         SkeletonGrid {
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: !Anime.libraryLoaded
-            active: !Anime.libraryLoaded
+            visible: !libraryView.listMode && !Anime.libraryLoaded
+            active: !libraryView.listMode && !Anime.libraryLoaded
             padding: Style.spacing.lg
             cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns, Style.space(28))
             footerHeight: 28
@@ -51,7 +101,7 @@ Item {
         GridView {
             id: libGrid
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: Anime.libraryList.length > 0
+            visible: !libraryView.listMode && Anime.libraryList.length > 0
             topMargin: Style.spacing.xl; leftMargin: Style.spacing.lg; rightMargin: Style.spacing.lg; bottomMargin: Style.spacing.xl
             cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
             cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(28))
@@ -76,6 +126,7 @@ Item {
                     // The slots the anime panel needs, from data it already has.
                     cornerText: entry.score !== null && entry.score !== undefined
                         ? "★ " + Number(entry.score || 0).toFixed(1) : ""
+                    cornerAccent: true
                     bookmarked: !!entry.bookmarked
 
                     CoverProgressBar {
@@ -105,6 +156,48 @@ Item {
                     }
                 }
             }
+
+        // ── List ─────────────────────────────────────────────────────────────
+        ListView {
+            id: libRows
+            Layout.fillWidth: true; Layout.fillHeight: true
+            visible: Anime.libraryList.length > 0 && libraryView.listMode
+            topMargin: Style.spacing.xl
+            bottomMargin: Style.spacing.xl
+            clip: true; boundsBehavior: Flickable.StopAtBounds
+            model: Anime.libraryList
+
+            ScrollBar.vertical: StyledScrollBar {
+            }
+
+            delegate: ListRow {
+                width: libRows.width
+                height: implicitHeight
+                source: entry.thumbnail || ""
+                title: entry.englishName || entry.name || ""
+                bodyFont: libraryView.fontBody
+                inset: Style.spacing.lg
+                meta: ""
+                progress: entry.lastWatchedEpNum ? I18n.t("ep", { 1: entry.lastWatchedEpNum }) : I18n.t("state.notStarted")
+                progressActive: !!entry.lastWatchedEpNum
+
+                onClicked: {
+                    // Reconstruct a minimal show object for fetchAnimeDetail
+                    libraryView.animeSelected({
+                        id:          entry.id,
+                        name:        entry.name,
+                        englishName: entry.englishName,
+                        nativeName:  entry.nativeName  || "",
+                        thumbnail:   entry.thumbnail,
+                        score:       entry.score,
+                        type:        entry.type        || "",
+                        episodeCount: entry.episodeCount || "",
+                        availableEpisodes: entry.availableEpisodes || { sub: 0, dub: 0, raw: 0 },
+                        season:      entry.season      || null
+                    })
+                }
+            }
         }
     }
+}
 }

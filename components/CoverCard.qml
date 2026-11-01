@@ -38,6 +38,10 @@ ClickableRect {
     property string cornerText: ""
     // "done" | "live" | "warn" | "" (neutral), from services/manga_card.js.
     property string cornerTone: ""
+    // A score is not a state: the anime panel's "★ 8.8" takes the theme's
+    // accent and the bold weight, so it reads on top of the artwork instead of
+    // disappearing into it (owner, round 6).
+    property bool cornerAccent: false
 
     property string episodesText: ""
     property bool bookmarked: false
@@ -183,8 +187,10 @@ ClickableRect {
                 font.letterSpacing: 0.6
                 font.bold: true
                 // The same roles the info row uses, so a state reads the same
-                // wherever it is painted.
-                color: root.cornerTone === "done" ? Colors.primary
+                // wherever it is painted; a score takes the accent instead of
+                // the muted role, so it reads on top of the artwork.
+                color: root.cornerAccent ? Colors.primary
+                    : root.cornerTone === "done" ? Colors.primary
                     : root.cornerTone === "warn" ? Colors.error
                     : Colors.on_surface_variant
             }

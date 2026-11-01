@@ -36,7 +36,7 @@ Item {
     // The layout the user picked (persisted in settings.json). Both branches
     // below read this one value, so the toggle in the section header and the
     // model wiring can never disagree about which one is showing.
-    readonly property bool listMode: UiPrefs.viewMode === "list"
+    readonly property bool listMode: UiPrefs.viewModeFor("manga") === "list"
 
     // Emitted when the user taps a manga card
     signal mangaSelected(string mangaId)
@@ -125,7 +125,7 @@ Item {
                         current: !browseView.listMode
                         bodyFont: browseView.fontBody
                         cellSize: Style.space(22)
-                        onClicked: UiPrefs.setViewMode("grid")
+                        onClicked: UiPrefs.setViewMode("manga", "grid")
                     }
 
                     ViewModeChip {
@@ -134,7 +134,7 @@ Item {
                         current: browseView.listMode
                         bodyFont: browseView.fontBody
                         cellSize: Style.space(22)
-                        onClicked: UiPrefs.setViewMode("list")
+                        onClicked: UiPrefs.setViewMode("manga", "list")
                     }
                 }
             }

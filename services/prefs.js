@@ -6,7 +6,8 @@
 //   {
 //     "language": "es",       // UI language (WU-11)
 //     "scrollFactor": 2,      // reader wheel speed, 0.5..5
-//     "viewMode": "grid",     // manga Browse/Library layout: "grid" | "list"
+//     "viewMode": "grid",     // legacy: manga's layout before per-panel keys
+//     "viewMode.manga": "grid", "viewMode.anime": "grid", "viewMode.novel": "grid"
 //     "animeMode": "sub"      // anime audio: "sub" | "dub" (owner, round 6)
 //   }
 //
@@ -58,6 +59,26 @@ function normalizeLanguage(value) {
 // "grid" | "list", and nothing else: a hand-edited settings.json, an older
 // file without the key, or an object where a string belongs all fall back to
 // the default instead of leaving the views with a layout they cannot build.
+// The layouts live per panel now (owner, round 6): each one remembers its own
+// grid/list choice. The old single key is read as manga's value, so an upgrade
+// keeps the layout the user already had instead of resetting it.
+var VIEW_MODE_PANELS = ["manga", "anime", "novel"];
+
+function viewModeKey(panel) {
+    return "viewMode." + String(panel || "manga");
+}
+
+function viewModeFor(data, panel) {
+    var settings = (data && typeof data === "object") ? data : {};
+    var own = settings[viewModeKey(panel)];
+    if (own !== undefined && own !== null && own !== "")
+        return normalizeViewMode(own);
+    // Only manga inherits the legacy key: the other two never had one.
+    if (panel === "manga")
+        return normalizeViewMode(settings.viewMode);
+    return DEFAULT_VIEW_MODE;
+}
+
 function normalizeViewMode(value) {
     var mode = String(value === undefined || value === null ? "" : value).trim().toLowerCase();
     return VIEW_MODES.indexOf(mode) >= 0 ? mode : DEFAULT_VIEW_MODE;
@@ -97,6 +118,9 @@ if (typeof module !== "undefined" && module.exports) {
         normalizeLanguage: normalizeLanguage,
         DEFAULT_VIEW_MODE: DEFAULT_VIEW_MODE,
         normalizeViewMode: normalizeViewMode,
+        VIEW_MODE_PANELS: VIEW_MODE_PANELS,
+        viewModeKey: viewModeKey,
+        viewModeFor: viewModeFor,
         DEFAULT_ANIME_MODE: DEFAULT_ANIME_MODE,
         ANIME_MODE_OPTIONS: ANIME_MODE_OPTIONS,
         normalizeAnimeMode: normalizeAnimeMode

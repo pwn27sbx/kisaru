@@ -5,12 +5,16 @@ import qs.app
 import qs.Commons
 import qs.services
 import qs.components
+import "../../../services/list_metrics.js" as ListMetrics
 
 Item {
     id: libraryView
 
     readonly property string fontDisplay: Style.font.family
     readonly property string fontBody:    Style.font.family
+
+    // Each panel remembers its own layout (owner, round 6).
+    readonly property bool listMode: UiPrefs.viewModeFor("novel") === "list"
 
     signal novelSelected(string novelId)
 
@@ -20,9 +24,55 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
+        // ── Grid/list toggle, alone on its row ───────────────────────────────
+        // The same segmented box the other two panels use; the novel panel
+        // keeps its own layout preference (owner, round 6).
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.rightMargin: Style.spacing.xl
+            spacing: Style.spacing.sm
+
+            Item { Layout.fillWidth: true }
+
+            Rectangle {
+                Layout.alignment: Qt.AlignVCenter
+                implicitWidth: viewCells.implicitWidth + 2 * Style.spacing.xxs
+                implicitHeight: viewCells.implicitHeight + 2 * Style.spacing.xxs
+                radius: Style.cornerRadius
+                color: Colors.surface_container
+                border.width: Style.spacing.hairline
+                border.color: Colors.outline_variant
+
+                Row {
+                    id: viewCells
+                    x: Style.spacing.xxs
+                    y: Style.spacing.xxs
+                    spacing: Style.spacing.xxs
+
+                    ViewModeChip {
+                        glyph: "▦"
+                        label: I18n.t("view.grid")
+                        current: !libraryView.listMode
+                        bodyFont: libraryView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("novel", "grid")
+                    }
+
+                    ViewModeChip {
+                        glyph: "☰"
+                        label: I18n.t("view.list")
+                        current: libraryView.listMode
+                        bodyFont: libraryView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("novel", "list")
+                    }
+                }
+            }
+        }
+
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: Novel.libraryList.length === 0 && Novel.libraryLoaded
+            visible: !libraryView.listMode && Novel.libraryList.length === 0 && Novel.libraryLoaded
 
             EmptyState {
                 title: I18n.t("empty.library")
@@ -35,8 +85,8 @@ Item {
 
         SkeletonGrid {
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: !Novel.libraryLoaded
-            active: !Novel.libraryLoaded
+            visible: !libraryView.listMode && !Novel.libraryLoaded
+            active: !libraryView.listMode && !Novel.libraryLoaded
             padding: Style.spacing.lg
             cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns, Style.space(30))
             footerHeight: 30
@@ -45,7 +95,7 @@ Item {
         GridView {
             id: libGrid
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: Novel.libraryList.length > 0
+            visible: !libraryView.listMode && Novel.libraryList.length > 0
             topMargin: Style.spacing.xl; leftMargin: Style.spacing.lg
             rightMargin: Style.spacing.lg; bottomMargin: Style.spacing.xl
             cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
@@ -85,6 +135,37 @@ Item {
                     }
                 }
             }
+
+        // ── List ─────────────────────────────────────────────────────────────
+        ListView {
+            id: libRows
+            Layout.fillWidth: true; Layout.fillHeight: true
+            visible: Novel.libraryList.length > 0 && libraryView.listMode
+            topMargin: Style.spacing.xl
+            bottomMargin: Style.spacing.xl
+            clip: true; boundsBehavior: Flickable.StopAtBounds
+            model: Novel.libraryList
+
+            ScrollBar.vertical: StyledScrollBar {
+            }
+
+            delegate: ListRow {
+                width: libRows.width
+                height: implicitHeight
+                source: modelData.coverUrl || ""
+                title: modelData.title || ""
+                bodyFont: libraryView.fontBody
+                inset: Style.spacing.lg
+                meta: ""
+                progress: modelData.lastReadChapterNum ? I18n.t("ch", { 1: modelData.lastReadChapterNum }) : I18n.t("state.notStarted")
+                progressActive: !!modelData.lastReadChapterNum
+
+                onClicked: {
+                    Novel.fetchNovelDetail(modelData.id)
+                    libraryView.novelSelected(modelData.id)
+                }
+            }
         }
     }
+}
 }

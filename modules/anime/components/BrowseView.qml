@@ -7,11 +7,16 @@ import qs.Commons
 import qs.services
 import qs.components
 import qs.Ui
+import "../../../services/list_metrics.js" as ListMetrics
 
 Item {
     id: browseView
 
     readonly property string fontBody: Style.font.family
+
+    // Each panel remembers its own layout (owner, round 6): anime and novel
+    // stop sharing manga's choice.
+    readonly property bool listMode: UiPrefs.viewModeFor("anime") === "list"
 
     // Passes the full show object so DetailView can seed itself immediately
     signal animeSelected(var show)
@@ -31,29 +36,71 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Filter bar (tinted chips, scroll-x) ───────────────────────────────
-        FilterBar {
+        // ── Filter chips + grid/list toggle, one row ──────────────────────────
+        RowLayout {
             Layout.fillWidth: true
-            fontFamily: browseView.fontBody
-            options: [
-                { label: I18n.t("anime.filter.popular") },
-                { label: I18n.t("anime.filter.latest") },
-                { label: I18n.t("anime.filter.japan") },
-                { label: I18n.t("anime.filter.china") },
-                { label: I18n.t("anime.filter.korea") }
-            ]
-            currentIndex: {
-                if (Anime.currentView === "popular") return 0
-                if (Anime.currentCountry === "JP") return 2
-                if (Anime.currentCountry === "CN") return 3
-                if (Anime.currentCountry === "KR") return 4
-                return 1
+            spacing: Style.spacing.sm
+
+            FilterBar {
+                Layout.fillWidth: true
+                fontFamily: browseView.fontBody
+                options: [
+                    { label: I18n.t("anime.filter.popular") },
+                    { label: I18n.t("anime.filter.latest") },
+                    { label: I18n.t("anime.filter.japan") },
+                    { label: I18n.t("anime.filter.china") },
+                    { label: I18n.t("anime.filter.korea") }
+                ]
+                currentIndex: {
+                    if (Anime.currentView === "popular") return 0
+                    if (Anime.currentCountry === "JP") return 2
+                    if (Anime.currentCountry === "CN") return 3
+                    if (Anime.currentCountry === "KR") return 4
+                    return 1
+                }
+                onActivated: function(index) {
+                    browseView.searchCleared()
+                    Anime.currentCountry = index === 2 ? "JP" : index === 3 ? "CN" : index === 4 ? "KR" : "ALL"
+                    if (index === 0) Anime.fetchPopular(true)
+                    else Anime.fetchLatest(true)
+                }
             }
-            onActivated: function(index) {
-                browseView.searchCleared()
-                Anime.currentCountry = index === 2 ? "JP" : index === 3 ? "CN" : index === 4 ? "KR" : "ALL"
-                if (index === 0) Anime.fetchPopular(true)
-                else Anime.fetchLatest(true)
+            // The layout switch, in the same segmented box the manga
+            // panel uses, pinned to the right of the chips.
+            Rectangle {
+                Layout.alignment: Qt.AlignVCenter
+                Layout.rightMargin: Style.spacing.xl
+                implicitWidth: cellsRow.implicitWidth + 2 * Style.spacing.xxs
+                implicitHeight: cellsRow.implicitHeight + 2 * Style.spacing.xxs
+                radius: Style.cornerRadius
+                color: Colors.surface_container
+                border.width: Style.spacing.hairline
+                border.color: Colors.outline_variant
+
+                Row {
+                    id: cellsRow
+                    x: Style.spacing.xxs
+                    y: Style.spacing.xxs
+                    spacing: Style.spacing.xxs
+
+                    ViewModeChip {
+                        glyph: "▦"
+                        label: I18n.t("view.grid")
+                        current: !browseView.listMode
+                        bodyFont: browseView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("anime", "grid")
+                    }
+
+                    ViewModeChip {
+                        glyph: "☰"
+                        label: I18n.t("view.list")
+                        current: browseView.listMode
+                        bodyFont: browseView.fontBody
+                        cellSize: Style.space(22)
+                        onClicked: UiPrefs.setViewMode("anime", "list")
+                    }
+                }
             }
         }
 
@@ -65,10 +112,19 @@ Item {
             // Loading: ghost cards where the first page will land
             SkeletonGrid {
                 anchors.fill: parent; z: 10
-                active: Anime.isFetchingAnime && Anime.animeList.length === 0
+                active: !browseView.listMode && Anime.isFetchingAnime && Anime.animeList.length === 0
                 columns: CardMetrics.columns
                 padding: Style.spacing.xl
                 cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.xl) / CardMetrics.columns)
+            }
+
+            // Rows take over the same area in list mode.
+            SkeletonList {
+                anchors.fill: parent
+                z: 10
+                rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
+                dividerInset: Style.spacing.xl
+                active: browseView.listMode && Anime.animeList.length === 0
             }
 
             // More pages on the way
@@ -104,6 +160,7 @@ Item {
             // Grid
             GridView {
                 id: animeGrid
+                visible: !browseView.listMode
                 anchors.fill: parent; anchors.margins: Style.spacing.xl
                 cellWidth: Math.floor(width / CardMetrics.columns)
                 cellHeight: CardMetrics.cellHeight(cellWidth)
@@ -136,6 +193,7 @@ Item {
                         // state sits on the other cards.
                         cornerText: modelData.score !== null && modelData.score !== undefined
                             ? "★ " + Number(modelData.score || 0).toFixed(1) : ""
+                        cornerAccent: true
                         // What the source actually has, in the user's mode.
                         episodesText: {
                             var avail = modelData.availableEpisodes
@@ -147,6 +205,48 @@ Item {
 
                         onClicked: browseView.animeSelected(modelData)
                     }
+                }
+            }
+
+            // ── List ─────────────────────────────────────────────────────────
+            // Same model and fetch contract as the grid; only the row shape
+            // changes. Each panel keeps its own layout preference.
+            ListView {
+                id: animeRows
+                anchors.fill: parent
+                anchors.topMargin: Style.spacing.xl
+                anchors.bottomMargin: Style.spacing.xl
+                visible: browseView.listMode
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                model: ScriptModel { values: Anime.animeList }
+
+                ScrollBar.vertical: StyledScrollBar {
+                }
+
+                onContentYChanged: {
+                    if (contentY + height > contentHeight - height / 2)
+                        Anime.fetchNextPage()
+                }
+
+                delegate: ListRow {
+                    width: animeRows.width
+                    height: implicitHeight
+                    source: modelData.thumbnail || ""
+                    title: modelData.englishName || modelData.name || ""
+                    bodyFont: browseView.fontBody
+                    meta: {
+                        var parts = []
+                        if (modelData.type) parts.push(I18n.tData(modelData.type))
+                        var avail = modelData.availableEpisodes
+                        if (avail) {
+                            var n = Anime.currentMode === "dub" ? avail.dub : avail.sub
+                            if (n > 0) parts.push(I18n.t("anime.epCount", { 1: n }))
+                        }
+                        return parts.join(" · ")
+                    }
+
+                    onClicked: browseView.animeSelected(modelData)
                 }
             }
         }
