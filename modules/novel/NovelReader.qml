@@ -7,6 +7,7 @@ import qs.services
 import qs.modules.novel.components
 import qs.components
 import qs.Ui
+import "../../services/status_line.js" as StatusLine
 
 Item {
     id: root
@@ -341,6 +342,24 @@ Item {
                 active: root.settingsMode
                 onCloseRequested: root.settingsMode = false
             }
+        }
+
+        // ── Status bar ────────────────────────────────────────────────────────
+        // The same strip as the other two panels: connection, the count of the
+        // list on screen, and the version with the shortcuts that work.
+        StatusBar {
+            Layout.fillWidth: true
+            online: Novel.serverReady
+            countText: StatusLine.format(
+                StatusLine.visibleCount({
+                    settingsMode: root.settingsMode,
+                    tabIndex: root.tabIndex,
+                    browseCount: Novel.novelList.length,
+                    libraryCount: Novel.libraryList.length
+                }),
+                root.tabIndex,
+                I18n.tn)
+            fontFamily: root.fontBody
         }
     }
 

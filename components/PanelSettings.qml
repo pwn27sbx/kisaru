@@ -125,21 +125,16 @@ Item {
         PanelSeparator { Layout.fillWidth: true; visible: root.showScroll }
 
         // ── Audio mode (the anime panel's SUB/DUB) ─────────────────────────
-        // Same place as the language and for the same reason: it is a
-        // preference, not navigation, and it survives a restart.
-        PanelSeparator { Layout.fillWidth: true; visible: root.modes.length > 0 }
-
-        ColumnLayout {
+        // The same card as the language row below (owner, round 6): title and
+        // description on the left, the control where the toggle sits. The look
+        // comes from components/SettingsCard.qml, which mirrors Toggle's own
+        // container, so the two rows cannot drift apart.
+        SettingsCard {
             Layout.fillWidth: true
-            spacing: Style.spacing.sm
             visible: root.modes.length > 0
-
-            StyledText {
-                Layout.fillWidth: true
-                text: I18n.t("settings.audio")
-                color: Colors.text
-                font.pixelSize: Style.font.body
-            }
+            label: I18n.t("settings.audio")
+            description: I18n.t("settings.audioHint")
+            fontFamily: root.fontFamily
 
             Row {
                 spacing: Style.spacing.sm
@@ -161,14 +156,6 @@ Item {
                         onClicked: root.modeSelected(String(modelData.id || ""))
                     }
                 }
-            }
-
-            StyledText {
-                Layout.fillWidth: true
-                text: I18n.t("settings.audioHint")
-                color: Colors.muted
-                font.pixelSize: Style.font.caption
-                wrapMode: Text.WordWrap
             }
         }
 

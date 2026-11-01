@@ -97,6 +97,36 @@ test("every panel shows the shared search field, and anime keeps its mode in set
     assert.match(novel, /extraCell:/);
 });
 
+test("the three panels count in the status bar, not in a heading", () => {
+    // A-3: the count belongs to the bar (owner, round 4 for manga, round 6 for
+    // the other two), and the rule that picks it is the same tested helper.
+    for (const file of PANELS) {
+        const panel = read(file);
+        assert.match(panel, /StatusBar\s*\{/, `${file}: no status bar`);
+        assert.match(panel, /StatusLine\.visibleCount\(/, `${file}: count is not the shared rule`);
+        assert.match(panel, /StatusLine\.format\(/, `${file}: count is not formatted by the shared rule`);
+    }
+    // Anime's library heading had its own badge; two counts are one too many.
+    const animeLibrary = read("modules/anime/components/LibraryView.qml");
+    assert.ok(!animeLibrary.includes("libCountText"), "anime Library kept its own count badge");
+    assert.ok(!animeLibrary.includes("anime.library.title"), "anime Library kept its heading");
+});
+
+test("the audio setting is the same card as the language row", () => {
+    // Owner, round 6: title and description on the left, control on the right,
+    // the container the language row uses — not two loose buttons.
+    const settings = read("components/PanelSettings.qml");
+    const start = settings.indexOf("Audio mode (the anime panel");
+    const audio = settings.slice(start, settings.indexOf("UI language", start));
+    assert.match(audio, /SettingsCard\s*\{/, "the audio row is not a settings card");
+    assert.match(audio, /modeSelected/, "the card has no SUB/DUB control");
+    const card = read("components/SettingsCard.qml");
+    // Same container tokens as qs.Ui's Toggle, which the language row uses.
+    assert.match(card, /BorderSurface/);
+    assert.match(card, /Style\.controlFill\(/);
+    assert.match(card, /Border\.controlSpec\(\s*"normal"/);
+});
+
 test("every panel keeps publishing pointerInside from a HoverHandler", () => {
     for (const file of PANELS) {
         const qml = read(file);

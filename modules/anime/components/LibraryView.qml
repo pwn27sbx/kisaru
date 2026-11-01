@@ -20,47 +20,9 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Header ────────────────────────────────────────────────────────────
-        Rectangle {
-            Layout.fillWidth: true; height: 52
-            color: Colors.surface_container_low; z: 2
-
-            Rectangle {
-                anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                height: 1; color: Colors.outline_variant; opacity: 0.5
-            }
-
-            RowLayout {
-                anchors { fill: parent; leftMargin: Style.spacing.huge; rightMargin: Style.space(16) }
-
-                Row {
-                    spacing: Style.space(0); Layout.fillWidth: true
-
-                    StyledText {
-                        text: I18n.t("anime.library.title")
-                        font.family: libraryView.fontDisplay
-                        font.pixelSize: 22; font.letterSpacing: 1 // style-ignore — bespoke size
-                        color: Colors.on_surface; opacity: 0.85
-                    }
-                }
-
-                // Entry count badge
-                Rectangle {
-                    visible: Anime.libraryList.length > 0
-                    height: 22; width: libCountText.implicitWidth + 16; radius: Style.cornerRadius
-                    color: Colors.surface_container
-                    border.color: Colors.outline_variant; border.width: 1
-
-                    StyledText {
-                        id: libCountText; anchors.centerIn: parent
-                        text: Anime.libraryList.length
-                        font.family: libraryView.fontBody
-                        font.pixelSize: Style.font.caption; font.letterSpacing: 0.5
-                        color: Colors.on_surface_variant
-                    }
-                }
-            }
-        }
+        // The heading row (title plus entry-count badge) is gone: the tab
+        // names the section and the count lives in the status bar now, exactly
+        // like the manga library after round 4 (owner, round 6).
 
         // ── Empty state ───────────────────────────────────────────────────────
         Item {

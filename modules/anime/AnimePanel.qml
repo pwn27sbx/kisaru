@@ -231,7 +231,17 @@ Item {
         StatusBar {
             Layout.fillWidth: true
             online: Anime.serverReady
-            countText: StatusLine.format(Anime.animeList.length, 0, I18n.tn)
+            // Same rule as the manga bar: the loaded count on Browse, the
+            // library's own size on Library, nothing on the settings page.
+            countText: StatusLine.format(
+                StatusLine.visibleCount({
+                    settingsMode: root.settingsMode,
+                    tabIndex: root.tabIndex,
+                    browseCount: Anime.animeList.length,
+                    libraryCount: Anime.libraryList.length
+                }),
+                root.tabIndex,
+                I18n.tn)
             modeText: Anime.currentMode.toUpperCase()
             fontFamily: root.fontBody
         }
