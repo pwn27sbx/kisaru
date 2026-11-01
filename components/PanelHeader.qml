@@ -5,30 +5,21 @@ import qs.Commons
 import qs.Ui
 import "../services/header_cell.js" as HeaderCell
 
-// The header row, shared by the three panels (owner, round 6: one look for all).
+// The header row, shared by the three panels (owner, round 6).
 //
 // One strip of full-height cells, no box inside a box:
 //
-//   [ BRAND ][ Browse 32 ][ Library 1 ][ SUB | DUB ][ provider ] … [⌕][⚙][─]
+//   [ BRAND ][ Browse 32 ][ Library 1 ] … [ provider ] [⚙][─]
 //
 // The selected cell wears the active filter chip's recipe (accent tint, 1 px
 // accent ring, resolved state colour); the rest stay plain and tint on hover.
 // `services/header_cell.js` decides which paint applies and is tested; this file
 // only maps that answer to Style calls.
 //
-// Cells, in order:
-//   - `brand`, a Component supplied by the panel (PanelBrand in caps, no glyph);
-//   - the tabs, with an optional small muted counter each;
-//   - `modes`, a small switch for a panel-wide choice — anime's SUB/DUB — with
-//     `modeSelected` reported; only on the first tab, where it applies;
-//   - `extraCell`, one slot for a control that is not a pair (the novel panel's
-//     provider dropdown); also only on the first tab;
-//   - on the right, the search button (until the always-visible field lands),
-//     then the gear and close as plain icon cells.
-//
-// The search field itself belongs to each panel (it owns the debounce and the
-// backend call), so it still arrives through the `overlay` slot while the panel
-// runs its own expanding search.
+// The search is not here: each panel puts the always-visible `SearchField` under
+// this row (owner, round 6), so the header has no search state and no overlay.
+// Panel-wide preferences that used to live here (SUB/DUB) moved to the settings
+// page for the same reason the language did: they are settings, not navigation.
 Item {
     id: root
 
@@ -38,35 +29,24 @@ Item {
     // stays a string[], so the delegates keep rendering `String(modelData)`
     // instead of `[object Object]`.
     property var tabCounts: []
-    // `[{ id, label }]`: a panel-wide switch rendered as cells after the tabs.
-    // Anime passes SUB/DUB; a panel with nothing to switch passes none.
-    property var modes: []
-    property string mode: ""
     property Component brand: null
     property int tabIndex: 0
-    property bool showSearch: true
-    property bool searchOpen: false
-    // While the settings view is open the content controls step aside: search,
-    // modes and the extra cell belong to the list, not to settings.
+    // While the settings view is open the content controls step aside: the
+    // extra cell belongs to the list, not to settings.
     property bool settingsMode: false
     // A control that is not a pair (the novel panel's provider dropdown),
     // rendered as one full-height cell before the gear.
     property Component extraCell: null
     property string fontFamily: Style.font.family
 
-    // Items declared as children land here (the panel's search field).
-    default property alias overlay: slot.data
-
     signal tabActivated(int index)
-    signal searchClicked()
     signal settingsClicked()
-    signal modeSelected(string value)
     signal minimizeClicked()
 
     implicitHeight: Style.space(48)
     implicitWidth: parent ? parent.width : 0
 
-    // The mode switch and the extra cell belong to the list on the first tab.
+    // The extra cell belongs to the list on the first tab.
     readonly property bool _listTab: root.tabIndex === 0 && !root.settingsMode
 
     Rectangle {
@@ -75,7 +55,6 @@ Item {
     }
 
     // One cell of the row: full height, plain until it is current or hovered.
-    // Shared by the tabs and the modes so the two cannot drift apart.
     component Cell: ClickableRect {
         id: cell
 
@@ -170,7 +149,6 @@ Item {
 
     Row {
         id: cellsRow
-        visible: !root.searchOpen
         anchors {
             left: brandLoader.active ? brandLoader.right : parent.left
             leftMargin: Style.spacing.md
@@ -196,28 +174,6 @@ Item {
                 onClicked: root.tabActivated(index)
             }
         }
-
-        Repeater {
-            model: root._listTab ? root.modes : []
-
-            delegate: Cell {
-                required property var modelData
-
-                label: String(modelData.label || "")
-                current: String(modelData.id || "") === root.mode
-                onClicked: root.modeSelected(String(modelData.id || ""))
-            }
-        }
-    }
-
-    Item {
-        id: slot
-        anchors {
-            left: parent.left
-            right: actionsRow.left
-            top: parent.top
-            bottom: parent.bottom
-        }
     }
 
     Row {
@@ -229,21 +185,12 @@ Item {
         }
         spacing: Style.spacing.controlGap
 
-        PanelActionButton {
-            visible: !root.settingsMode && root.showSearch && root.tabIndex === 0
-            iconText: "⌕"
-            hasCursor: root.searchOpen
-            size: Style.space(36)
-            fontSize: Style.font.iconLarge
-            onClicked: root.searchClicked()
-        }
-
         // The panel's own control (novel's provider dropdown), one cell tall —
         // the control inside is expected to be one cell of the row.
         Loader {
             id: extraLoader
             anchors.verticalCenter: parent.verticalCenter
-            visible: root._listTab && root.extraCell !== null && !root.searchOpen
+            visible: root._listTab && root.extraCell !== null
             height: root.implicitHeight
             width: item ? item.implicitWidth : 0
             sourceComponent: root.extraCell

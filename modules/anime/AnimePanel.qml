@@ -7,6 +7,7 @@ import qs.services
 import qs.modules.anime.components
 import qs.components
 import qs.Ui
+import "../../services/status_line.js" as StatusLine
 
 Item {
     id: root
@@ -34,9 +35,6 @@ Item {
     property bool settingsMode: false
     readonly property int settingsPageIndex: 2   // third page of the content stack
 
-    // ── Search state ──────────────────────────────────────────────────────────
-    property bool searchOpen: false
-
     // ── Navigation stacks (0 = list, 1 = detail) ──────────────────────────────
     // No "reader" stack — MPV handles playback externally
     property int browseStack:  0
@@ -51,18 +49,31 @@ Item {
         visible = false
     }
 
-    function openSearch() {
-        searchOpen = true
-        Qt.callLater(function() { searchField.forceActiveFocus() })
+    // "/" focuses the always-visible search field; the visibility guard keeps
+    // it from firing over another panel, and the focus guard from swallowing a
+    // "/" typed INTO the field.
+    Shortcut {
+        sequence: "/"
+        context: Qt.WindowShortcut
+        enabled: root.visible && !root.settingsMode && root.tabIndex === 0
+                 && !(searchField && searchField.activeFocus)
+        onActivated: root.focusSearch()
     }
 
+    function focusSearch() {
+        if (searchField) searchField.forceFocus()
+    }
+
+    // Clears the text only: Browse calls this when a filter invalidates the
+    // query, and the field stays where the user was typing.
     function clearSearch() {
-        searchOpen = false
-        if (searchField) searchField.text = ""
+        if (searchField) searchField.clear()
     }
 
+    // Esc: empty the field, hand the focus back and show the unfiltered list.
     function closeSearch() {
-        clearSearch()
+        if (!searchField) return
+        searchField.blur()
         browseView.resetList()
     }
 
@@ -87,20 +98,13 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Header (tabs · search · SUB/DUB · language · minimize) ────────────
+        // ── Header (brand · tabs · settings · minimize) ───────────────────────
         PanelHeader {
             Layout.fillWidth: true
             z: 2
             tabs: [I18n.t("tab.browse"), I18n.t("tab.library")]
             tabIndex: root.tabIndex
             brand: brandComponent
-            searchOpen: root.searchOpen
-            // SUB/DUB as cells of the header row (owner, round 6, D1a).
-            modes: [
-                { id: "sub", label: "SUB" }, // i18n-ignore — key cap; `id` is the value, this is what it reads
-                { id: "dub", label: "DUB" } // i18n-ignore — key cap; `id` is the value, this is what it reads
-            ]
-            mode: Anime.currentMode
             fontFamily: root.fontBody
             settingsMode: root.settingsMode
             onTabActivated: function(index) {
@@ -108,87 +112,35 @@ Item {
                 root.tabIndex = index
             }
             onSettingsClicked: root.settingsMode = !root.settingsMode
-            onSearchClicked: root.searchOpen ? root.closeSearch() : root.openSearch()
-            onModeSelected: function(value) { Anime.setMode(value) }
             onMinimizeClicked: root.minimize()
+        }
 
-            // Search field — occupies the left region while searching
-            Rectangle {
-                id: searchBar
-                visible: root.searchOpen
-                anchors {
-                    fill: parent
-                    leftMargin: Style.spacing.md
-                    rightMargin: Style.spacing.md
-                    topMargin: Style.spacing.md
-                    bottomMargin: Style.spacing.md
-                }
-                radius: Style.cornerRadius
-                color: Colors.surface_container
-                border.color: searchField.activeFocus ? Colors.primary : Colors.outline_variant
-                border.width: searchField.activeFocus ? 1.5 : 1
-                Behavior on border.width { NumberAnimation { duration: Motion.fast } }
+        // ── Search field (always on screen, under the header) ────────────────
+        SearchField {
+            id: searchField
+            visible: root.tabIndex === 0 && !root.settingsMode
+            Layout.fillWidth: true
+            Layout.preferredHeight: Style.space(30)
+            Layout.leftMargin: Style.spacing.md
+            Layout.rightMargin: Style.spacing.md
+            Layout.topMargin: Style.spacing.sm
+            Layout.bottomMargin: Style.spacing.sm
+            placeholder: I18n.t("anime.search")
+            fontFamily: root.fontBody
+            onEdited: searchDebounce.restart()
+            onCleared: root.closeSearch()
+        }
 
-                TextInput {
-                    id: searchField
-                    anchors {
-                        verticalCenter: parent.verticalCenter
-                        left: parent.left; right: clearBtn.left
-                        leftMargin: Style.spacing.xxxl; rightMargin: Style.spacing.md
-                    }
-                    color: Colors.on_surface
-                    font.family: root.fontBody
-                    font.pixelSize: Style.font.subtitle
-                    clip: true
-                    onTextChanged: searchDebounce.restart()
-                    Keys.onEscapePressed: {
-                        searchField.text = ""
-                        root.closeSearch()
-                    }
-                }
-
-                StyledText {
-                    anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: Style.spacing.xxxl }
-                    text: I18n.t("anime.search")
-                    color: Colors.on_surface_variant
-                    font.family: root.fontBody
-                    font.pixelSize: Style.font.subtitle
-                    visible: searchField.text.length === 0
-                    opacity: 0.6
-                }
-
-                Item {
-                    id: clearBtn
-                    anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: Style.spacing.xl }
-                    width: 22; height: 22
-                    visible: searchField.text.length > 0
-                    opacity: visible ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: 18; height: 18; radius: Style.cornerRadius
-                        color: Colors.surface_container_highest
-                    }
-                    StyledText {
-                        anchors.centerIn: parent
-                        text: "✕"
-                        color: Colors.on_surface_variant
-                        font.pixelSize: 9; font.bold: true // style-ignore — bespoke size
-                    }
-                    MouseArea { anchors.fill: parent; onClicked: searchField.text = "" }
-                }
-            }
-
-            Timer {
-                id: searchDebounce
-                interval: 350
-                onTriggered: {
-                    if (searchField.text.trim().length > 0)
-                        Anime.searchAnime(searchField.text.trim(), true)
-                    else
-                        browseView.resetList()
-                }
+        // The one debounce the field goes through. It sits at the panel's root
+        // so the query survives the field being hidden on the library tab.
+        Timer {
+            id: searchDebounce
+            interval: 350
+            onTriggered: {
+                if (searchField.text.trim().length > 0)
+                    Anime.searchAnime(searchField.text.trim(), true)
+                else
+                    browseView.resetList()
             }
         }
 
@@ -261,8 +213,28 @@ Item {
             PanelSettings {
                 showScroll: false
                 active: root.settingsMode
+                // SUB/DUB lives here now (owner, round 6): a preference like the
+                // language, persisted with the rest.
+                modes: [
+                    { id: "sub", label: "SUB" }, // i18n-ignore — key cap; `id` is the value
+                    { id: "dub", label: "DUB" } // i18n-ignore — key cap; `id` is the value
+                ]
+                mode: Anime.currentMode
+                onModeSelected: function(id) { Anime.setMode(id) }
                 onCloseRequested: root.settingsMode = false
             }
+        }
+
+        // ── Status bar ────────────────────────────────────────────────────────
+        // Online, the loaded count and the active audio mode: "● Online ·
+        // 32 loaded · SUB" (owner, round 6). The count uses the wording the
+        // manga panel already had, and the mode is a key name, not UI copy.
+        StatusBar {
+            Layout.fillWidth: true
+            online: Anime.serverReady
+            countText: StatusLine.format(Anime.animeList.length, 0, I18n.tn)
+            modeText: Anime.currentMode.toUpperCase()
+            fontFamily: root.fontBody
         }
     }
 

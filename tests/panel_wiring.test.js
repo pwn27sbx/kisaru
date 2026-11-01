@@ -62,11 +62,37 @@ test("the three panels share one header: no per-panel look flags", () => {
         "LanguageToggle.qml is back; the language is a setting");
 });
 
-test("anime and novel drive the shared cells instead of their own copies", () => {
-    // SUB/DUB and the provider used to be header internals; they are cells now.
+test("the header holds no search state and no panel preferences", () => {
+    // A-2: the search is a field under the row, and SUB/DUB is a setting.
+    const header = read("components/PanelHeader.qml");
+    // Declarations, not words: the comments still talk about the overlay ring.
+    for (const gone of [
+        "default property alias overlay",
+        "property bool showSearch",
+        "property bool searchOpen",
+        "signal searchClicked",
+        "readonly property bool showBrand",
+        "property var modes",
+        "signal modeSelected"
+    ]) {
+        assert.ok(!header.includes(gone), `PanelHeader still declares ${gone}`);
+    }
+    // The provider picker stays: it is used to switch sources all the time.
+    assert.match(header, /extraCell/);
+});
+
+test("every panel shows the shared search field, and anime keeps its mode in settings", () => {
+    for (const file of PANELS) {
+        assert.match(read(file), /SearchField\s*\{/, `${file}: no shared search field`);
+        assert.match(read(file), /onEdited:\s*searchDebounce\.restart\(\)/, `${file}: field is not debounced`);
+    }
     const anime = read("modules/anime/AnimePanel.qml");
-    assert.match(anime, /modes:\s*\[/);
+    // The audio mode is a settings row now, persisted, and named in the bar.
+    assert.match(anime, /PanelSettings\s*\{[^}]*modes:/s);
     assert.match(anime, /onModeSelected/);
+    assert.match(anime, /modeText:\s*Anime\.currentMode\.toUpperCase\(\)/);
+    assert.match(read("services/Anime.qml"), /currentMode:\s*UiPrefs\.animeMode/);
+    assert.match(read("services/Anime.qml"), /UiPrefs\.setAnimeMode\(mode\)/);
     const novel = read("modules/novel/NovelReader.qml");
     assert.match(novel, /extraCell:/);
 });

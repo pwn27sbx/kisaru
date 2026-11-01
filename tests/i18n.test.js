@@ -138,6 +138,15 @@ test("tn() pluralizes the loaded-results count", () => {
     assert.equal(i18n.tn("en", "header.loaded", 7), "7 loaded");
 });
 
+test("t() labels the settings rows the panels share", () => {
+    // The audio-mode row lives in the settings page next to the language row
+    // (owner, round 6): same panel, same wording rules, both languages.
+    assert.equal(i18n.t("es", "settings.audio"), "Audio");
+    assert.equal(i18n.t("en", "settings.audio"), "Audio");
+    assert.equal(i18n.t("es", "settings.audioHint"), "Subtítulos o doblaje. Se aplica en vivo y se guarda.");
+    assert.equal(i18n.t("en", "settings.audioHint"), "Subtitles or dub. Applies live and is saved.");
+});
+
 test("t() names each panel's header brand", () => {
     // The manga panel's brand is the product name, not the section (owner,
     // round 2), and it reads the same in both languages. Anime and novel keep

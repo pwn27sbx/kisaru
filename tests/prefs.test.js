@@ -86,3 +86,27 @@ test("withSetting() persists viewMode without dropping the other keys", () => {
     assert.equal(after.language, "es");
     assert.equal(after.scrollFactor, 4);
 });
+
+test("normalizeAnimeMode() defaults to sub and accepts only the two modes", () => {
+    // Owner, round 6: the anime audio mode is a preference now, so a DUB choice
+    // must survive a restart and a broken file must not leave it unset.
+    assert.equal(prefs.DEFAULT_ANIME_MODE, "sub");
+    assert.equal(prefs.normalizeAnimeMode(undefined), "sub");
+    assert.equal(prefs.normalizeAnimeMode(null), "sub");
+    assert.equal(prefs.normalizeAnimeMode(""), "sub");
+    assert.equal(prefs.normalizeAnimeMode("garbage"), "sub");
+    assert.equal(prefs.normalizeAnimeMode(42), "sub");
+    assert.equal(prefs.normalizeAnimeMode("sub"), "sub");
+    assert.equal(prefs.normalizeAnimeMode("dub"), "dub");
+    // Tolerant of case and stray whitespace from a hand-edited settings.json.
+    assert.equal(prefs.normalizeAnimeMode(" DUB "), "dub");
+});
+
+test("withSetting() persists animeMode without dropping the other keys", () => {
+    const before = JSON.stringify({ language: "es", scrollFactor: 4, viewMode: "list", animeMode: "sub" });
+    const after = JSON.parse(prefs.withSetting(before, "animeMode", "dub"));
+    assert.equal(after.animeMode, "dub");
+    assert.equal(after.language, "es");
+    assert.equal(after.scrollFactor, 4);
+    assert.equal(after.viewMode, "list");
+});

@@ -59,21 +59,20 @@ Item {
     // leaves, and the one debounce below stays the only path to
     // Manga.searchManga.
     function focusSearch() {
-        if (searchField) searchField.forceActiveFocus()
+        if (searchField) searchField.forceFocus()
     }
 
     // Clears the text only: Browse calls this when a filter invalidates the
     // query, and the field must stay where the user is typing.
     function clearSearch() {
-        if (searchField) searchField.text = ""
+        if (searchField) searchField.clear()
     }
 
     // Esc: empty the field, hand the focus back and show the unfiltered list
     // again — the end state the closed overlay used to leave.
     function closeSearch() {
         if (!searchField) return
-        searchField.text = ""
-        searchField.focus = false
+        searchField.blur()
         browseView.resetList()
     }
 
@@ -146,7 +145,6 @@ Item {
             tabIndex: root.tabIndex
             brand: brandComponent
             tabCounts: [Manga.mangaList.length, Manga.libraryList.length]
-            showSearch: false
             fontFamily: root.fontBody
             settingsMode: root.settingsMode
             onTabActivated: function(index) {
@@ -158,13 +156,10 @@ Item {
         }
 
         // ── Search field (always on screen, under the header) ─────────────────
-        // Stitch's sub-bar: one full-width pill with the search glyph on the
-        // left, the placeholder in the middle and the "/" key badge on the
-        // right. Browse only — the library is searched by itself, and the
-        // settings page has no list — which is exactly the scope the old
-        // header button had.
-        Rectangle {
-            id: searchBar
+        // The shared pill (components/SearchField.qml): the panel keeps the
+        // debounce and the service call, nothing else.
+        SearchField {
+            id: searchField
             visible: root.tabIndex === 0 && !root.settingsMode
             Layout.fillWidth: true
             Layout.preferredHeight: Style.space(30)
@@ -172,95 +167,10 @@ Item {
             Layout.rightMargin: Style.spacing.md
             Layout.topMargin: Style.spacing.sm
             Layout.bottomMargin: Style.spacing.sm
-            radius: Style.cornerRadius
-            color: Colors.surface_container
-            border.color: searchField.activeFocus ? Colors.primary : Colors.outline_variant
-            border.width: searchField.activeFocus ? 1.5 : 1
-            Behavior on border.width { NumberAnimation { duration: Motion.fast } }
-
-            StyledText {
-                anchors {
-                    left: parent.left; leftMargin: Style.spacing.md
-                    verticalCenter: parent.verticalCenter
-                }
-                text: "⌕"
-                color: Colors.muted
-                font.family: root.fontBody
-                font.pixelSize: Style.font.body
-            }
-
-            TextInput {
-                id: searchField
-                anchors {
-                    verticalCenter: parent.verticalCenter
-                    left: parent.left; right: keyArea.left
-                    leftMargin: Style.space(26); rightMargin: Style.spacing.sm
-                }
-                color: Colors.on_surface
-                font.family: root.fontBody
-                font.pixelSize: Style.font.body
-                clip: true
-                onTextChanged: searchDebounce.restart()
-                Keys.onEscapePressed: root.closeSearch()
-            }
-
-            StyledText {
-                anchors { verticalCenter: parent.verticalCenter; left: searchField.left }
-                text: I18n.t("manga.search")
-                color: Colors.on_surface_variant
-                font.family: root.fontBody
-                font.pixelSize: Style.font.body
-                visible: searchField.text.length === 0
-                opacity: 0.6
-            }
-
-            // The "/" key hint. It doubles as the clear button once there is
-            // text, so the mouse keeps the affordance the old overlay had, in
-            // the same cell and without a second control in the row.
-            Item {
-                id: keyArea
-                anchors {
-                    right: parent.right; rightMargin: Style.spacing.sm
-                    verticalCenter: parent.verticalCenter
-                }
-                width: Style.space(16)
-                height: Style.space(16)
-
-                Rectangle {
-                    anchors.fill: parent
-                    visible: searchField.text.length === 0
-                    radius: Style.cornerRadius
-                    color: Colors.surface_container_highest
-                    border.width: Style.spacing.hairline
-                    border.color: Colors.outline_variant
-
-                    StyledText {
-                        anchors.centerIn: parent
-                        text: "/"
-                        color: Colors.muted
-                        font.family: root.fontBody
-                        font.pixelSize: Style.font.caption
-                    }
-                }
-
-                ClickableRect {
-                    anchors.fill: parent
-                    visible: searchField.text.length > 0
-                    cursorShape: Qt.PointingHandCursor
-                    color: Colors.surface_container_highest
-                    border.width: Style.spacing.hairline
-                    border.color: Colors.outline_variant
-                    onClicked: searchField.text = ""
-
-                    StyledText {
-                        anchors.centerIn: parent
-                        text: "✕"
-                        color: Colors.muted
-                        font.family: root.fontBody
-                        font.pixelSize: Style.font.caption
-                    }
-                }
-            }
+            placeholder: I18n.t("manga.search")
+            fontFamily: root.fontBody
+            onEdited: searchDebounce.restart()
+            onCleared: root.closeSearch()
         }
 
         StackLayout {

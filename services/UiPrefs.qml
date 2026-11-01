@@ -53,6 +53,10 @@ Singleton {
     // views never have to guard against anything else.
     readonly property string viewMode: Core.normalizeViewMode(Core.parseSettings(root.raw).viewMode)
 
+    // "sub" | "dub": the anime panel's audio mode. It reads like the language —
+    // one preference, one key — so a DUB choice survives a restart.
+    readonly property string animeMode: Core.normalizeAnimeMode(Core.parseSettings(root.raw).animeMode)
+
     function setSetting(key, value) {
         if (!root._loaded) {
             root._pending[key] = value
@@ -86,6 +90,10 @@ Singleton {
     // be what lands in the file (and the next read would ignore it anyway).
     function setViewMode(value) {
         root.setSetting("viewMode", Core.normalizeViewMode(value))
+    }
+
+    function setAnimeMode(value) {
+        root.setSetting("animeMode", Core.normalizeAnimeMode(value))
     }
 
     FileView {

@@ -29,6 +29,9 @@ Rectangle {
     // not know what is being counted — and empty when there is nothing to
     // count: the settings page, or a list that has not loaded yet.
     property string countText: ""
+    // A panel-wide state worth a word, after the count: the anime panel's
+    // active audio mode ("● Online · 32 loaded · SUB"). Empty elsewhere.
+    property string modeText: ""
     property string fontFamily: Style.font.family
 
     // install_config copies the plugin folder next to the running config, so
@@ -115,6 +118,25 @@ Rectangle {
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             color: Colors.on_surface_variant
+        }
+
+        StyledText {
+            Layout.alignment: Qt.AlignVCenter
+            visible: root.modeText !== ""
+            text: "·"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            color: Colors.muted
+        }
+
+        StyledText {
+            Layout.alignment: Qt.AlignVCenter
+            visible: root.modeText !== ""
+            text: root.modeText
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            color: Colors.on_surface_variant
+            font.letterSpacing: 0.4
         }
     }
 

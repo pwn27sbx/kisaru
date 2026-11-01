@@ -6,7 +6,8 @@
 //   {
 //     "language": "es",       // UI language (WU-11)
 //     "scrollFactor": 2,      // reader wheel speed, 0.5..5
-//     "viewMode": "grid"      // manga Browse/Library layout: "grid" | "list"
+//     "viewMode": "grid",     // manga Browse/Library layout: "grid" | "list"
+//     "animeMode": "sub"      // anime audio: "sub" | "dub" (owner, round 6)
 //   }
 //
 // Every writer must preserve the keys it does not own: the language toggle
@@ -23,6 +24,11 @@ var MAX_SCROLL_FACTOR = 5;
 // toggle existed, so it is the default when the key is missing or unreadable.
 var DEFAULT_VIEW_MODE = "grid";
 var VIEW_MODES = ["grid", "list"];
+
+// The anime panel's audio mode. It used to be a local property that started at
+// "sub" on every launch, so a DUB choice was lost on restart (owner, round 6).
+var DEFAULT_ANIME_MODE = "sub";
+var ANIME_MODES = ["sub", "dub"];
 
 function parseSettings(text) {
     try {
@@ -60,6 +66,13 @@ function normalizeViewMode(value) {
 // Same document with ONE key set and everything else left alone. This is the
 // only writer shape the app uses: the language row and the scroll slider each
 // own their key, and neither may drop the other's.
+// "sub" | "dub" and nothing else: a hand-edited file or a missing key falls
+// back to the default instead of leaving the panel asking for an unknown mode.
+function normalizeAnimeMode(value) {
+    var mode = String(value === undefined || value === null ? "" : value).trim().toLowerCase();
+    return ANIME_MODES.indexOf(mode) >= 0 ? mode : DEFAULT_ANIME_MODE;
+}
+
 function withSetting(text, key, value) {
     var data = parseSettings(text);
     data[String(key)] = value;
@@ -76,6 +89,8 @@ if (typeof module !== "undefined" && module.exports) {
         withSetting: withSetting,
         normalizeLanguage: normalizeLanguage,
         DEFAULT_VIEW_MODE: DEFAULT_VIEW_MODE,
-        normalizeViewMode: normalizeViewMode
+        normalizeViewMode: normalizeViewMode,
+        DEFAULT_ANIME_MODE: DEFAULT_ANIME_MODE,
+        normalizeAnimeMode: normalizeAnimeMode
     };
 }

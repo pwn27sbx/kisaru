@@ -20,10 +20,17 @@ Item {
 
     // The anime panel has no reader, so the scroll row makes no sense there.
     property bool showScroll: true
+    // A panel-wide preference that is a small switch, rendered as a settings
+    // row: the anime panel's SUB/DUB (owner, round 6: "it is a preference like
+    // the language"). `[{ id, label }]`; empty hides the row.
+    property var modes: []
+    property string mode: ""
+    property string fontFamily: Style.font.family
     // The panels do not hand focus to this view, and Esc needs a focused item.
     property bool active: false
 
     signal closeRequested()
+    signal modeSelected(string id)
 
     Item {
         id: keyCatcher
@@ -116,6 +123,54 @@ Item {
         }
 
         PanelSeparator { Layout.fillWidth: true; visible: root.showScroll }
+
+        // ── Audio mode (the anime panel's SUB/DUB) ─────────────────────────
+        // Same place as the language and for the same reason: it is a
+        // preference, not navigation, and it survives a restart.
+        PanelSeparator { Layout.fillWidth: true; visible: root.modes.length > 0 }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: Style.spacing.sm
+            visible: root.modes.length > 0
+
+            StyledText {
+                Layout.fillWidth: true
+                text: I18n.t("settings.audio")
+                color: Colors.text
+                font.pixelSize: Style.font.body
+            }
+
+            Row {
+                spacing: Style.spacing.sm
+
+                Repeater {
+                    model: root.modes
+
+                    delegate: Button {
+                        required property var modelData
+
+                        readonly property bool active: String(modelData.id || "") === root.mode
+
+                        text: String(modelData.label || "")
+                        bordered: false
+                        selected: active
+                        foreground: active ? Colors.text : Colors.muted
+                        fontFamily: root.fontFamily
+                        fontSize: Style.font.body
+                        onClicked: root.modeSelected(String(modelData.id || ""))
+                    }
+                }
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                text: I18n.t("settings.audioHint")
+                color: Colors.muted
+                font.pixelSize: Style.font.caption
+                wrapMode: Text.WordWrap
+            }
+        }
 
         // ── UI language ────────────────────────────────────────────────────
         Toggle {

@@ -17,7 +17,9 @@ Singleton {
     property int popularPage: 1
     property int latestPage: 1
     property string currentSearchText: ""
-    property string currentMode: "sub"
+    // The audio mode is a user preference now, not a per-launch default: it is
+    // read from settings.json and written back by setMode (owner, round 6).
+    property string currentMode: UiPrefs.animeMode
     property string currentCountry: "ALL"
     property string currentView: ""
 
@@ -430,6 +432,7 @@ Singleton {
     function setMode(mode) {
         if (mode === currentMode) return
         currentMode = mode
+        UiPrefs.setAnimeMode(mode)
         if (currentView === "popular")      fetchPopular(true)
         else if (currentView === "latest")  fetchLatest(true)
         else if (currentView === "search" && currentSearchText.length > 0)
