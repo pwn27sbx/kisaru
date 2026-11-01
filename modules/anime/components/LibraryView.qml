@@ -38,39 +38,12 @@ Item {
 
             Item { Layout.fillWidth: true }
 
-            Rectangle {
+            ViewModeToggle {
                 Layout.alignment: Qt.AlignVCenter
-                implicitWidth: viewCells.implicitWidth + 2 * Style.spacing.xxs
-                implicitHeight: viewCells.implicitHeight + 2 * Style.spacing.xxs
-                radius: Style.cornerRadius
-                color: Colors.surface_container
-                border.width: Style.spacing.hairline
-                border.color: Colors.outline_variant
-
-                Row {
-                    id: viewCells
-                    x: Style.spacing.xxs
-                    y: Style.spacing.xxs
-                    spacing: Style.spacing.xxs
-
-                    ViewModeChip {
-                        glyph: "▦"
-                        label: I18n.t("view.grid")
-                        current: !libraryView.listMode
-                        bodyFont: libraryView.fontBody
-                        cellSize: Style.space(22)
-                        onClicked: UiPrefs.setViewMode("anime", "grid")
-                    }
-
-                    ViewModeChip {
-                        glyph: "☰"
-                        label: I18n.t("view.list")
-                        current: libraryView.listMode
-                        bodyFont: libraryView.fontBody
-                        cellSize: Style.space(22)
-                        onClicked: UiPrefs.setViewMode("anime", "list")
-                    }
-                }
+                Layout.rightMargin: Style.spacing.xl
+                panel: "anime"
+                listMode: libraryView.listMode
+                fontFamily: libraryView.fontBody
             }
         }
 

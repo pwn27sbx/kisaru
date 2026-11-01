@@ -207,10 +207,15 @@ test("every panel remembers its own grid/list choice", () => {
     for (const [file, panel] of views) {
         const qml = read(file);
         assert.match(qml, new RegExp(`viewModeFor\\("${panel}"\\)`), `${file}: reads another panel's layout`);
-        assert.match(qml, /ViewModeChip\s*\{/, `${file}: no layout toggle`);
+        // One shared control: the view names its panel and never carries its
+        // own copy of the segmented box.
+        assert.match(qml, /ViewModeToggle\s*\{/, `${file}: no shared layout toggle`);
+        assert.match(qml, new RegExp(`panel: "${panel}"`), `${file}: the toggle names another panel`);
+        assert.ok(!qml.includes("cellsRow {") && !qml.includes("viewCells {"),
+            `${file}: still carries a hand-built toggle`);
         assert.match(qml, /ListRow\s*\{/, `${file}: no list rows`);
-        assert.ok(qml.includes(`setViewMode("${panel}", "grid")`), `${file}: writes another panel's layout`);
     }
+    assert.match(read("components/ViewModeToggle.qml"), /UiPrefs\.setViewMode\(root\.panel/, "the shared toggle does not write the panel's key");
 });
 
 test("the anime score chip is legible: accent and bold", () => {
@@ -227,6 +232,24 @@ test("the anime score chip is legible: accent and bold", () => {
     ]) {
         assert.match(read(file), /cornerAccent: true/, `${file}: the score is still dim`);
     }
+});
+
+test("all three panels are 550 wide, and the novel keeps fullscreen", () => {
+    // Owner, round 6 (D2). The novel's reader is the reason the width exists, so
+    // its fullscreen branch must survive the change.
+    assert.match(read("modules/manga/MangaReader.qml"), /implicitWidth: 550/);
+    assert.match(read("modules/anime/AnimePanel.qml"), /implicitWidth: 550/);
+    assert.match(read("modules/novel/NovelReader.qml"), /implicitWidth: fullscreen \?.*: 550/);
+});
+
+test("the anime list row carries the score the grid shows", () => {
+    const row = read("components/ListRow.qml");
+    assert.match(row, /property string score/);
+    assert.match(row, /visible: root\.score !== ""/);
+    // The score keeps the accent tone of the grid's chip.
+    assert.match(row, /color: Colors\.primary/);
+    const browse = read("modules/anime/components/BrowseView.qml");
+    assert.match(browse, /score: modelData\.score/);
 });
 
 test("every panel keeps publishing pointerInside from a HoverHandler", () => {

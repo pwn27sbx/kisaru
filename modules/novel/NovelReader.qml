@@ -23,7 +23,7 @@ Item {
         bottom: parent.bottom
         right: parent.right
     }
-    implicitWidth: fullscreen ? (parent && parent.parent ? parent.parent.width : 1200) : 600
+    implicitWidth: fullscreen ? (parent && parent.parent ? parent.parent.width : 1200) : 550
     visible: false
 
     Behavior on implicitWidth { NumberAnimation { duration: Motion.slow; easing.type: Motion.easeOut } }

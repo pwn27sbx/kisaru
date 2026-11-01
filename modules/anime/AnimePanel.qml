@@ -24,7 +24,7 @@ Item {
         bottom:  parent.bottom
         top: parent.top
     }
-    implicitWidth: 540
+    implicitWidth: 550
     visible: false
 
     readonly property string fontBody: Style.font.family

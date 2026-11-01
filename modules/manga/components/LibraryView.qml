@@ -59,42 +59,12 @@ Item {
             // panel. Its twin lives in BrowseView.qml: the shared section
             // header is a bare Text in qs.Ui, and giving it children would
             // reach into a component every panel uses.
-            Rectangle {
+            ViewModeToggle {
                 Layout.alignment: Qt.AlignVCenter
-                // Implicit (not width/height): a RowLayout sizes a child from
-                // its implicitWidth, and an explicit width would be overridden
-                // to zero.
-                implicitWidth: cellsRow.implicitWidth + 2 * Style.spacing.xxs
-                implicitHeight: cellsRow.implicitHeight + 2 * Style.spacing.xxs
-                radius: Style.cornerRadius
-                color: Colors.surface_container
-                border.width: Style.spacing.hairline
-                border.color: Colors.outline_variant
-
-                Row {
-                    id: cellsRow
-                    x: Style.spacing.xxs
-                    y: Style.spacing.xxs
-                    spacing: Style.spacing.xxs
-
-                    ViewModeChip {
-                        glyph: "▦"
-                        label: I18n.t("view.grid")
-                        current: !libraryView.listMode
-                        bodyFont: libraryView.fontBody
-                        cellSize: Style.space(22)
-                        onClicked: UiPrefs.setViewMode("manga", "grid")
-                    }
-
-                    ViewModeChip {
-                        glyph: "☰"
-                        label: I18n.t("view.list")
-                        current: libraryView.listMode
-                        bodyFont: libraryView.fontBody
-                        cellSize: Style.space(22)
-                        onClicked: UiPrefs.setViewMode("manga", "list")
-                    }
-                }
+                Layout.rightMargin: Style.spacing.xl
+                panel: "manga"
+                listMode: libraryView.listMode
+                fontFamily: libraryView.fontBody
             }
         }
 

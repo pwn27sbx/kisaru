@@ -67,40 +67,12 @@ Item {
             }
             // The layout switch, in the same segmented box the manga
             // panel uses, pinned to the right of the chips.
-            Rectangle {
+            ViewModeToggle {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.rightMargin: Style.spacing.xl
-                implicitWidth: cellsRow.implicitWidth + 2 * Style.spacing.xxs
-                implicitHeight: cellsRow.implicitHeight + 2 * Style.spacing.xxs
-                radius: Style.cornerRadius
-                color: Colors.surface_container
-                border.width: Style.spacing.hairline
-                border.color: Colors.outline_variant
-
-                Row {
-                    id: cellsRow
-                    x: Style.spacing.xxs
-                    y: Style.spacing.xxs
-                    spacing: Style.spacing.xxs
-
-                    ViewModeChip {
-                        glyph: "▦"
-                        label: I18n.t("view.grid")
-                        current: !browseView.listMode
-                        bodyFont: browseView.fontBody
-                        cellSize: Style.space(22)
-                        onClicked: UiPrefs.setViewMode("anime", "grid")
-                    }
-
-                    ViewModeChip {
-                        glyph: "☰"
-                        label: I18n.t("view.list")
-                        current: browseView.listMode
-                        bodyFont: browseView.fontBody
-                        cellSize: Style.space(22)
-                        onClicked: UiPrefs.setViewMode("anime", "list")
-                    }
-                }
+                panel: "anime"
+                listMode: browseView.listMode
+                fontFamily: browseView.fontBody
             }
         }
 
@@ -235,6 +207,10 @@ Item {
                     source: modelData.thumbnail || ""
                     title: modelData.englishName || modelData.name || ""
                     bodyFont: browseView.fontBody
+                    // The score goes in its own accent run, like the grid's
+                    // chip; the meta keeps the format and the episode count.
+                    score: modelData.score !== null && modelData.score !== undefined
+                        ? "★ " + Number(modelData.score || 0).toFixed(1) : ""
                     meta: {
                         var parts = []
                         if (modelData.type) parts.push(I18n.tData(modelData.type))

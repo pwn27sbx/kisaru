@@ -21,6 +21,9 @@ ClickableRect {
     property string title: ""
     // Already localized by the caller (manga_card.metaLine).
     property string meta: ""
+    // A score the row carries ahead of the meta line ("★ 8.8"), in the accent
+    // tone the grid's chip uses. Empty hides it; the separator is the row's.
+    property string score: ""
     // The reader's progress for this entry ("Cap. 12"); empty hides the slot.
     property string progress: ""
     // True once the entry has been read at least once: colours the progress.
@@ -129,16 +132,41 @@ ClickableRect {
             maximumLineCount: 1
         }
 
-        StyledText {
+        // The score and the metadata share one line: "★ 8.8 · 4 ep". The score
+        // keeps the accent tone of the grid's chip, the rest stays muted, and
+        // the separator appears only when both halves exist.
+        Row {
             width: parent.width
-            visible: root.meta !== ""
-            text: root.meta
-            font.family: root.bodyFont
-            font.pixelSize: Style.font.caption
-            font.letterSpacing: 0.3
-            color: Colors.on_surface_variant
-            elide: Text.ElideRight
-            maximumLineCount: 1
+            spacing: Style.spacing.xs
+
+            StyledText {
+                visible: root.score !== ""
+                text: root.score
+                font.family: root.bodyFont
+                font.pixelSize: Style.font.caption
+                font.letterSpacing: 0.3
+                font.bold: true
+                color: Colors.primary
+            }
+
+            StyledText {
+                visible: root.score !== "" && root.meta !== ""
+                text: "·"
+                font.family: root.bodyFont
+                font.pixelSize: Style.font.caption
+                color: Colors.muted
+            }
+
+            StyledText {
+                visible: root.meta !== ""
+                text: root.meta
+                font.family: root.bodyFont
+                font.pixelSize: Style.font.caption
+                font.letterSpacing: 0.3
+                color: Colors.on_surface_variant
+                elide: Text.ElideRight
+                maximumLineCount: 1
+            }
         }
     }
 
