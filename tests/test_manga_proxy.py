@@ -234,6 +234,34 @@ class HealthPayloadTest(unittest.TestCase):
         # Expired entries are dropped as they are read, not accumulated.
         self.assertFalse(manga_server.img_blocked(url, now=1000.0 + manga_server.IMG_FAIL_TTL))
 
+    def test_a_cover_survives_on_disk(self):
+        """Art already fetched must not vanish because the CDN stopped answering."""
+        import tempfile
+        jpeg = b"\xff\xd8\xff\xe0" + b"\x00" * 64
+        with tempfile.TemporaryDirectory() as tmp:
+            url = "https://example.invalid/cover.jpg"
+            self.assertIsNone(manga_server.img_disk_get(url, directory=tmp))
+            manga_server.img_disk_put(url, jpeg, directory=tmp)
+            got = manga_server.img_disk_get(url, directory=tmp)
+            self.assertEqual(got[0], jpeg)
+            self.assertEqual(got[1], "image/jpeg")
+
+    def test_only_images_are_stored_on_disk(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            url = "https://example.invalid/broken.jpg"
+            manga_server.img_disk_put(url, b"<!doctype html><html>challenge</html>", directory=tmp)
+            self.assertIsNone(manga_server.img_disk_get(url, directory=tmp))
+
+    def test_a_challenged_host_is_left_alone(self):
+        """One browser check must cost one request, not one per cover."""
+        host = "uploads.example.invalid"
+        self.assertFalse(manga_server.img_host_down(host, now=500.0))
+        manga_server.img_mark_host_down(host, now=500.0)
+        self.assertTrue(manga_server.img_host_down(host, now=500.0))
+        self.assertTrue(manga_server.img_host_down(host, now=500.0 + manga_server.IMG_HOST_TTL - 1))
+        self.assertFalse(manga_server.img_host_down(host, now=500.0 + manga_server.IMG_HOST_TTL))
+
 
 if __name__ == "__main__":
     unittest.main()

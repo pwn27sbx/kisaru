@@ -17,6 +17,7 @@ import os
 import re
 import json
 import time
+import hashlib
 import shutil
 import threading
 from datetime import datetime, timezone
@@ -661,10 +662,62 @@ _img_cache_lock = threading.Lock()
 _img_cache_max  = 600
 _img_sem        = threading.Semaphore(10)
 
+# Covers also live on disk. An image that was fetched once must never disappear
+# again: the panel re-asks for the same 32 URLs on every restart, and when the
+# CDN starts refusing (a browser check, an outage) the art already seen keeps
+# rendering instead of turning the grid into placeholders.
+IMG_DISK_MAX_BYTES = 8 * 1024 * 1024   # one image bigger than this is not a cover
+
+
+def img_cache_dir():
+    base = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
+    return os.path.join(base, "qs-novelmangareader", "covers")
+
+
+def img_disk_path(url, directory=None):
+    digest = hashlib.sha256(url.encode("utf-8")).hexdigest()
+    return os.path.join(directory or img_cache_dir(), digest + ".img")
+
+
+def img_disk_get(url, directory=None):
+    """(bytes, ctype) for a cover already on disk, or None."""
+    path = img_disk_path(url, directory)
+    try:
+        with open(path, "rb") as fh:
+            body = fh.read()
+    except OSError:
+        return None
+    ctype = sniff_image_type(body)
+    return (body, ctype) if ctype else None
+
+
+def img_disk_put(url, body, directory=None):
+    """Store a cover on disk. Failures are silent: a full disk is not an error."""
+    if not body or len(body) > IMG_DISK_MAX_BYTES:
+        return
+    if not sniff_image_type(body):
+        return
+    path = img_disk_path(url, directory)
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "wb") as fh:
+            fh.write(body)
+        os.replace(tmp, path)
+    except OSError:
+        pass
+
 
 def _img_get(url):
     with _img_cache_lock:
-        return _img_cache.get(url)
+        cached = _img_cache.get(url)
+    if cached:
+        return cached
+    on_disk = img_disk_get(url)
+    if on_disk:
+        with _img_cache_lock:
+            _img_cache[url] = on_disk
+    return on_disk
 
 
 # When an upstream answers with something that is not an image, remember it for
@@ -698,11 +751,38 @@ def img_mark_failed(url, now=None):
         _img_failed[url] = now + IMG_FAIL_TTL
 
 
+# A host that answered a browser check is not going to answer the next 31
+# covers either. Remember the HOST (not the URL) for a while, so one challenge
+# costs one request instead of a whole grid of them.
+_img_host_down      = {}
+_img_host_lock      = threading.Lock()
+IMG_HOST_TTL        = 600
+
+
+def img_host_down(host, now=None):
+    now = time.monotonic() if now is None else now
+    with _img_host_lock:
+        deadline = _img_host_down.get(host)
+        if deadline is None:
+            return False
+        if now < deadline:
+            return True
+        _img_host_down.pop(host, None)
+        return False
+
+
+def img_mark_host_down(host, now=None):
+    now = time.monotonic() if now is None else now
+    with _img_host_lock:
+        _img_host_down[host] = now + IMG_HOST_TTL
+
+
 def _img_put(url, body, ctype):
     with _img_cache_lock:
         if len(_img_cache) >= _img_cache_max:
             _img_cache.pop(next(iter(_img_cache)))
         _img_cache[url] = (body, ctype)
+    img_disk_put(url, body)
 
 
 def health_payload(chain=None):
@@ -789,6 +869,20 @@ def _retry_mangadex_page(chapter, page, old_url):
     return ""
 
 
+def sniff_image_type(body):
+    """The image type of `body` by its magic bytes, or "" when it is not one."""
+    head = bytes(body[:12])
+    if head.startswith(b"\xff\xd8"):
+        return "image/jpeg"
+    if head.startswith(b"\x89PNG"):
+        return "image/png"
+    if head.startswith(b"GIF8"):
+        return "image/gif"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image/webp"
+    return ""
+
+
 def is_image_response(content_type, body):
     """True when the upstream answered with image bytes.
 
@@ -818,6 +912,10 @@ def proxy_image(handler, img_url, chapter=None, page=None):
     if img_blocked(img_url):
         handler.send_error(502)
         return
+    host = urlparse(img_url).hostname or ""
+    if img_host_down(host):
+        handler.send_error(502)
+        return
 
     try:
         with _img_sem:
@@ -845,6 +943,11 @@ def proxy_image(handler, img_url, chapter=None, page=None):
         print("[manga-server] upstream returned %s, not an image: %s"
               % (ctype or "no type", img_url[:90]), flush=True)
         img_mark_failed(img_url)
+        # An HTML body where an image should be is a browser check, not a
+        # one-off: give the host a rest instead of asking 31 more times.
+        if "html" in (ctype or "").lower() or bytes(body[:6]).lower().startswith(b"<html") \
+                or bytes(body[:15]).lower().startswith(b"<!doctype html"):
+            img_mark_host_down(host)
         handler.send_error(502, "upstream is not an image")
         return
 
