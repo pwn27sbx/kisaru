@@ -91,10 +91,6 @@ Item {
             hovered: cell.hovered,
             pressed: cell.pressed
         })
-        // The ring Button reserves for its widest state border; taken from the
-        // same tokens so a theme that changes them moves the cell with it.
-        readonly property int _ring: Math.max(Style.hoverBorderWidth,
-                                             Style.selectedBorderWidth)
         // The active filter chip's exact recipe: Button with `selected`
         // resolves one state colour from (foreground, accent) and FilterBar
         // passes Colors.text as the foreground of its current chip, so that is
@@ -104,7 +100,7 @@ Item {
         readonly property color _foreground:
             cell._style.label === HeaderCell.LABEL.SELECTED ? cell._selectedColor : cell._fillBase
 
-        implicitWidth: content.implicitWidth + 2 * Style.spacing.controlPaddingX + 2 * cell._ring
+        implicitWidth: content.implicitWidth + 2 * Style.spacing.controlPaddingX
         // The cell IS the header row, so the tint reaches its top and bottom.
         implicitHeight: root.implicitHeight
         radius: 0 // style-ignore — the header cells are square
@@ -116,8 +112,9 @@ Item {
                 : cell._style.fill === HeaderCell.FILL.SELECTED
                     ? Style.selectedFillFor(Colors.text, Colors.primary)
                     : "transparent"
-        // A ring around a header-tall cell would read as a box, which is what
-        // this layout removes; the tint says it.
+        // No border of its own: a ring around a header-tall cell would read as
+        // a box, which is what this layout removes. The only ring is the
+        // overlay below, and only on the selected cell.
         border.width: 0
         Behavior on color { ColorAnimation { duration: Motion.fast } }
 

@@ -97,8 +97,8 @@ Item {
             searchOpen: root.searchOpen
             // SUB/DUB as cells of the header row (owner, round 6, D1a).
             modes: [
-                { id: "sub", label: "SUB" }, // i18n-ignore — key name, same in both languages
-                { id: "dub", label: "DUB" } // i18n-ignore — key name, same in both languages
+                { id: "sub", label: "SUB" }, // i18n-ignore — key cap; `id` is the value, this is what it reads
+                { id: "dub", label: "DUB" } // i18n-ignore — key cap; `id` is the value, this is what it reads
             ]
             mode: Anime.currentMode
             fontFamily: root.fontBody
