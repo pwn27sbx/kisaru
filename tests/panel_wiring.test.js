@@ -211,7 +211,8 @@ test("every panel remembers its own grid/list choice", () => {
         // own copy of the segmented box.
         assert.match(qml, /ViewModeToggle\s*\{/, `${file}: no shared layout toggle`);
         assert.match(qml, new RegExp(`panel: "${panel}"`), `${file}: the toggle names another panel`);
-        assert.ok(!qml.includes("cellsRow {") && !qml.includes("viewCells {"),
+        // The hand-built blocks declared `Row { id: cellsRow }` / `viewCells`.
+        assert.ok(!qml.includes("id: cellsRow") && !qml.includes("id: viewCells"),
             `${file}: still carries a hand-built toggle`);
         assert.match(qml, /ListRow\s*\{/, `${file}: no list rows`);
     }
@@ -248,8 +249,15 @@ test("the anime list row carries the score the grid shows", () => {
     assert.match(row, /visible: root\.score !== ""/);
     // The score keeps the accent tone of the grid's chip.
     assert.match(row, /color: Colors\.primary/);
-    const browse = read("modules/anime/components/BrowseView.qml");
-    assert.match(browse, /score: modelData\.score/);
+    // Both anime lists feed the same field from the same data.
+    for (const file of [
+        "modules/anime/components/BrowseView.qml",
+        "modules/anime/components/LibraryView.qml",
+    ]) {
+        const qml = read(file);
+        assert.ok(qml.includes('"★ " + value.toFixed(1)'), `${file}: no score run`);
+        assert.match(qml, /isFinite\(value\)/, `${file}: the score is not guarded`);
+    }
 });
 
 test("every panel keeps publishing pointerInside from a HoverHandler", () => {

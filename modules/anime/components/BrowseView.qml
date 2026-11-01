@@ -209,8 +209,11 @@ Item {
                     bodyFont: browseView.fontBody
                     // The score goes in its own accent run, like the grid's
                     // chip; the meta keeps the format and the episode count.
-                    score: modelData.score !== null && modelData.score !== undefined
-                        ? "★ " + Number(modelData.score || 0).toFixed(1) : ""
+                    score: {
+                        var value = Number(modelData.score)
+                        return (modelData.score !== null && modelData.score !== undefined
+                                && isFinite(value)) ? "★ " + value.toFixed(1) : ""
+                    }
                     meta: {
                         var parts = []
                         if (modelData.type) parts.push(I18n.tData(modelData.type))

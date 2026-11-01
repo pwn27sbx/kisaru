@@ -140,6 +140,7 @@ ClickableRect {
             spacing: Style.spacing.xs
 
             StyledText {
+                id: scoreText
                 visible: root.score !== ""
                 text: root.score
                 font.family: root.bodyFont
@@ -150,6 +151,7 @@ ClickableRect {
             }
 
             StyledText {
+                id: scoreSeparator
                 visible: root.score !== "" && root.meta !== ""
                 text: "·"
                 font.family: root.bodyFont
@@ -159,6 +161,11 @@ ClickableRect {
 
             StyledText {
                 visible: root.meta !== ""
+                // A Row does not shrink its children: without this the meta
+                // runs past the row instead of eliding (review finding).
+                width: Math.max(0, parent.width
+                    - (scoreText.visible ? scoreText.width + parent.spacing : 0)
+                    - (scoreSeparator.visible ? scoreSeparator.width + parent.spacing : 0))
                 text: root.meta
                 font.family: root.bodyFont
                 font.pixelSize: Style.font.caption

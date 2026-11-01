@@ -162,6 +162,11 @@ Item {
                 title: entry.englishName || entry.name || ""
                 bodyFont: libraryView.fontBody
                 inset: Style.spacing.lg
+                score: {
+                    var value = Number(entry.score)
+                    return (entry.score !== null && entry.score !== undefined
+                            && isFinite(value)) ? "★ " + value.toFixed(1) : ""
+                }
                 meta: ""
                 progress: entry.lastWatchedEpNum ? I18n.t("ep", { 1: entry.lastWatchedEpNum }) : I18n.t("state.notStarted")
                 progressActive: !!entry.lastWatchedEpNum
