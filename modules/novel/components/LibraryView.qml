@@ -70,6 +70,7 @@ Item {
             visible: libraryView.listMode && !Novel.libraryLoaded
             active: libraryView.listMode && !Novel.libraryLoaded
             rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
+            cover: true
             dividerInset: Style.spacing.lg
         }
 

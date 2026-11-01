@@ -6,10 +6,12 @@ import "../services/list_metrics.js" as ListMetrics
 // One row of a manga list view: a cover thumbnail, the title, the work's
 // metadata line and — when the caller has one — the reader's own progress.
 //
-// Round 7 (A-8) made the row readable at a glance: a 56 px thumbnail (it was
-// 40), a bold body-size title that wraps to two lines, a normal-size meta line
-// instead of a caption, more height and a hairline between rows. The sizes come
-// from services/list_metrics.js, which the loading skeleton reads too.
+// Round 8 (A-9) is the owner's sketch: a tall 64 x 90 cover that nearly spans
+// the row, a large bold title (Style.font.heading, ~1.35x the body size) on up
+// to two lines, and under it the datum — the chapter, the score run, the author
+// — small and muted, with a clear gap between the two. The text block is
+// centred against the cover. Every size comes from services/list_metrics.js,
+// which the loading skeleton reads too.
 //
 // It is the row twin of CoverCard, and it takes the SAME `meta` string instead
 // of composing it: both views build it with services/manga_card.js, so the
@@ -73,9 +75,10 @@ ClickableRect {
             leftMargin: root.inset
         }
         // The thumbnail's size is a decision, not a consequence of the row
-        // height: it is shared with the skeleton through list_metrics.
+        // height: it is shared with the skeleton through list_metrics, and both
+        // sides are declared so nothing depends on which way a ratio is read.
         width: Style.space(ListMetrics.THUMB_WIDTH)
-        height: Math.round(width / ListMetrics.THUMB_RATIO)
+        height: Style.space(ListMetrics.THUMB_HEIGHT)
         radius: root.radius
         color: Colors.surface_container
         clip: true
@@ -124,13 +127,15 @@ ClickableRect {
             rightMargin: root.inset
             verticalCenter: parent.verticalCenter
         }
-        spacing: Style.spacing.xs
+        // A clear breath between the title and the datum, as in the sketch.
+        spacing: Style.spacing.md
 
         StyledText {
             width: parent.width
             text: root.title
             font.family: root.bodyFont
-            font.pixelSize: Style.font.body
+            // The sketch's big title: ~1.35x the body size.
+            font.pixelSize: Style.font.heading
             font.bold: true
             font.letterSpacing: 0.2
             color: Colors.on_surface
@@ -141,9 +146,10 @@ ClickableRect {
             elide: Text.ElideRight
         }
 
-        // The score and the metadata share one line: "★ 8.8 · 4 ep". The score
-        // keeps the accent tone of the grid's chip, the rest stays muted, and
-        // the separator appears only when both halves exist.
+        // The datum under the title: "Ch. 200", "★ 8.8 · 4 ep", the author. The
+        // score keeps the accent tone of the grid's chip and the rest is muted,
+        // small, the way the sketch draws it; the separator appears only when
+        // both halves exist.
         Row {
             width: parent.width
             spacing: Style.spacing.xs
@@ -153,7 +159,7 @@ ClickableRect {
                 visible: root.score !== ""
                 text: root.score
                 font.family: root.bodyFont
-                font.pixelSize: Style.font.body
+                font.pixelSize: Style.font.caption
                 font.letterSpacing: 0.3
                 font.bold: true
                 color: Colors.primary
@@ -164,7 +170,7 @@ ClickableRect {
                 visible: root.score !== "" && root.meta !== ""
                 text: "·"
                 font.family: root.bodyFont
-                font.pixelSize: Style.font.body
+                font.pixelSize: Style.font.caption
                 color: Colors.muted
             }
 
@@ -177,7 +183,7 @@ ClickableRect {
                     - (scoreSeparator.visible ? scoreSeparator.width + parent.spacing : 0))
                 text: root.meta
                 font.family: root.bodyFont
-                font.pixelSize: Style.font.body
+                font.pixelSize: Style.font.caption
                 font.letterSpacing: 0.3
                 color: Colors.on_surface_variant
                 elide: Text.ElideRight

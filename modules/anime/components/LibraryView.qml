@@ -76,6 +76,7 @@ Item {
             visible: libraryView.listMode && !Anime.libraryLoaded
             active: libraryView.listMode && !Anime.libraryLoaded
             rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
+            cover: true
             dividerInset: Style.spacing.lg
         }
 

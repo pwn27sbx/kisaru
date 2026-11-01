@@ -101,6 +101,7 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
+            cover: true
             dividerInset: Style.spacing.lg
             active: !Manga.libraryLoaded && libraryView.listMode
         }

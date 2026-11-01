@@ -251,17 +251,42 @@ test("all three panels are 550 wide, and the novel keeps fullscreen", () => {
     assert.match(read("modules/novel/NovelReader.qml"), /implicitWidth: fullscreen \?.*: 550/);
 });
 
-test("the list row is readable: big thumbnail, bold two-line title, normal meta", () => {
-    // Owner, A-8: the list was legible only if you squinted.
+test("the list row is the owner's sketch: tall cover, big title, small datum", () => {
+    // A-9: 64 x 90 cover, title about 1.35x the body size, datum back to a
+    // caption under it, block centred.
     const row = read("components/ListRow.qml");
-    // One thumbnail size, shared with the skeleton that stands in for rows.
+    // Both thumbnail sides come from the shared metrics, never from the row.
     assert.match(row, /Style\.space\(ListMetrics\.THUMB_WIDTH\)/);
+    assert.match(row, /Style\.space\(ListMetrics\.THUMB_HEIGHT\)/);
     assert.ok(!row.includes("Math.round(height * 0.7)"), "the thumbnail is derived from the row again");
-    assert.match(row, /Style\.font\.body\b[\s\S]{0,120}font\.bold: true/,
-        "the title is not a bold body-size line");
+    // Big bold title, two lines.
+    assert.match(row, /Style\.font\.heading\b[\s\S]{0,160}font\.bold: true/,
+        "the title is not a big bold line");
     assert.match(row, /maximumLineCount: 2/, "long titles still die on one line");
     assert.match(row, /wrapMode: Text\.Wrap/, "two lines do not wrap");
+    // The datum under it is small again.
+    assert.match(row, /Style\.font\.caption/, "the datum is not a caption");
     assert.match(row, /Colors\.outline_variant/, "no separator between rows");
+});
+
+test("the list ghost has the list row's shape, not a chapter row's", () => {
+    // A-9: the Browse/Library skeletons stand in for ListRow, so they must draw
+    // the same cover; a pill-shaped ghost makes the panel jump on load.
+    const skeleton = read("components/SkeletonList.qml");
+    assert.match(skeleton, /property bool cover/);
+    assert.match(skeleton, /Style\.space\(ListMetrics\.THUMB_WIDTH\)/);
+    assert.match(skeleton, /Style\.space\(ListMetrics\.THUMB_HEIGHT\)/);
+    for (const file of [
+        "modules/manga/components/BrowseView.qml",
+        "modules/manga/components/LibraryView.qml",
+        "modules/anime/components/BrowseView.qml",
+        "modules/anime/components/LibraryView.qml",
+        "modules/novel/components/BrowseView.qml",
+        "modules/novel/components/LibraryView.qml",
+    ]) {
+        const qml = read(file);
+        assert.match(qml, /SkeletonList\s*\{[\s\S]{0,400}?cover: true/, `${file}: its ghost is still a chapter row`);
+    }
 });
 
 test("the anime list row carries the score the grid shows", () => {

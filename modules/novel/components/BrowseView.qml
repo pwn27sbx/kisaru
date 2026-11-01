@@ -90,6 +90,7 @@ Item {
                 anchors.fill: parent
                 z: 10
                 rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
+                cover: true
                 dividerInset: Style.spacing.xl
                 active: browseView.listMode && Novel.isFetchingNovel && Novel.novelList.length === 0
             }
