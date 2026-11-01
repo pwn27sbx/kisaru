@@ -2,6 +2,7 @@ import QtQuick
 import qs.app
 import qs.Commons
 import qs.Ui
+import "../services/header_cell.js" as HeaderCell
 
 // One segment of the grid/list toggle. Both manga views used to inline this
 // block; one file means a change to the fill, the glyph or the tooltip lands
@@ -21,11 +22,18 @@ ClickableRect {
     implicitWidth: chip.cellSize
     implicitHeight: chip.cellSize
     cursorShape: Qt.PointingHandCursor
-    // Selected is the solid accent; hover keeps its tint (owner, round 6).
-    color: chip.current ? Colors.primary
-        : chip.pressed ? Style.pressedFillFor(Colors.muted, Colors.primary)
-        : chip.hovered ? Style.hoverFillFor(Colors.muted, Colors.primary)
-        : "transparent"
+    // Selected is the solid accent; pressed and hover keep their fills, in the
+    // same precedence services/header_cell.js uses for the header cells
+    // (pressed first, then hover, then selected).
+    readonly property var _style: HeaderCell.cellStyle({
+        current: chip.current, hovered: chip.hovered, pressed: chip.pressed
+    })
+    color: chip._style.fill === HeaderCell.FILL.SOLID ? Colors.primary
+        : chip._style.fill === HeaderCell.FILL.PRESSED
+            ? Style.pressedFillFor(Colors.muted, Colors.primary)
+            : chip._style.fill === HeaderCell.FILL.HOVER
+                ? Style.hoverFillFor(Colors.muted, Colors.primary)
+                : "transparent"
     border.width: 0
 
     StyledText {
@@ -33,7 +41,7 @@ ClickableRect {
         text: chip.glyph
         font.family: chip.bodyFont
         font.pixelSize: Style.font.body
-        color: chip.current ? Colors.on_primary : Colors.muted
+        color: chip._style.label === HeaderCell.LABEL.ON ? Colors.on_primary : Colors.muted
     }
 
     // No tooltip: the two glyphs say grid and list, and the bordered box it

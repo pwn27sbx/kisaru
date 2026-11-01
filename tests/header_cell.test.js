@@ -16,11 +16,11 @@ const style = (over) => cell.cellStyle(
 
 test("the selected cell is a solid accent with the on-accent label", () => {
     // Owner, round 6: the tint-plus-ring reading is gone.
-    assert.deepEqual(style({ current: true }), { fill: "solid", label: "on", showRing: false });
+    assert.deepEqual(style({ current: true }), { fill: "solid", label: "on" });
 });
 
 test("an unselected cell is plain", () => {
-    assert.deepEqual(style({}), { fill: "none", label: "muted", showRing: false });
+    assert.deepEqual(style({}), { fill: "none", label: "muted" });
 });
 
 test("hover tints the unselected cells and never overrides the solid selected one", () => {
@@ -41,7 +41,6 @@ test("an empty state is a plain cell, never a crash", () => {
     const s = cell.cellStyle();
     assert.equal(s.fill, cell.FILL.NONE);
     assert.equal(s.label, cell.LABEL.MUTED);
-    assert.equal(s.showRing, false);
 });
 
 test("the header and the filter chips share one cell contract", () => {

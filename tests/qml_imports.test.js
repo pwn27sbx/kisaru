@@ -62,7 +62,8 @@ test("a QML file imports whoever owns the singleton it uses", () => {
 test("the shared layout toggle can reach the preference it writes", () => {
     // The exact file the bug was in: keep the assertion even if the generic
     // check above is ever narrowed.
-    const toggle = fs.readFileSync(path.join(ROOT, "components/ViewModeToggle.qml"), "utf8");
+    const toggle = stripComments(
+        fs.readFileSync(path.join(ROOT, "components/ViewModeToggle.qml"), "utf8"));
     assert.match(toggle, /import qs\.services/);
     assert.match(toggle, /UiPrefs\.setViewMode\(root\.panel/);
 });

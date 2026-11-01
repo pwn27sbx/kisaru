@@ -16,8 +16,8 @@
 // one strip of full-height cells in all three panels, so the boxed/anime
 // variants this used to switch no longer exist.
 
-var FILL = { NONE: "none", SELECTED: "selected", HOVER: "hover", PRESSED: "pressed", SOLID: "solid" };
-var LABEL = { MUTED: "muted", SELECTED: "selected", ON: "on" };
+var FILL = { NONE: "none", HOVER: "hover", PRESSED: "pressed", SOLID: "solid" };
+var LABEL = { MUTED: "muted", ON: "on" };
 
 // state: { current, hovered, pressed }
 function cellStyle(state) {
@@ -31,9 +31,7 @@ function cellStyle(state) {
             : (state.pressed ? FILL.PRESSED
                 : state.hovered ? FILL.HOVER
                 : FILL.NONE),
-        label: state.current ? LABEL.ON : LABEL.MUTED,
-        // No ring: the solid fill is the selected state now.
-        showRing: false
+        label: state.current ? LABEL.ON : LABEL.MUTED
     };
 }
 

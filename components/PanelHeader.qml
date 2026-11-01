@@ -70,15 +70,16 @@ Item {
             hovered: cell.hovered,
             pressed: cell.pressed
         })
-        // The active filter chip's exact recipe: Button with `selected`
-        // resolves one state colour from (foreground, accent) and FilterBar
-        // passes Colors.text as the foreground of its current chip, so that is
-        // the pair used here — the same two calls, not a third tint.
+        // The selected cell is a solid accent with the on-accent label, the
+        // same reading as FilterBar's active chip (owner, round 6).
         readonly property color _fillBase: cell.current ? Colors.on_primary : Colors.muted
         // Selected reads as a solid accent cell with the on-accent label; the
         // tint plus ring is gone (owner, round 6).
         readonly property color _foreground:
             cell._style.label === HeaderCell.LABEL.ON ? Colors.on_primary : cell._fillBase
+
+        // How much of the on-accent colour the counter keeps.
+        readonly property real counterOpacity: 0.75
 
         implicitWidth: content.implicitWidth + 2 * Style.spacing.controlPaddingX
         // The cell IS the header row, so the tint reaches its top and bottom.
@@ -120,7 +121,9 @@ Item {
                 text: cell.count >= 0 ? String(cell.count) : ""
                 // On the solid accent the counter keeps contrast without
                 // competing with the label.
-                color: cell.current ? Colors.withAlpha(Colors.on_primary, 0.75) : Colors.muted
+                color: cell.current
+                    ? Colors.withAlpha(Colors.on_primary, cell.counterOpacity)
+                    : Colors.muted
                 font.family: cell.bodyFont
                 font.pixelSize: Style.font.caption
             }
