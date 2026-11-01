@@ -138,6 +138,21 @@ test("every header shows its tab counters", () => {
     }
 });
 
+test("a library cell reserves its footer on top of the shared box", () => {
+    // The review of A-4 caught the real bug: the libraries' progress strip is
+    // not part of INFO_BASE, so a cell that forgets it makes the info block
+    // ride over the cover. Every library grid and its ghost must pass it.
+    for (const file of [
+        "modules/manga/components/LibraryView.qml",
+        "modules/anime/components/LibraryView.qml",
+        "modules/novel/components/LibraryView.qml",
+    ]) {
+        const qml = read(file);
+        assert.match(qml, /CardMetrics\.cellHeight\([^)]*Style\.space\(\d+\)\s*\)/s,
+            `${file}: the cell does not reserve the footer`);
+    }
+});
+
 test("the six grids and their ghosts share one cell box and three columns", () => {
     const grids = [
         "modules/manga/components/BrowseView.qml",

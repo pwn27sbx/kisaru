@@ -122,7 +122,7 @@ Item {
             // one source the six grids share.
             columns: CardMetrics.columns
             padding: Style.spacing.lg
-            cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns)
+            cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns, Style.space(30))
             footerHeight: 30
         }
 
@@ -145,7 +145,7 @@ Item {
             rightMargin: Style.spacing.lg
             bottomMargin: Style.spacing.xl
             cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
-            cellHeight: CardMetrics.cellHeight(cellWidth)
+            cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(30))
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             model: Manga.libraryList

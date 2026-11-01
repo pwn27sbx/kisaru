@@ -43,7 +43,7 @@ Item {
             visible: !Anime.libraryLoaded
             active: !Anime.libraryLoaded
             padding: Style.spacing.lg
-            cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns)
+            cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns, Style.space(28))
             footerHeight: 28
         }
 
@@ -54,7 +54,7 @@ Item {
             visible: Anime.libraryList.length > 0
             topMargin: Style.spacing.xl; leftMargin: Style.spacing.lg; rightMargin: Style.spacing.lg; bottomMargin: Style.spacing.xl
             cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
-            cellHeight: CardMetrics.cellHeight(cellWidth)
+            cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(28))
             clip: true; boundsBehavior: Flickable.StopAtBounds
             model: Anime.libraryList
 
@@ -69,7 +69,6 @@ Item {
 
                 CoverCard {
                     anchors.fill: parent
-                    // Same gate as the grid: the local backend must be up.
                     source: entry.thumbnail || ""
                     title: entry.englishName || entry.name || ""
                     bodyFont: libraryView.fontBody

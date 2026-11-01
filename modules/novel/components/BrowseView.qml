@@ -8,7 +8,6 @@ import qs.services
 import qs.components
 import qs.Ui
 import "../../../services/manga_card.js" as MangaCard
-import qs.services
 
 Item {
     id: browseView

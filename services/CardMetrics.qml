@@ -20,9 +20,14 @@ Singleton {
     // Three columns in every panel (owner, round 6, D7).
     readonly property int columns: 3
 
-    function cellHeight(cellWidth) {
+    // `extra` is the bottom strip a card carries besides the cover and the info
+    // band: the libraries' progress row (28-30 px). Without it the info block
+    // and the footer would not fit and would ride over the cover.
+    function cellHeight(cellWidth, extra) {
         var width = Number(cellWidth)
         if (!isFinite(width) || width <= 0) return 0
-        return width * root.coverRatio + Style.space(root.infoBase)
+        var footer = Number(extra)
+        if (!isFinite(footer) || footer < 0) footer = 0
+        return width * root.coverRatio + Style.space(root.infoBase) + footer
     }
 }

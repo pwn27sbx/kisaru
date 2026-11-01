@@ -38,7 +38,7 @@ Item {
             visible: !Novel.libraryLoaded
             active: !Novel.libraryLoaded
             padding: Style.spacing.lg
-            cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns)
+            cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns, Style.space(30))
             footerHeight: 30
         }
 
@@ -49,7 +49,7 @@ Item {
             topMargin: Style.spacing.xl; leftMargin: Style.spacing.lg
             rightMargin: Style.spacing.lg; bottomMargin: Style.spacing.xl
             cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
-            cellHeight: CardMetrics.cellHeight(cellWidth)
+            cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(30))
             clip: true; boundsBehavior: Flickable.StopAtBounds
             model: Novel.libraryList
 
