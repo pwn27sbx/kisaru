@@ -147,4 +147,11 @@ test("each panel keeps its own layout, and manga inherits the old key", () => {
     // Broken values fall back per panel, never to another panel's choice.
     assert.equal(prefs.viewModeFor({ "viewMode.manga": "garbage" }, "manga"), "grid");
     assert.equal(prefs.viewModeFor(undefined, "anime"), "grid");
+
+    // A missing or misspelt panel is not manga: it gets no key and the grid
+    // default, so a typo cannot silently read or write another panel's layout.
+    assert.equal(prefs.viewModeKey(), "");
+    assert.equal(prefs.viewModeKey("anmie"), "");
+    assert.equal(prefs.viewModeFor({ "viewMode.manga": "list" }, "anmie"), "grid");
+    assert.equal(prefs.viewModeFor({ "viewMode.manga": "list" }, undefined), "grid");
 });

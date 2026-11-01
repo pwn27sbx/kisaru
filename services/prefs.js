@@ -64,13 +64,19 @@ function normalizeLanguage(value) {
 // keeps the layout the user already had instead of resetting it.
 var VIEW_MODE_PANELS = ["manga", "anime", "novel"];
 
+// "" for a panel that is not one of the three: a missing or misspelt name must
+// fail visibly (the caller falls back to the grid) instead of quietly reading
+// and writing another panel's layout.
 function viewModeKey(panel) {
-    return "viewMode." + String(panel || "manga");
+    var name = String(panel === undefined || panel === null ? "" : panel);
+    return VIEW_MODE_PANELS.indexOf(name) >= 0 ? "viewMode." + name : "";
 }
 
 function viewModeFor(data, panel) {
     var settings = (data && typeof data === "object") ? data : {};
-    var own = settings[viewModeKey(panel)];
+    var key = viewModeKey(panel);
+    if (key === "") return DEFAULT_VIEW_MODE;
+    var own = settings[key];
     if (own !== undefined && own !== null && own !== "")
         return normalizeViewMode(own);
     // Only manga inherits the legacy key: the other two never had one.

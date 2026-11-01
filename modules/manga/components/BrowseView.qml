@@ -287,7 +287,7 @@ Item {
                 }
 
                 onContentYChanged: {
-                    if (contentY + height > contentHeight - height / 2)
+                    if (ListMetrics.shouldFetchMore(contentY, height, contentHeight))
                         Manga.fetchNextMangaPage()
                 }
 

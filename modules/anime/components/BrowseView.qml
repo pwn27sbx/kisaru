@@ -124,7 +124,7 @@ Item {
                 z: 10
                 rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
                 dividerInset: Style.spacing.xl
-                active: browseView.listMode && Anime.animeList.length === 0
+                active: browseView.listMode && Anime.isFetchingAnime && Anime.animeList.length === 0
             }
 
             // More pages on the way
@@ -225,7 +225,7 @@ Item {
                 }
 
                 onContentYChanged: {
-                    if (contentY + height > contentHeight - height / 2)
+                    if (ListMetrics.shouldFetchMore(contentY, height, contentHeight))
                         Anime.fetchNextPage()
                 }
 

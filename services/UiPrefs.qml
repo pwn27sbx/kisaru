@@ -55,9 +55,6 @@ Singleton {
         return Core.viewModeFor(Core.parseSettings(root.raw), panel)
     }
 
-    // Manga's own value, kept as a property for the views that predate the
-    // per-panel split.
-    readonly property string viewMode: root.viewModeFor("manga")
 
     // "sub" | "dub": the anime panel's audio mode. It reads like the language —
     // one preference, one key — so a DUB choice survives a restart.

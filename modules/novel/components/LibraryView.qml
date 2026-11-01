@@ -72,7 +72,7 @@ Item {
 
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: !libraryView.listMode && Novel.libraryList.length === 0 && Novel.libraryLoaded
+            visible: Novel.libraryList.length === 0 && Novel.libraryLoaded
 
             EmptyState {
                 title: I18n.t("empty.library")
@@ -90,6 +90,14 @@ Item {
             padding: Style.spacing.lg
             cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns, Style.space(30))
             footerHeight: 30
+        }
+
+        SkeletonList {
+            Layout.fillWidth: true; Layout.fillHeight: true
+            visible: libraryView.listMode && !Novel.libraryLoaded
+            active: libraryView.listMode && !Novel.libraryLoaded
+            rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
+            dividerInset: Style.spacing.lg
         }
 
         GridView {

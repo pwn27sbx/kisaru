@@ -77,7 +77,7 @@ Item {
         // ── Empty state ───────────────────────────────────────────────────────
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: !libraryView.listMode && Anime.libraryList.length === 0 && Anime.libraryLoaded
+            visible: Anime.libraryList.length === 0 && Anime.libraryLoaded
 
             EmptyState {
                 title: I18n.t("empty.library")
@@ -98,6 +98,14 @@ Item {
         }
 
         // ── Library grid ──────────────────────────────────────────────────────
+        SkeletonList {
+            Layout.fillWidth: true; Layout.fillHeight: true
+            visible: libraryView.listMode && !Anime.libraryLoaded
+            active: libraryView.listMode && !Anime.libraryLoaded
+            rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
+            dividerInset: Style.spacing.lg
+        }
+
         GridView {
             id: libGrid
             Layout.fillWidth: true; Layout.fillHeight: true
