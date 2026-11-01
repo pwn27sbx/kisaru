@@ -44,10 +44,19 @@ function format(count, tabIndex, translate) {
 
 // The QML engine has no CommonJS `module`, so the same guard the other
 // services use keeps this file importable from both sides.
+// The whole bar segment for one panel: which count, and how it reads. The three
+// panels call this and pass their own numbers, so the expression and the key
+// names live in one place instead of being copied per panel.
+function barText(state) {
+    state = state || {};
+    return format(visibleCount(state), state.tabIndex, state.translate);
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         NONE: NONE,
         visibleCount: visibleCount,
-        format: format
+        format: format,
+        barText: barText
     };
 }

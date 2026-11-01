@@ -126,9 +126,10 @@ Item {
 
         // ── Audio mode (the anime panel's SUB/DUB) ─────────────────────────
         // The same card as the language row below (owner, round 6): title and
-        // description on the left, the control where the toggle sits. The look
-        // comes from components/SettingsCard.qml, which mirrors Toggle's own
-        // container, so the two rows cannot drift apart.
+        // description on the left, the control where the toggle sits. The
+        // language row is a qs.Ui Toggle; this one is components/SettingsCard,
+        // which copies Toggle's container values (its right side is hard-wired
+        // to a switch) and is checked against it by measuring both cards.
         SettingsCard {
             Layout.fillWidth: true
             visible: root.modes.length > 0

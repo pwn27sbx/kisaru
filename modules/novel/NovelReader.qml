@@ -350,15 +350,13 @@ Item {
         StatusBar {
             Layout.fillWidth: true
             online: Novel.serverReady
-            countText: StatusLine.format(
-                StatusLine.visibleCount({
-                    settingsMode: root.settingsMode,
-                    tabIndex: root.tabIndex,
-                    browseCount: Novel.novelList.length,
-                    libraryCount: Novel.libraryList.length
-                }),
-                root.tabIndex,
-                I18n.tn)
+            countText: StatusLine.barText({
+                settingsMode: root.settingsMode,
+                tabIndex: root.tabIndex,
+                browseCount: Novel.novelList.length,
+                libraryCount: Novel.libraryList.length,
+                translate: I18n.tn
+            })
             fontFamily: root.fontBody
         }
     }

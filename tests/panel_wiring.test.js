@@ -103,8 +103,7 @@ test("the three panels count in the status bar, not in a heading", () => {
     for (const file of PANELS) {
         const panel = read(file);
         assert.match(panel, /StatusBar\s*\{/, `${file}: no status bar`);
-        assert.match(panel, /StatusLine\.visibleCount\(/, `${file}: count is not the shared rule`);
-        assert.match(panel, /StatusLine\.format\(/, `${file}: count is not formatted by the shared rule`);
+        assert.match(panel, /StatusLine\.barText\(/, `${file}: count is not the shared rule`);
     }
     // Anime's library heading had its own badge; two counts are one too many.
     const animeLibrary = read("modules/anime/components/LibraryView.qml");
@@ -116,15 +115,19 @@ test("the audio setting is the same card as the language row", () => {
     // Owner, round 6: title and description on the left, control on the right,
     // the container the language row uses — not two loose buttons.
     const settings = read("components/PanelSettings.qml");
-    const start = settings.indexOf("Audio mode (the anime panel");
+    // Anchored on the component, not on a comment: rewording the prose must not
+    // silently change what this checks.
+    const start = settings.indexOf("SettingsCard {");
     const audio = settings.slice(start, settings.indexOf("UI language", start));
     assert.match(audio, /SettingsCard\s*\{/, "the audio row is not a settings card");
     assert.match(audio, /modeSelected/, "the card has no SUB/DUB control");
     const card = read("components/SettingsCard.qml");
-    // Same container tokens as qs.Ui's Toggle, which the language row uses.
+    // The values copied from qs.Ui's Toggle, pinned: the minimum height it
+    // enforces, the idle fill, the normal border and the container it builds on.
     assert.match(card, /BorderSurface/);
-    assert.match(card, /Style\.controlFill\(/);
-    assert.match(card, /Border\.controlSpec\(\s*"normal"/);
+    assert.match(card, /minimumHeight: 54/);
+    assert.match(card, /Style\.controlFill\(false \/\* focused \*\/, false \/\* hot \*\//);
+    assert.match(card, /Border\.controlSpec\("normal"/);
 });
 
 test("every panel keeps publishing pointerInside from a HoverHandler", () => {

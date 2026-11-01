@@ -53,6 +53,15 @@ test("the number is an integer, whatever the model hands over", () => {
     assert.equal(line.visibleCount({ tabIndex: 0, browseCount: "8" }), 8);
 });
 
+test("barText() is the one expression the three panels call", () => {
+    const state = { tabIndex: 0, browseCount: 32, libraryCount: 1, translate };
+    assert.equal(line.barText(state), "32 loaded");
+    assert.equal(line.barText({ ...state, tabIndex: 1 }), "1");
+    assert.equal(line.barText({ ...state, settingsMode: true }), "");
+    // A panel passes its own numbers and the same translator; nothing else.
+    assert.equal(line.barText({ tabIndex: 0, browseCount: 0, translate }), "0 loaded");
+});
+
 test("the Browse wording is the one the results row used", () => {
     // Same key and the same singular/plural pair, so the move cannot change
     // what the reader sees; es and en are both exercised.

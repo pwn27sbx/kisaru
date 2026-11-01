@@ -278,15 +278,13 @@ Item {
             online: Manga.serverReady
             // The count moved out of the grid's heading (owner, round 4): the
             // rules live in services/status_line.js, where they are tested.
-            countText: StatusLine.format(
-                StatusLine.visibleCount({
-                    settingsMode: root.settingsMode,
-                    tabIndex: root.tabIndex,
-                    browseCount: Manga.mangaList.length,
-                    libraryCount: Manga.libraryList.length
-                }),
-                root.tabIndex,
-                I18n.tn)
+            countText: StatusLine.barText({
+                settingsMode: root.settingsMode,
+                tabIndex: root.tabIndex,
+                browseCount: Manga.mangaList.length,
+                libraryCount: Manga.libraryList.length,
+                translate: I18n.tn
+            })
             fontFamily: root.fontBody
         }
     }
