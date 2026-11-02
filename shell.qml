@@ -14,8 +14,8 @@ import "services/panels.js" as Panels
 // loaded on its first toggle, kept while minimized, and unloaded shortly
 // after it is closed:
 //
-//   qs-novelmangareader anime|manga|novel
-// (bin/qs-novelmangareader; underneath, `qs -p <this folder> ipc call
+//   kisaru anime|manga|novel
+// (bin/kisaru; underneath, `qs -p <this folder> ipc call
 // animePlayer|mangaReader|novelReader toggle`)
 ShellRoot {
     id: root
@@ -93,7 +93,7 @@ ShellRoot {
         // passes input through to the windows below.
         visible: animeSlot.open || mangaSlot.open || novelSlot.open
 
-        WlrLayershell.namespace: "qs-novelmangareader"
+        WlrLayershell.namespace: "kisaru"
         WlrLayershell.layer: WlrLayer.Top
         // Keep clear of the user's bar and other panels' exclusive zones.
         exclusionMode: ExclusionMode.Normal

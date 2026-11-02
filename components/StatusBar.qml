@@ -39,7 +39,7 @@ Rectangle {
     // the module folder below is the one segment this file adds, and it is the
     // same name the installer uses (`pwnsxb.novelmangareader`).
     readonly property string manifestPath: UiPrefs.settingsDir
-        + "/omarchy/pwnsxb.novelmangareader/manifest.json"
+        + "/omarchy/pwnsxb.kisaru/manifest.json"
 
     // "" until the manifest is read; the version label hides itself then.
     property string version: ""

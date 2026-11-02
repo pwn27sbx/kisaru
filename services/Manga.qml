@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import "library.js" as Library
 import qs.services
+import "app_paths.js" as Paths
 
 Singleton {
     id: root
@@ -74,14 +75,26 @@ Singleton {
     property list<var> libraryList: []
     property bool libraryLoaded: false
 
+    // The library lives under the project's name now; the inherited neutral
+    // folder is read while it is the only one that exists (owner decision D6),
+    // so the list never looks empty during the migration window.
+    readonly property string _dataHome:
+        Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")
+    readonly property string _newLibraryPath: Paths.libraryPath(root._dataHome, "manga", false)
+    readonly property string _oldLibraryPath: Paths.libraryPath(root._dataHome, "manga", true)
+    property bool _newLibrarySeen: false
+    property bool _oldLibrarySeen: false
+    property bool _oldLibraryChecked: false
     readonly property string _libraryPath:
-        Quickshell.env("HOME") + "/.local/share/quickshell/manga_library.json"
+        Paths.resolvePath(root._newLibraryPath, root._oldLibraryPath,
+                          root._newLibrarySeen, root._oldLibrarySeen)
 
     // FileView for reading
     FileView {
         id: libraryFile
         path: root._libraryPath
         onLoaded: {
+            root._newLibrarySeen = root._libraryPath === root._newLibraryPath
             try {
                 var data = JSON.parse(libraryFile.text())
                 root.libraryList = Array.isArray(data) ? data : []
@@ -93,11 +106,47 @@ Singleton {
             console.log("[ServiceManga] Library loaded —", root.libraryList.length, "entries")
         }
         onLoadFailed: {
+            // Missing at the new path: the probe flips _libraryPath to the
+            // inherited file and this read runs again there.
+            if (root._oldLibrarySeen && root._libraryPath !== root._oldLibraryPath)
+                return
+            if (!root._oldLibraryChecked)
+                return
             // File doesn't exist yet — start empty
             root.libraryList = []
             root.libraryLoaded = true
             console.log("[ServiceManga] No library file found, starting fresh")
         }
+    }
+
+    // Does the inherited library file exist? Read-only, never written.
+    FileView {
+        id: oldLibraryProbe
+        path: root._oldLibraryPath
+        onLoaded: {
+            root._oldLibrarySeen = true
+            root._oldLibraryChecked = true
+            root._finishWhenProbeFindsNothing()
+        }
+        onLoadFailed: {
+            root._oldLibrarySeen = false
+            root._oldLibraryChecked = true
+            root._finishWhenProbeFindsNothing()
+        }
+    }
+
+    // The main read can fail before the probe settles, and if the probe then
+    // finds no inherited file the path does not change, so no second read ever
+    // comes: this is what turns that race into the normal empty state instead
+    // of a list that never finishes loading (review finding R3-ProbeRace).
+    function _finishWhenProbeFindsNothing() {
+        if (!root._oldLibraryChecked || root.libraryLoaded)
+            return
+        if (root._libraryPath !== root._newLibraryPath)
+            return          // a reload against the inherited file is coming
+        root.libraryList = []
+        root.libraryLoaded = true
+        console.log("[ServiceManga] No library file found, starting fresh")
     }
 
     // FileView for writing

@@ -316,6 +316,40 @@ test("the anime list row carries the score the grid shows", () => {
     }
 });
 
+test("settings and libraries read the new name first, the inherited one only as a fallback", () => {
+    // Owner decision D6: the app owns `kisaru` paths, and the migration window
+    // must not show an empty library or reset the settings.
+    const prefs = read("services/UiPrefs.qml");
+    assert.match(prefs, /Paths\.CONFIG_DIR/);
+    assert.match(prefs, /Paths\.LEGACY_CONFIG_DIR/);
+    assert.match(prefs, /Paths\.resolvePath\(root\._newDir, root\._oldDir/);
+    assert.match(prefs, /id: oldProbe/);
+    // Same race on the settings file: the empty state must arrive too.
+    assert.match(prefs, /_finishWhenProbeFindsNothing/);
+
+    for (const [file, panel] of [
+        ["services/Manga.qml", "manga"],
+        ["services/Anime.qml", "anime"],
+        ["services/Novel.qml", "novel"],
+    ]) {
+        const qml = read(file);
+        assert.match(qml, new RegExp(`Paths\\.libraryPath\\(root\\._dataHome, "${panel}", false\\)`),
+            `${file}: no new library path`);
+        assert.match(qml, new RegExp(`Paths\\.libraryPath\\(root\\._dataHome, "${panel}", true\\)`),
+            `${file}: no inherited library path to fall back to`);
+        assert.match(qml, /id: oldLibraryProbe/, `${file}: no probe for the inherited library`);
+        // The read can fail before the probe settles; without this the empty
+        // state would never arrive on a fresh install (review R3-ProbeRace).
+        assert.match(qml, /_finishWhenProbeFindsNothing/, `${file}: the probe race is not closed`);
+        assert.match(qml, /Paths\.resolvePath\(root\._newLibraryPath, root\._oldLibraryPath/,
+            `${file}: the library path is not resolved through the shared rule`);
+    }
+
+    // The backends' interpreter is the new venv and nothing else: a silent
+    // fallback would hide a broken install behind old packages.
+    assert.match(read("services/ReaderEnv.qml"), /Paths\.DATA_DIR \+ "\/venv\/bin\/python3"/);
+});
+
 test("every panel keeps publishing pointerInside from a HoverHandler", () => {
     for (const file of PANELS) {
         const qml = read(file);

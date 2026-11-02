@@ -42,7 +42,7 @@ Singleton {
             onStreamFinished: {
                 root.running = Core.parseVersion(text)
                 if (!root.ok)
-                    console.warn("qs-novelmangareader: " + Core.warningMessage(root.supported, root.running))
+                    console.warn("kisaru: " + Core.warningMessage(root.supported, root.running))
             }
         }
     }

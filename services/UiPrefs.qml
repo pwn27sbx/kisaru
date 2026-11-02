@@ -3,9 +3,14 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "prefs.js" as Core
+import "app_paths.js" as Paths
 
-// The app's preferences, and the ONLY writer of
-// <config>/qs-novelmangareader/settings.json.
+// The app's preferences, and the ONLY writer of <config>/kisaru/settings.json.
+//
+// The directory is `kisaru`; the inherited `qs-novelmangareader` one is read
+// only while the new one does not exist yet (owner decision D6), so the app
+// keeps its settings during the migration window and a fresh install never
+// writes into the old folder.
 //
 // Three features own a key here: the language row (`language`), the readers
 // (`scrollFactor`) and the manga Browse/Library layout (`viewMode`). There used
@@ -20,10 +25,16 @@ import "prefs.js" as Core
 Singleton {
     id: root
 
-    readonly property string settingsDir: {
-        const base = Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
-        return base + "/qs-novelmangareader"
-    }
+    readonly property string _baseDir:
+        Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
+    readonly property string _newDir: root._baseDir + "/" + Paths.CONFIG_DIR
+    readonly property string _oldDir: root._baseDir + "/" + Paths.LEGACY_CONFIG_DIR
+    // Probes: which of the two holds a settings file today.
+    property bool _newSeen: false
+    property bool _oldSeen: false
+    property bool oldChecked: false
+    readonly property string settingsDir:
+        Paths.resolvePath(root._newDir, root._oldDir, root._newSeen, root._oldSeen)
     readonly property string settingsPath: root.settingsDir + "/settings.json"
 
     property string raw: ""
@@ -104,12 +115,19 @@ Singleton {
         id: reader
         path: root.settingsPath
         onLoaded: {
+            root._newSeen = root.settingsDir === root._newDir
             root._loaded = true
             if (!root._touched)
                 root.raw = reader.text()
             root._flushPending()
         }
         onLoadFailed: {
+            // The new file is missing: if the inherited one exists, the probe
+            // flips settingsDir and this read runs again there.
+            if (root._oldSeen && root.settingsDir !== root._oldDir)
+                return
+            if (!root.oldChecked)
+                return
             root._loaded = true
             if (!root._touched)
                 root.raw = ""
@@ -117,19 +135,56 @@ Singleton {
         }
     }
 
+    // Does the inherited settings file exist? Read-only, never written.
+    FileView {
+        id: oldProbe
+        path: root._oldDir + "/settings.json"
+        onLoaded: {
+            root._oldSeen = true
+            root.oldChecked = true
+            root._finishWhenProbeFindsNothing()
+        }
+        onLoadFailed: {
+            root._oldSeen = false
+            root.oldChecked = true
+            root._finishWhenProbeFindsNothing()
+        }
+    }
+
+    // The read of the new file can fail before this probe settles; when there is
+    // no inherited file either, the path never changes and no second read comes,
+    // so the empty settings are finished here (review finding R3-ProbeRace).
+    function _finishWhenProbeFindsNothing() {
+        if (!root.oldChecked || root._loaded)
+            return
+        if (root.settingsDir !== root._newDir)
+            return          // a reload against the inherited file is coming
+        root._loaded = true
+        if (!root._touched)
+            root.raw = ""
+        root._flushPending()
+    }
+
     FileView {
         id: writer
         path: root.settingsPath
     }
 
-    // The config dir may not exist on a fresh setup; create it before writing.
+    // The config dir may not exist on a fresh setup; create it before writing —
+    // but only once the probes have decided WHICH directory is the app's, or a
+    // fresh `~/.config/kisaru` would be created next to the inherited one and
+    // then block the migration's symlink.
     Process {
         id: ensureDir
         command: ["mkdir", "-p", root.settingsDir]
     }
 
+    // QML change handlers cannot be generated for names starting with `_`,
+    // so the probe flag is public.
+    onOldCheckedChanged: if (root.oldChecked) ensureDir.running = true
+
     Component.onCompleted: {
-        ensureDir.running = true
+        if (root.oldChecked) ensureDir.running = true
         reader.reload()
     }
 }

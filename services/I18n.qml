@@ -12,7 +12,7 @@ import "i18n.js" as Core
 //
 // UI language precedence: QS_LANG (env) -> settings.json -> LANG -> "en".
 // By default the UI follows the system locale; the panel toggle and the
-// settings view write <config>/qs-novelmangareader/settings.json and change
+// settings view write <config>/kisaru/settings.json and change
 // `lang` LIVE.
 //
 // The settings file has a single writer (services/UiPrefs.qml): this singleton

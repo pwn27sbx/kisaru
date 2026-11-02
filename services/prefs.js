@@ -1,4 +1,4 @@
-// Pure helpers for <config>/qs-novelmangareader/settings.json.
+// Pure helpers for <config>/kisaru/settings.json.
 //
 // The file holds the user's preferences and is shared by the language toggle
 // and the readers:
