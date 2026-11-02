@@ -35,6 +35,10 @@ TOOL = "migrate_to_kisaru"
 VERSION = 1
 MARKER_NAME = ".migrated-from-qs-novelmangareader.json"
 
+# Exit statuses: 0 nothing to do or done, 2 conflicts found and nothing written.
+OK = 0
+BLOCKED = 2
+
 
 def _sha256(path):
     digest = hashlib.sha256()
@@ -107,26 +111,26 @@ def build_steps(home, xdg_data=None, xdg_cache=None, xdg_config=None):
 
     new_data = os.path.join(data, "kisaru")
     new_cache = os.path.join(cache, "kisaru")
-    old_data = os.path.join(home, ".local", "share")
+    legacy_data = os.path.join(home, ".local", "share")
 
     steps = [
         # The QML libraries (owner decision D6).
         Step("manga library",
-             os.path.join(old_data, "quickshell", "manga_library.json"),
+             os.path.join(legacy_data, "quickshell", "manga_library.json"),
              os.path.join(new_data, "manga_library.json")),
         Step("anime library",
-             os.path.join(old_data, "quickshell", "anime_library.json"),
+             os.path.join(legacy_data, "quickshell", "anime_library.json"),
              os.path.join(new_data, "anime_library.json")),
         Step("novel library",
-             os.path.join(old_data, "quickshell", "new_novel_library.json"),
+             os.path.join(legacy_data, "quickshell", "new_novel_library.json"),
              os.path.join(new_data, "new_novel_library.json")),
         # The backends' own data, one folder each so the two `downloads/`
         # directories cannot collide.
         Step("manga data",
-             os.path.join(old_data, "quickshell-manga"),
+             os.path.join(legacy_data, "quickshell-manga"),
              os.path.join(new_data, "manga")),
         Step("novel data",
-             os.path.join(old_data, "quickshell-novel"),
+             os.path.join(legacy_data, "quickshell-novel"),
              os.path.join(new_data, "novel")),
         # Caches: covers and chapter lists.
         Step("cover cache",
@@ -157,9 +161,22 @@ def load_marker(path):
         return None
 
 
+def _matches_marker(step, done):
+    """True when the destination still holds exactly what the marker recorded."""
+    recorded = done.get(step.dst) or []
+    if isinstance(recorded, str):
+        recorded = [{"rel": os.path.basename(step.dst), "sha256": recorded}]
+    current = ({os.path.relpath(f, step.dst): _sha256(f) for f in _files_of(step.dst)}
+               if os.path.isdir(step.dst)
+               else {os.path.basename(step.dst): _sha256(step.dst)})
+    return {e["rel"]: e["sha256"] for e in recorded} == current
+
+
 def assess(steps, marker):
     """(to_copy, already, blocked): what the run would do, and why it cannot."""
-    done = {entry["dst"]: entry["sha256"] for entry in (marker or {}).get("entries", [])}
+    done = {}
+    for entry in (marker or {}).get("entries", []):
+        done.setdefault(entry["dst"], []).append(entry)
     to_copy, already, blocked = [], [], []
     for step in steps:
         if not step.exists:
@@ -167,30 +184,64 @@ def assess(steps, marker):
         if step.secrets and _inside_git(os.path.dirname(step.dst)):
             blocked.append((step, "refusing to write secrets inside a git work tree"))
             continue
-        if step.same():
+        if step.same() and not step.secrets:
             already.append(step)
             continue
-        if step.conflicts() and step.dst not in done:
-            blocked.append((step, "destination has content and there is no marker for it"))
-            continue
+        # A secrets file that is already in place still goes through the copy:
+        # that is what normalises its mode to 600.
+        if step.conflicts():
+            if step.dst not in done:
+                blocked.append((step, "destination has content and there is no marker for it"))
+                continue
+            # A marker is not permission to overwrite an edited copy: only the
+            # content this tool recorded may be replaced.
+            if not _matches_marker(step, done):
+                blocked.append((step, "destination changed since the last run; not overwriting it"))
+                continue
         to_copy.append(step)
     return to_copy, already, blocked
 
 
 def copy_step(step):
+    """Copy one step into place and return one provenance entry per file."""
     entries = []
-    before = {os.path.abspath(step.src): _sha256(f) for f in _files_of(step.src)}
+    is_tree = os.path.isdir(step.src)
+    base = step.src if is_tree else os.path.dirname(step.src)
+    before = [(os.path.relpath(f, base), _sha256(f)) for f in _files_of(step.src)]
+
     os.makedirs(os.path.dirname(step.dst), exist_ok=True)
-    if os.path.isdir(step.src):
-        shutil.copytree(step.src, step.dst, dirs_exist_ok=True)
+    # Copy next to the destination and swap it in, so an interrupted run never
+    # leaves a half-written tree that a retry would see as a conflict.
+    staging = step.dst + ".partial"
+    if os.path.exists(staging):
+        shutil.rmtree(staging, ignore_errors=True) if os.path.isdir(staging) else os.remove(staging)
+    if is_tree:
+        shutil.copytree(step.src, staging)
+        os.replace(staging, step.dst)
     else:
-        shutil.copy2(step.src, step.dst)
-        if step.secrets:
-            os.chmod(step.dst, 0o600)
-    for src, digest in before.items():
-        rel = os.path.relpath(src, step.src if os.path.isdir(step.src) else os.path.dirname(step.src))
+        shutil.copy2(step.src, staging)
+        os.replace(staging, step.dst)
+    if step.secrets:
+        os.chmod(step.dst, 0o600)
+
+    for rel, digest in before:
         entries.append({"dst": step.dst, "rel": rel, "sha256": digest})
     return entries
+
+
+def _write_marker(path, home, entries):
+    record = {
+        "tool": TOOL,
+        "version": VERSION,
+        "at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+        "home": home,
+        "entries": entries,
+    }
+    tmp = path + ".partial"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(record, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    os.replace(tmp, path)
 
 
 def run(args):
@@ -216,30 +267,21 @@ def run(args):
 
     if blocked:
         print("\nnothing written: resolve the conflicts above and run again")
-        return 2
+        return BLOCKED
     if not to_copy:
         print("\nnothing to do")
-        return 0
+        return OK
     if not args.apply:
         print("\ndry run: pass --apply to copy (the inherited files are left in place)")
-        return 0
+        return OK
 
-    entries = []
+    entries = list((marker or {}).get("entries", []))
+    os.makedirs(os.path.dirname(mpath), exist_ok=True)
     for step in to_copy:
         entries.extend(copy_step(step))
+        _write_marker(mpath, home, entries)
         print("  copied {}".format(step.label))
 
-    record = {
-        "tool": TOOL,
-        "version": VERSION,
-        "at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
-        "home": home,
-        "entries": entries,
-    }
-    os.makedirs(os.path.dirname(mpath), exist_ok=True)
-    with open(mpath, "w", encoding="utf-8") as fh:
-        json.dump(record, fh, indent=2, sort_keys=True)
-        fh.write("\n")
     print("\ncopied {} file(s); marker: {}".format(len(entries), mpath))
     print("the inherited files are untouched: remove them only after the checklist")
     return 0

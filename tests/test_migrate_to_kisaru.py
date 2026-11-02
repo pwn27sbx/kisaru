@@ -113,10 +113,34 @@ class Layout(Base):
             "cover cache", "chapter cache", "canary secrets",
         ])
 
-    def test_the_tool_refuses_to_put_the_marker_inside_a_checkout(self):
-        # The marker lives under the data root, never under ~/.config (which is a
-        # symlink to the repository on the real machine).
-        self.assertNotIn(".config", mig.marker_path(self.home, self.data))
+    def test_the_marker_lives_under_the_data_root_not_the_config_one(self):
+        # ~/.config/kisaru is a symlink to the checkout on the real machine, so
+        # the marker must never be derived from it.
+        self.assertEqual(mig.marker_path(self.home, self.data),
+                         os.path.join(self.data, "kisaru", mig.MARKER_NAME))
+
+    def test_a_second_run_replaces_only_what_the_marker_recorded(self):
+        self.write(os.path.join(self.legacy_libs, "manga_library.json"), '{"v": 1}')
+        self.assertEqual(self.run_tool("--apply"), 0)
+        # The user edits the migrated copy; a re-run must not undo that.
+        dst = os.path.join(self.data, "kisaru", "manga_library.json")
+        self.write(dst, '{"v": 1, "edited": true}')
+        self.assertEqual(self.run_tool("--apply"), 2)
+        with open(dst, encoding="utf-8") as fh:
+            self.assertIn("edited", fh.read())
+
+    def test_an_interrupted_copy_leaves_no_partial_tree_behind(self):
+        self.write(os.path.join(self.data, "quickshell-manga", "downloads", "a", "x.txt"), "x")
+        self.assertEqual(self.run_tool("--apply"), 0)
+        self.assertFalse(os.path.exists(os.path.join(self.data, "kisaru", "manga.partial")))
+
+    def test_a_secret_already_in_place_still_gets_mode_600(self):
+        self.write(os.path.join(self.config, "qs-nmr", "canary.env"), "TOKEN=1\n")
+        dst = os.path.join(self.config, "kisaru-canary", "canary.env")
+        self.write(dst, "TOKEN=1\n")
+        os.chmod(dst, 0o644)
+        self.run_tool("--apply")
+        self.assertEqual(os.stat(dst).st_mode & 0o777, 0o600)
 
 
 if __name__ == "__main__":
