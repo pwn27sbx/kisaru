@@ -355,7 +355,10 @@ def exit_with_parent():
     threading.Thread(target=watch, daemon=True).start()
 
 
-def run():
+def run(port=None):
+    global PORT
+    if port is not None:
+        PORT = port
     exit_with_parent()
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     print(f"[novel-server] Listening on http://127.0.0.1:{PORT}")

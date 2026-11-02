@@ -33,7 +33,10 @@ TTL_CHAP   = 86400
 # per 200 chapters (see utils.PAGE_INTERVAL), so a 3000-chapter novel takes
 # ~15 s cold. With the list on disk, reopening it only fetches the pages that
 # can hold new chapters.
-_APP_META_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+# providers/ -> novel_server/ -> scripts/: two levels, the folder app_meta lives
+# in. Three landed on the repository root and `import app_meta` only worked
+# when a test had already put scripts/ on the path by chance.
+_APP_META_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 if _APP_META_ROOT not in sys.path:
     sys.path.insert(0, os.path.abspath(_APP_META_ROOT))
 import app_meta  # noqa: E402

@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 # The app owns `kisaru` now; the inherited folder is used while it is the only
 # one that exists, so the migration does not empty the favourites or the
 # downloads (owner decision D6).
-_APP_META_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
+_APP_META_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.abspath(_APP_META_ROOT))
 import app_meta  # noqa: E402
 

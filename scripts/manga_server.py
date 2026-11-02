@@ -1228,7 +1228,10 @@ def exit_with_parent():
     threading.Thread(target=watch, daemon=True).start()
 
 
-def run():
+def run(port=None):
+    global PORT
+    if port is not None:
+        PORT = port
     exit_with_parent()
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     print(f"[manga-server] Listening on http://127.0.0.1:{PORT} (threaded)")
@@ -1236,4 +1239,9 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="kisaru manga backend")
+    parser.add_argument("--port", type=int, default=PORT,
+                        help=f"Port to listen on (default: {PORT})")
+    run(parser.parse_args().port)
