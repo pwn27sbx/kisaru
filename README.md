@@ -41,9 +41,14 @@ reportan al upstream, no aquí.
 | Destinos IPC | `animePlayer`, `mangaReader`, `novelReader` |
 | Widget de barra | `pwnsxb.kisaru` |
 
-El proyecto se llamó `qs-novelmangareader` hasta la migración de noviembre de 2026; los datos,
-la configuración y la caché de esa época se leen mientras solo existan en su sitio viejo, y
-desaparecen cuando pasa la limpieza (`D4` del plan de migración).
+Los destinos IPC conservan sus nombres originales a propósito: los usan el comando y el widget,
+y renombrarlos rompería a cualquiera que los llame por IPC.
+
+El proyecto se llamó `qs-novelmangareader` hasta la migración de noviembre de 2026. Los datos,
+la configuración y la caché de esa época siguen leyéndose mientras solo existan en su sitio
+viejo; el plan de migración (`2026-11-01-kisaru-rename-migration-plan.md`, decisión D4) fija
+cuándo se borran, y exige que el checklist pase dos veces y que el canary haya corrido al menos
+una vez con la ruta nueva.
 
 ## Requisitos
 
@@ -222,8 +227,8 @@ suites y subir `supported` a propósito) está documentado en el README del widg
   `~/.local/share/kisaru/new_novel_library.json`
 - Descargas y cachés: `~/.local/share/kisaru/downloads`, `~/.cache/kisaru/`
 
-Las versiones anteriores vivían en `~/.local/share/quickshell*`; se leen mientras solo existan
-allí y la migración las copia a `~/.local/share/kisaru/`.
+Las versiones anteriores vivían en `~/.local/share/quickshell*`; la regla de compatibilidad
+está arriba, en «Los nombres», y la migración las copia a `~/.local/share/kisaru/`.
 
 ## Desarrollo y pruebas
 
