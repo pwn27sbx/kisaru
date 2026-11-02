@@ -23,9 +23,10 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import app_meta
 
 BASE = "https://jkanime.net"
-USER_AGENT = "qs-novelmangareader-es/0.1 (+https://github.com/dhrruvsharma/qs-novelmangareader)"
+USER_AGENT = app_meta.user_agent()
 
 try:
     from curl_cffi.requests import Session as _CffiSession

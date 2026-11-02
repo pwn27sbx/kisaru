@@ -27,13 +27,14 @@ import urllib.error
 import warnings
 import urllib.parse
 import urllib.request
+import app_meta
 
 DEDUPE_TTL = 3600          # one event per (source, op, type) per hour
 FAILED_BACKOFF = 300       # after a failed send, wait before trying that key again
 TIMEOUT = 2                # the reader must not wait on an alert
 MAX_MESSAGE = 500
 MAX_TRACEBACK = 2000
-USER_AGENT = "qs-nmr-backend/1.0 (+https://github.com/pwn27sbx/kisaru)"
+USER_AGENT = app_meta.user_agent()
 
 _sent = {}
 _failed = {}

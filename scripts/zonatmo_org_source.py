@@ -33,10 +33,11 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from html import unescape as _html_unescape
+import app_meta
 
 BASE = "https://zonatmo.org"
 PROXY_PORT = 5150  # same image proxy as manga_server.py
-USER_AGENT = "qs-novelmangareader-es/0.1 (+https://github.com/dhrruvsharma/qs-novelmangareader)"
+USER_AGENT = app_meta.user_agent()
 PAGE_LIMIT = 24  # /biblioteca per_page
 
 NEGATIVE_TTL = 60  # seconds a dead domain is short-cached

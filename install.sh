@@ -2,8 +2,8 @@
 # Instalador de los lectores de Quickshell (anime, manga y novelas).
 #
 #   ./install.sh            instala los paquetes y las fuentes que necesitan, pone
-#                           esta carpeta en ~/.config/qs-novelmangareader y el
-#                           comando qs-novelmangareader en ~/.local/bin, y
+#                           esta carpeta en ~/.config/kisaru y el comando
+#                           kisaru en ~/.local/bin, y
 #                           prepara el venv de Python para los backends
 #   ./install.sh --no-deps  omite los paquetes del sistema y las fuentes
 #   ./install.sh --no-venv  omite el venv de Python
@@ -15,7 +15,7 @@ SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/install-common.sh
 source "$SRC_DIR/scripts/install-common.sh"
 
-VENV="${XDG_DATA_HOME:-$HOME/.local/share}/qs-novelmangareader/venv"
+VENV="${XDG_DATA_HOME:-$HOME/.local/share}/kisaru/venv"
 PIP_PKGS=(flask requests curl_cffi)
 
 PACMAN_PKGS=(quickshell python mpv noto-fonts curl)
@@ -51,8 +51,8 @@ for cmd in quickshell python3 mpv; do
     command -v "$cmd" >/dev/null || warn "sigue faltando $cmd"
 done
 
-install_config qs-novelmangareader
-install_command qs-novelmangareader
+install_config kisaru
+install_command kisaru
 
 if ((VENV_SETUP)); then
     info "Preparando el venv de los backends en $VENV"
@@ -64,13 +64,13 @@ cat <<MSG
 
 Listo. Arráncalo con
 
-    qs-novelmangareader
+    kisaru
 
 (ponlo en tu autostart) y enlaza teclas a
 
-    qs-novelmangareader anime
-    qs-novelmangareader manga
-    qs-novelmangareader novel
+    kisaru anime
+    kisaru manga
+    kisaru novel
 
 Mira README.md para los ejemplos de compositor; los colores salen del tema de Omarchy.
 MSG

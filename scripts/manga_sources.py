@@ -28,11 +28,12 @@ import urllib.parse
 import urllib.request
 
 import content_lang
+import app_meta
 
 BASE = "https://api.mangadex.org"
 UPLOADS = "https://uploads.mangadex.org"
 PROXY_PORT = 5150  # same image proxy as manga_server.py
-USER_AGENT = "qs-novelmangareader-es/0.1 (+https://github.com/dhrruvsharma/qs-novelmangareader)"
+USER_AGENT = app_meta.user_agent()
 PAGE_LIMIT = 32
 FEED_LIMIT = 500  # MangaDex max
 

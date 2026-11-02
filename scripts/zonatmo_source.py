@@ -31,12 +31,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import warnings
+import app_meta
 
 BASE = "https://zonatmo.net/wp-api/api"
 CDN = "https://cdn.zonatmo.to/manga"
 UPLOADS = "https://zonatmo.net/wp-content/uploads"
 PROXY_PORT = 5150  # same image proxy as manga_server.py
-USER_AGENT = "qs-novelmangareader-es/0.1 (+https://github.com/dhrruvsharma/qs-novelmangareader)"
+USER_AGENT = app_meta.user_agent()
 PAGE_LIMIT = 12           # /listing/manga default per_page
 CHAPTER_PAGE_LIMIT = 25   # /single/manga/.../chapters default per_page
 MAX_CHAPTER_PAGES = 40    # safety cap on chapter pagination

@@ -21,12 +21,13 @@ import urllib.parse
 import urllib.request
 
 import titles
+import app_meta
 
 BASE = "https://inmanga.com"
 IMG_CDN = "https://cdn1.intomanga.com/i/m"
 PROXY_PORT = 5150
 PAGE_LIMIT = 32
-USER_AGENT = "qs-novelmangareader-es/0.1 (+https://github.com/dhrruvsharma/qs-novelmangareader)"
+USER_AGENT = app_meta.user_agent()
 
 try:  # optional browser-grade TLS (used by manga_server.py); urllib is the fallback
     from curl_cffi.requests import Session as _CffiSession

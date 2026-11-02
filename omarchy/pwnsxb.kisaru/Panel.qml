@@ -6,7 +6,7 @@ import qs.Commons as Commons
 import qs.Ui
 
 // One bar icon that opens a small menu: Anime / Manga / Novelas. Each entry
-// runs `qs-novelmangareader <key>`, which toggles the matching reader panel
+// runs `kisaru <key>`, which toggles the matching reader panel
 // (the wrapper talks to the app over IPC).
 //
 // The rows are qs.Ui Buttons (icon + left-aligned label, shared hover/selected
@@ -14,8 +14,8 @@ import qs.Ui
 // Omarchy instead of a hand-drawn column.
 Panel {
   id: root
-  moduleName: "pwnsxb.novelmangareader"
-  ipcTarget: "pwnsxb.novelmangareader"
+  moduleName: "pwnsxb.kisaru"
+  ipcTarget: "pwnsxb.kisaru"
   manageIpc: false
 
   readonly property color foreground: bar ? bar.foreground : Commons.Color.foreground
@@ -32,7 +32,7 @@ Panel {
   implicitHeight: button.implicitHeight
 
   function launch(key) {
-    opener.command = ["qs-novelmangareader", key]
+    opener.command = ["kisaru", key]
     opener.running = true
     root.close()
   }

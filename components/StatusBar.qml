@@ -37,7 +37,7 @@ Rectangle {
     // install_config copies the plugin folder next to the running config, so
     // the manifest ships with it. `UiPrefs.settingsDir` owns the config root;
     // the module folder below is the one segment this file adds, and it is the
-    // same name the installer uses (`pwnsxb.novelmangareader`).
+    // same name the installer uses (`pwnsxb.kisaru`).
     readonly property string manifestPath: UiPrefs.settingsDir
         + "/omarchy/pwnsxb.kisaru/manifest.json"
 

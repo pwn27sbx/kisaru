@@ -6,6 +6,7 @@ Completely provider-agnostic — every stored ID is a PREFIXED ID
 
 import os
 import re
+import sys
 import json
 import shutil
 import threading
@@ -14,7 +15,18 @@ from datetime import datetime, timezone
 
 
 # ── Paths ──────────────────────────────────────────────────────────────────
-DATA_DIR       = os.path.expanduser("~/.local/share/quickshell-novel")
+# The app owns `kisaru` now; the inherited folder is used while it is the only
+# one that exists, so the migration does not empty the favourites or the
+# downloads (owner decision D6).
+_APP_META_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
+sys.path.insert(0, os.path.abspath(_APP_META_ROOT))
+import app_meta  # noqa: E402
+
+DATA_DIR = app_meta.resolve_by_content(
+    os.path.join(app_meta.data_home(), app_meta.DATA_DIR),
+    os.path.join(app_meta.LEGACY_DATA_HOME, app_meta.LEGACY_NOVEL_DIR),
+    ("favorites.json", "downloads"),
+)
 FAVORITES_FILE = os.path.join(DATA_DIR, "favorites.json")
 DOWNLOADS_DIR  = os.path.join(DATA_DIR, "downloads")
 os.makedirs(DATA_DIR,      exist_ok=True)

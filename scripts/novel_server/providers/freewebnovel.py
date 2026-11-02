@@ -12,6 +12,7 @@ Implemented:
 
 import json
 import os
+import sys
 import random
 import re
 import threading
@@ -32,7 +33,15 @@ TTL_CHAP   = 86400
 # per 200 chapters (see utils.PAGE_INTERVAL), so a 3000-chapter novel takes
 # ~15 s cold. With the list on disk, reopening it only fetches the pages that
 # can hold new chapters.
-CHAPTER_CACHE_DIR = os.path.expanduser("~/.cache/quickshell-novel/chapters")
+_APP_META_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+if _APP_META_ROOT not in sys.path:
+    sys.path.insert(0, os.path.abspath(_APP_META_ROOT))
+import app_meta  # noqa: E402
+
+CHAPTER_CACHE_DIR = app_meta.resolve_dir(
+    os.path.join(app_meta.cache_home(), app_meta.CACHE_DIR, "chapters"),
+    os.path.join(app_meta.LEGACY_CACHE_HOME, "quickshell-novel", "chapters"),
+)
 _list_locks: dict = {}
 _list_locks_lock  = threading.Lock()
 

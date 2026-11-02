@@ -1,11 +1,11 @@
 [Unit]
-Description=Contract canary for the qs-novelmangareader Spanish sources
+Description=Contract canary for the kisaru Spanish sources
 After=network-online.target
 
 [Service]
 Type=oneshot
 # Secrets (Sentry check-in URL, Discord webhook) live outside the repo, mode 600.
-EnvironmentFile=%h/.config/qs-nmr/canary.env
+EnvironmentFile=%h/.config/kisaru-canary/canary.env
 Environment=PYTHONDONTWRITEBYTECODE=1
 # Repo path is machine-specific: adjust it if the checkout moves.
-ExecStart=/usr/bin/env python3 %h/Projects/forks/qs-novelmangareader-es/scripts/source_canary.py
+ExecStart=/usr/bin/env python3 %h/Projects/kisaru/scripts/source_canary.py

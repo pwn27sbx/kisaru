@@ -37,6 +37,16 @@ function libraryPath(dataHome, panel, legacy) {
     return dataHome + "/" + dir + "/" + name;
 }
 
+// The inherited libraries were written with a literal `~/.local/share`, not with
+// XDG_DATA_HOME, so the fallback has to look there even when the variable is
+// set. This is not a guess: before the migration the three services each read
+// `Quickshell.env("HOME") + "/.local/share/quickshell/<file>"`. Honouring XDG
+// here would look in a place the old code never wrote to, and the migration
+// would report an empty library on a machine that has its data.
+function legacyLibraryPath(home, panel) {
+    return libraryPath(home + "/.local/share", panel, true);
+}
+
 if (typeof module !== "undefined" && module.exports)
     module.exports = {
         CONFIG_DIR: CONFIG_DIR,
@@ -45,5 +55,6 @@ if (typeof module !== "undefined" && module.exports)
         LEGACY_LIBRARY_DIR: LEGACY_LIBRARY_DIR,
         LIBRARY_FILES: LIBRARY_FILES,
         resolvePath: resolvePath,
-        libraryPath: libraryPath
+        libraryPath: libraryPath,
+        legacyLibraryPath: legacyLibraryPath
     };

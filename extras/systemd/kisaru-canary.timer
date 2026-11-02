@@ -1,5 +1,5 @@
 [Unit]
-Description=Daily contract canary for the qs-nmr Spanish sources
+Description=Daily contract canary for the kisaru Spanish sources
 
 [Timer]
 # 09:15 local is 30 minutes after the Sentry cron monitor expects its check-in

@@ -40,6 +40,7 @@ except ImportError:
 import manga_chain
 import manga_sources
 import titles
+import app_meta
 
 PORT        = 5150
 BASE        = "https://weebcentral.com"
@@ -670,8 +671,11 @@ IMG_DISK_MAX_BYTES = 8 * 1024 * 1024   # one image bigger than this is not a cov
 
 
 def img_cache_dir():
-    base = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
-    return os.path.join(base, "qs-novelmangareader", "covers")
+    base = app_meta.cache_home()
+    return app_meta.resolve_dir(
+        os.path.join(base, app_meta.CACHE_DIR, "covers"),
+        os.path.join(base, app_meta.LEGACY_CACHE_DIR, "covers"),
+    )
 
 
 def img_disk_path(url, directory=None):

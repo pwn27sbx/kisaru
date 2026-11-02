@@ -17,7 +17,7 @@ const os = require("node:os");
 const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
-const BIN = path.join(ROOT, "bin", "qs-novelmangareader");
+const BIN = path.join(ROOT, "bin", "kisaru");
 const INSTALL = path.join(ROOT, "install.sh");
 
 function run(script, args, env) {
@@ -39,7 +39,7 @@ test("the command --help prints and keeps the command tokens", () => {
     assert.equal(result.status, 0, result.stderr);
     for (const token of ["anime", "manga", "novel", "stop", "log"])
         assert.match(result.stdout, new RegExp("\\b" + token + "\\b"), "missing token " + token);
-    assert.match(result.stdout, /qs-novelmangareader/);
+    assert.match(result.stdout, /kisaru/);
 });
 
 test("the command --help is in Spanish", () => {
@@ -75,19 +75,19 @@ test("install.sh installs into a temporary HOME without sudo", () => {
 
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout + result.stderr, SPANISH);
-    assert.ok(fs.lstatSync(path.join(home, ".config/qs-novelmangareader")).isSymbolicLink(),
+    assert.ok(fs.lstatSync(path.join(home, ".config/kisaru")).isSymbolicLink(),
         "the config folder is not a symlink");
-    assert.ok(fs.existsSync(path.join(home, ".local/bin/qs-novelmangareader")),
+    assert.ok(fs.existsSync(path.join(home, ".local/bin/kisaru")),
         "the command was not installed");
     // The marker install.sh greps before overwriting the command: it lives in
     // the command's header and in install-common.sh's grep, so both have to
     // carry the same phrase or every reinstall refuses to replace the file.
-    const command = fs.readFileSync(path.join(home, ".local/bin/qs-novelmangareader"), "utf8");
+    const command = fs.readFileSync(path.join(home, ".local/bin/kisaru"), "utf8");
     const common = fs.readFileSync(path.join(ROOT, "scripts/install-common.sh"), "utf8");
     // The command names itself; the installer greps the same sentence with
     // the command name interpolated.
     const sentence = "Instalado por el install.sh de ";
-    assert.ok(command.includes(sentence + "qs-novelmangareader"),
+    assert.ok(command.includes(sentence + "kisaru"),
         "the command header lost the install marker");
     assert.ok(common.includes(sentence + "$name"),
         "install-common.sh no longer greps the install marker");
