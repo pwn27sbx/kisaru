@@ -1,0 +1,63 @@
+kisaru
+Copyright (C) 2026 pwnsxb
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+The full license text is in the LICENSE file next to this notice.
+
+
+MODIFICATIONS NOTICE
+====================
+
+This notice is given under section 5(a) of the GNU General Public License,
+version 3.
+
+kisaru is a modified version of the program "qs-novelmangareader", originally
+published by dhrruvsharma at
+
+    https://github.com/dhrruvsharma/qs-novelmangareader
+
+Original work: Copyright (C) dhrruvsharma and contributors, licensed under
+GPL-3.0. Its copyright notices are retained in the source files.
+
+Modification date: the work was forked on 2026-10-07 at upstream commit
+c3ebeca ("fix: Fixing commands not working with users not having local bin in
+their path"), and has been modified continuously since then.
+
+Modification range: all commits of this repository after that base commit,
+starting with commit eb39f81 ("chore: initialize i18n-es workspace and feature
+plan", 2026-10-11) on the branch i18n-es. To see the complete set of changes
+against the original work:
+
+    git clone https://github.com/pwn27sbx/kisaru
+    git remote add upstream https://github.com/dhrruvsharma/qs-novelmangareader
+    git fetch upstream
+    git log --patch c3ebeca..origin/i18n-es
+
+Summary of the modifications:
+
+  * Spanish interface (all labels, buttons, states and error messages) with a
+    persisted EN/ES toggle, and Spanish content sources for anime, manga and
+    novels, as two independent preferences.
+  * Adoption of the Omarchy shell: the panels take theme, typography, radii and
+    control components from qs.Commons and qs.Ui instead of carrying their own
+    copy, and the app warns when the Omarchy version line changes.
+  * A single shared component layer for the three panels: header with tabs and
+    counts, search field, filter chips, cover card, list row, loading skeleton,
+    settings view and view-mode toggle.
+  * Per-panel grid/list view, remembered in settings.json, and a settings page
+    for scroll speed, interface language and audio mode.
+  * Extensive test suites (Node for the QML-side modules and the CLI, Python
+    unittest for the local backends) and linting tools for style and i18n.
+  * Source chain hardening for manga (MangaDex, InManga, ZonaTMO, ManhwaWeb,
+    WeebCentral) and a local image proxy.
+
+The project keeps the internal name "qs-novelmangareader" for its configuration
+directory, command, IPC targets, bar widget and data paths; see the README.

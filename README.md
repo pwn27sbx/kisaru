@@ -1,106 +1,63 @@
-# qs-novelmangareader (fork en español)
+# kisaru
 
-Reproductor de anime, lector de manga y lector de novelas para
-[Quickshell](https://quickshell.org), sacados de
-[dhrruvsharma/shell](https://github.com/dhrruvsharma/shell) para poder usarlos sin el
-resto de ese rice. Se abren como paneles laterales sobre el escritorio: manga y anime a
-la izquierda, novelas a la derecha.
+**Anime, manga y novelas en tres paneles laterales de [Quickshell](https://quickshell.org).**
+Abres el que quieras con un atajo, se desliza sobre el escritorio y lo vuelves a cerrar; cada
+panel trae su propio backend Python local que consulta los sitios de origen y solo escucha en
+`127.0.0.1`.
 
-- **Anime:** explorar, buscar y biblioteca; los episodios se reproducen en `mpv`.
-- **Manga:** explorar, buscar, favoritos, descargar y leer capítulos.
-- **Novelas:** explorar, buscar, biblioteca, y leer en el panel o a pantalla completa.
+- **Anime** — explorar, buscar y biblioteca; los episodios se reproducen en `mpv`, con
+  subtítulos en español cuando la fuente los tiene.
+- **Manga** — explorar, buscar, favoritos, descargar capítulos y leerlos en el panel.
+- **Novelas** — explorar, buscar, biblioteca, y leer en el panel o a pantalla completa.
 
-Cada panel levanta un servidor Python local pequeño (`scripts/`) que consulta los sitios
-de origen. Arrancan con el servicio del panel y solo escuchan en `127.0.0.1` (anime 5050,
-manga 5150, novelas 5151).
+Fuera del panel no hay ventana principal: el shell corre callado hasta que pides un panel, y
+se integra con el tema, la tipografía y los componentes de Omarchy en vez de traer su propia
+copia.
 
-> Este fork es **privado y local**: no se publica. El upstream del proyecto original es
-> [dhrruvsharma/qs-novelmangareader](https://github.com/dhrruvsharma/qs-novelmangareader)
-> (GPL-3.0); los errores del código original van a su repo, no aquí.
+## De dónde viene
 
-## Qué añade este fork
+kisaru nace como fork de
+**[dhrruvsharma/qs-novelmangareader](https://github.com/dhrruvsharma/qs-novelmangareader)**
+(GPL-3.0), separado el **2026-10-07** sobre el commit
+[`c3ebeca`](https://github.com/dhrruvsharma/qs-novelmangareader/commit/c3ebeca). Desde
+entonces el proyecto siguió por su cuenta: interfaz en español, adopción de Omarchy, fuentes de
+contenido en español, ajustes y una capa de componentes compartidos.
 
-- **UI en español** (etiquetas, botones, estados, errores) con un **toggle EN/ES** que
-  persiste, y **contenido en español** por defecto, que es una preferencia aparte.
-- **Fuentes en español** para anime, manga y novelas (abajo).
-- **Adopción de Omarchy**: la app toma tema, tipografía, radios y componentes de
-  `qs.Commons` y `qs.Ui` en vez de mantener su propia copia.
-- **Widget de barra** de Omarchy: un icono que abre un menú **Anime / Manga / Novelas**
-  (`omarchy/pwnsxb.novelmangareader/`, con su propio README).
+La licencia sigue siendo **GPL-3.0**: el `LICENSE` original queda intacto, los avisos de
+copyright del código original se conservan, y `NOTICE` recoge el aviso de modificaciones que
+pide la GPL-3.0 §5a junto con el rango de commits del fork. Los errores del código original se
+reportan al upstream, no aquí.
 
-## Idioma: UI y contenido son independientes
+## El nombre interno sigue siendo `qs-novelmangareader`
 
-| Qué | Variable | Precedencia / valor por defecto |
-|---|---|---|
-| **UI** (textos de los paneles) | `QS_LANG` | `QS_LANG` → `settings.json` del app → `LANG` → `en` |
-| **Contenido** (subtítulos, capítulos) | `QS_CONTENT_LANG` | lista ordenada separada por comas; por defecto `es` |
+El proyecto se llama **kisaru**, pero por dentro conserva el nombre heredado, y esto es a
+propósito:
 
-El toggle **EN/ES** del panel escribe `<config>/qs-novelmangareader/settings.json` y
-cambia la UI **en vivo**. `QS_LANG` manda sobre el archivo, y no se escribe nunca en el
-código: el wrapper pasa el entorno tal cual. Así puedes leer contenido en español con la
-UI en inglés, o al revés.
+| Qué | Valor |
+|---|---|
+| Carpeta de configuración | `~/.config/qs-novelmangareader` |
+| Comando | `qs-novelmangareader` |
+| Destinos IPC | `animePlayer`, `mangaReader`, `novelReader` |
+| Widget de barra | `pwnsxb.novelmangareader` |
+| Datos | `~/.local/share/quickshell*` |
 
-### Ajustes (el engranaje del panel)
-
-El botón **`󰒓`** del header, en cualquiera de los tres paneles, abre la vista de ajustes:
-
-- **Velocidad de scroll** — cuánto avanza una muesca de rueda en el lector: de **0,5 a 5**
-  en pasos de **0,1**, por defecto `2`. Se aplica **en vivo**; en el panel de anime no
-  aparece, porque no tiene lector. El slider se maneja con ratón o rueda.
-- **Interfaz en español** — el mismo cambio que el chip `EN`, pero explicado y persistente.
-  Si tienes `QS_LANG` en el entorno, esa variable manda y la fila lo dice (se ve atenuada).
-
-Se cierra con la flecha de volver o `Esc`. Todo se guarda en
-`<config>/qs-novelmangareader/settings.json`:
-
-```json
-{
-  "language": "es",
-  "scrollFactor": 2
-}
-```
-
-Un solo escritor mantiene ese archivo (`services/UiPrefs.qml`): cambiar una clave nunca
-borra la otra.
-
-## Fuentes por panel
-
-- **Anime:** hianime primero; si el stream no trae pista de subtítulos en español, cae a
-  [JKAnime](https://jkanime.net) por título (subtítulos en español, hardsub). Si **ambas**
-  vuelven vacías, se pregunta a [`ani-cli-mx`](https://github.com/Gildedboy/ani-cli-mx)
-  (`ani-cli-mx --debug …`), que aporta sus propias fuentes en español (AnimeAV1 y compañía).
-  `QS_ANIME_CLI` acepta la ruta del binario, o `off` para desactivar ese respaldo.
-- **Manga / manhwa:** cadena **MangaDex → InManga → zonatmo.net → zonatmo.org →
-  ManhwaWeb**, de modo que un título que falta en una fuente se busca en la siguiente. Las
-  dos de ZonaTMO son backends independientes (una API JSON y el sitio HTML) que se respaldan
-  entre sí; una fuente con el dominio caído se omite sin romper el panel.
-  **[ManhwaWeb](https://manhwaweb.com)** aporta su propio catálogo de manhwas en español
-  (contenido +18), que no está en las demás fuentes; va al final porque es el último recurso.
-  Se puede forzar una fuente con `QS_MANGA_SOURCE`: `mangadex`, `inmanga`,
-  `zonatmo` (zonatmo.net), `zonatmo_org` (zonatmo.org), `manhwaweb` y `weebcentral` (inglés,
-  sin capítulos en español) fijan esa fuente; `auto` (por defecto) elige por el idioma de
-  contenido: español → la cadena, cualquier otro → WeebCentral.
-- **Novelas:** [SkyNovels](https://skynovels.net) en español; si el idioma de contenido no
-  es español, FreeWebNovel (inglés).
-
-Cuando ninguna fuente tiene capítulos en español, el lector lo dice claramente —nombrando
-las fuentes que revisó— en vez de mostrar contenido como si fuera español. Si no hay
-capítulos en español para un manga concreto, se muestra en inglés **con un aviso
-prominente** en el detalle.
+Renombrar todo eso es una migración aparte —configuración, comando en el `PATH`, widget y
+bibliotecas de lectura— y no se hace de tapadillo: mientras no ocurra, lo que leas aquí usa los
+nombres de la tabla.
 
 ## Requisitos
 
 - **Omarchy 4.0** con su shell de Quickshell. Es una dependencia dura: el repo enlaza
   `Commons/` y `Ui/` a `/usr/share/omarchy/shell/{Commons,Ui}`, así que no funciona sin
-  Omarchy instalado. La app avisa en el log si la versión de Omarchy cambia de línea
-  (ver *Omarchy* abajo).
-- `qs` (Quickshell) — el que trae Omarchy, `python3` y `mpv`.
+  Omarchy instalado. La app avisa en el log si la versión de Omarchy cambia de línea (ver
+  *Omarchy* abajo).
+- `qs` (Quickshell) — el que trae Omarchy —, `python3` y `mpv`.
 - Fuentes: Noto Sans y una Nerd Font (para los iconos).
 
 ## Instalar
 
 ```sh
-git clone <este repo> ~/.config/qs-novelmangareader
+git clone https://github.com/pwn27sbx/kisaru ~/.config/qs-novelmangareader
 ~/.config/qs-novelmangareader/install.sh
 ```
 
@@ -128,8 +85,6 @@ en vez de enlazarla), `--yes` (no pregunta).
 Arranca al iniciar sesión con `qs-novelmangareader` (queda callado hasta que abres un panel).
 
 ## Comandos y atajos
-
-Los tokens de comando son los mismos del original:
 
 ```sh
 qs-novelmangareader           # arráncalo
@@ -164,6 +119,83 @@ bindsym $mod+Alt+n exec qs-novelmangareader novel
 El botón de minimizar del header oculta el panel pero guarda tu lugar; el siguiente toggle
 lo devuelve como lo dejaste.
 
+## Idioma: UI y contenido son independientes
+
+| Qué | Variable | Precedencia / valor por defecto |
+|---|---|---|
+| **UI** (textos de los paneles) | `QS_LANG` | `QS_LANG` → `settings.json` del app → `LANG` → `en` |
+| **Contenido** (subtítulos, capítulos) | `QS_CONTENT_LANG` | lista ordenada separada por comas; por defecto `es` |
+
+El toggle **EN/ES** del panel escribe `<config>/qs-novelmangareader/settings.json` y
+cambia la UI **en vivo**. `QS_LANG` manda sobre el archivo, y no se escribe nunca en el
+código: el wrapper pasa el entorno tal cual. Así puedes leer contenido en español con la
+UI en inglés, o al revés.
+
+## Ajustes (el engranaje del panel)
+
+El botón **`󰒓`** del header, en cualquiera de los tres paneles, abre la vista de ajustes:
+
+- **Velocidad de scroll** — cuánto avanza una muesca de rueda en el lector: de **0,5 a 5**
+  en pasos de **0,1**, por defecto `2`. Se aplica **en vivo**; en el panel de anime no
+  aparece, porque no tiene lector. El slider se maneja con ratón o rueda.
+- **Interfaz en español** — el mismo cambio que el chip `EN`, pero explicado y persistente.
+  Si tienes `QS_LANG` en el entorno, esa variable manda y la fila lo dice (se ve atenuada).
+- **Audio (SUB/DUB)** — solo en anime: subtítulos o doblaje, se aplica en vivo y se guarda.
+
+Se cierra con la flecha de volver o `Esc`. Todo se guarda en
+`<config>/qs-novelmangareader/settings.json`:
+
+```json
+{
+  "language": "es",
+  "scrollFactor": 2,
+  "viewMode": "grid",
+  "viewMode.manga": "list"
+}
+```
+
+Un solo escritor mantiene ese archivo (`services/UiPrefs.qml`): cambiar una clave nunca
+borra las demás.
+
+## Fuentes por panel
+
+- **Anime:** hianime primero; si el stream no trae pista de subtítulos en español, cae a
+  [JKAnime](https://jkanime.net) por título (subtítulos en español, hardsub). Si **ambas**
+  vuelven vacías, se pregunta a [`ani-cli-mx`](https://github.com/Gildedboy/ani-cli-mx)
+  (`ani-cli-mx --debug …`), que aporta sus propias fuentes en español (AnimeAV1 y compañía).
+  `QS_ANIME_CLI` acepta la ruta del binario, o `off` para desactivar ese respaldo.
+- **Manga / manhwa:** cadena **MangaDex → InManga → zonatmo.net → zonatmo.org →
+  ManhwaWeb**, de modo que un título que falta en una fuente se busca en la siguiente. Las
+  dos de ZonaTMO son backends independientes (una API JSON y el sitio HTML) que se respaldan
+  entre sí; una fuente con el dominio caído se omite sin romper el panel.
+  **[ManhwaWeb](https://manhwaweb.com)** aporta su propio catálogo de manhwas en español
+  (contenido +18), que no está en las demás fuentes; va al final porque es el último recurso.
+  Se puede forzar una fuente con `QS_MANGA_SOURCE`: `mangadex`, `inmanga`,
+  `zonatmo` (zonatmo.net), `zonatmo_org` (zonatmo.org), `manhwaweb` y `weebcentral` (inglés,
+  sin capítulos en español) fijan esa fuente; `auto` (por defecto) elige por el idioma de
+  contenido: español → la cadena, cualquier otro → WeebCentral.
+- **Novelas:** [SkyNovels](https://skynovels.net) en español; si el idioma de contenido no
+  es español, FreeWebNovel (inglés).
+
+Cuando ninguna fuente tiene capítulos en español, el lector lo dice claramente —nombrando
+las fuentes que revisó— en vez de mostrar contenido como si fuera español. Si no hay
+capítulos en español para un manga concreto, se muestra en inglés **con un aviso
+prominente** en el detalle.
+
+## Cómo se ve
+
+Los tres paneles comparten una sola capa de componentes (`components/`, `services/`): un
+header con pestañas y contadores, buscador, chips de filtro, tarjeta de portada y fila de
+lista, y un esqueleto de carga que dibuja la forma exacta de lo que va a llegar. La retícula
+es de tres columnas en las tres vistas, y cada panel recuerda su propio modo (cuadrícula o
+lista) en `settings.json`.
+
+La paleta sale del tema de Omarchy (`qs.Commons.Color`, respaldado por
+`~/.local/state/omarchy/current/theme/colors.toml`). No hay copia propia ni archivo de
+paleta que mantener: cambiar el tema de Omarchy cambia la app. `app/Colors.qml` solo traduce
+los nombres de rol que usan las vistas a los colores del sistema.
+`extras/matugen/quickshell.json.hbs` es legado de antes de adoptar Omarchy y ya no se usa.
+
 ## Widget de barra de Omarchy
 
 El widget `pwnsxb.novelmangareader` vive en `omarchy/pwnsxb.novelmangareader/` y tiene su
@@ -184,14 +216,6 @@ El camino de actualización (actualizar, reiniciar shell y app, leer el log, cor
 suites y subir `supported` a propósito) está documentado en el README del widget, sección
 *Updating Omarchy*.
 
-## Colores
-
-La paleta sale del tema de Omarchy (`qs.Commons.Color`, respaldado por
-`~/.local/state/omarchy/current/theme/colors.toml`). No hay copia propia ni archivo de
-paleta que mantener: cambiar el tema de Omarchy cambia la app. `app/Colors.qml` solo traduce
-los nombres de rol que usan las vistas a los colores del sistema.
-`extras/matugen/quickshell.json.hbs` es legado de antes de adoptar Omarchy y ya no se usa.
-
 ## Tus datos
 
 - Bibliotecas y progreso de lectura: `~/.local/share/quickshell/{anime,manga}_library.json`,
@@ -204,7 +228,7 @@ biblioteca.
 ## Desarrollo y pruebas
 
 ```sh
-node --test                  # i18n, lint de estilo, lint de i18n, CLI, guardia de Omarchy
+node --test                  # i18n, lint de estilo y de i18n, CLI, componentes, backends
 node tools/lint-i18n.js      # literales en inglés sin I18n.t
 node tools/lint-style.js     # números crudos de radio/espaciado/tipografía
 python3 -m unittest discover -s tests -p "test_*.py"   # backends (fixtures, sin red)
@@ -214,6 +238,20 @@ Las pruebas de los backends usan fixtures grabadas y `HOME`/`XDG_DATA_HOME` temp
 **nunca** apuntan a `~/.local/share/quickshell*` reales. Las pruebas en vivo contra los
 sitios están detrás de variables de entorno opcionales (`INMANGA_LIVE_TESTS=1`).
 
+Los scripts sueltos —`scripts/source_canary.py`, `scripts/error_report.py`— son
+herramientas de diagnóstico contra las fuentes; no hacen falta para usar la app.
+
+## Créditos
+
+- Proyecto original: **qs-novelmangareader** de
+  [dhrruvsharma](https://github.com/dhrruvsharma/qs-novelmangareader) (GPL-3.0), del que este
+  repo parte.
+- Los sitios de origen y sus APIs son de sus dueños; kisaru solo los consulta desde tu
+  máquina.
+- Los paneles usan el shell, el tema y los componentes de
+  [Omarchy](https://github.com/basecamp/omarchy).
+
 ## Licencia
 
-GPL-3.0-or-later, la misma del rice del que viene. Ver `LICENSE`.
+GPL-3.0-or-later, la misma del proyecto del que viene. `LICENSE` se conserva tal cual y
+`NOTICE` contiene el aviso de modificaciones del fork.
