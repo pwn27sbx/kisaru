@@ -32,7 +32,7 @@ QUERY = "solo leveling"          # manhwa sources: cheap and always present
 MIN_IMAGE_BYTES = 1024           # a real scan is far bigger than a placeholder
 PROBE_DETAIL_TRIES = 5           # detail the first N hits until one has Spanish chapters
 TIMEOUT = 30
-USER_AGENT = "qs-nmr-canary/1.0 (+https://github.com/pwn27sbx/qs-novelmangareader-es)"
+USER_AGENT = "qs-nmr-canary/1.0 (+https://github.com/pwn27sbx/kisaru)"
 # Image CDNs answer 403 to a bare client: the app's proxy sends the same
 # browser UA and per-host Referer (see manga_server.IMAGE_REFERERS).
 BROWSER_UA = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"

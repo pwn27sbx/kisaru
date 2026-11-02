@@ -33,7 +33,7 @@ FAILED_BACKOFF = 300       # after a failed send, wait before trying that key ag
 TIMEOUT = 2                # the reader must not wait on an alert
 MAX_MESSAGE = 500
 MAX_TRACEBACK = 2000
-USER_AGENT = "qs-nmr-backend/1.0 (+https://github.com/pwn27sbx/qs-novelmangareader-es)"
+USER_AGENT = "qs-nmr-backend/1.0 (+https://github.com/pwn27sbx/kisaru)"
 
 _sent = {}
 _failed = {}
