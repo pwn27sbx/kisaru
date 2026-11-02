@@ -78,6 +78,28 @@ def resolve_by_content(new_base, old_base, markers):
     return new_base
 
 
+def resolve_file(new_path, old_path):
+    """The new file when it exists, the inherited one while it is the only one."""
+    if os.path.isfile(new_path):
+        return new_path
+    if os.path.isfile(old_path):
+        return old_path
+    return new_path
+
+
+def canary_env_path(env=None):
+    """The canary's secrets file: ~/.config/kisaru-canary/canary.env.
+
+    It sits outside the repository on purpose: `~/.config/kisaru` is a symlink to
+    the checkout, and a secrets file there would sit inside a public git tree.
+    """
+    base = config_home(env)
+    return resolve_file(
+        os.path.join(base, "kisaru-canary", "canary.env"),
+        os.path.join(base, "qs-nmr", "canary.env"),
+    )
+
+
 def cache_home(env=None):
     env = os.environ if env is None else env
     return env.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")

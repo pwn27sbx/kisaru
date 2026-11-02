@@ -81,6 +81,29 @@ class PathRule(unittest.TestCase):
         self.assertEqual(app_meta.config_home(env), "/g")
 
 
+class CanarySecrets(unittest.TestCase):
+    def test_the_secrets_file_prefers_the_new_folder_and_sits_outside_the_repo(self):
+        with tempfile.TemporaryDirectory() as cfg:
+            env = {"XDG_CONFIG_HOME": cfg}
+            self.assertEqual(app_meta.canary_env_path(env),
+                             os.path.join(cfg, "kisaru-canary", "canary.env"))
+            self.assertNotIn("/Projects/", app_meta.canary_env_path(env))
+
+    def test_the_inherited_secrets_file_is_used_while_it_is_the_only_one(self):
+        with tempfile.TemporaryDirectory() as cfg:
+            env = {"XDG_CONFIG_HOME": cfg}
+            legacy = os.path.join(cfg, "qs-nmr")
+            os.makedirs(legacy)
+            old = os.path.join(legacy, "canary.env")
+            open(old, "w").close()
+            self.assertEqual(app_meta.canary_env_path(env), old)
+
+            new = os.path.join(cfg, "kisaru-canary", "canary.env")
+            os.makedirs(os.path.dirname(new))
+            open(new, "w").close()
+            self.assertEqual(app_meta.canary_env_path(env), new)
+
+
 class CoverCache(unittest.TestCase):
     def test_the_cover_cache_follows_the_new_name_and_falls_back(self):
         try:

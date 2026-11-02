@@ -264,7 +264,7 @@ def run(sources, modules, fetch=fetch_bytes, chain=True):
     return lines, (1 if broken else 0)
 
 
-ENV_FILE = "~/.config/qs-nmr/canary.env"
+ENV_FILE = app_meta.canary_env_path()
 
 
 def load_env_file(path=ENV_FILE):
@@ -331,7 +331,7 @@ def report(code, lines, elapsed, webhook="", checkin_url="", post=post_json):
     checkin_sent = checkin(checkin_url, "ok" if code == 0 else "error", elapsed, post)
     notified = False
     if code != 0:
-        title = "⚠ qs-nmr canary: una fuente rompió su contrato"
+        title = "⚠ kisaru canary: una fuente rompió su contrato"
         notified = notify(webhook, title + "\n```\n" + "\n".join(lines) + "\n```", post)
     return checkin_sent, notified
 
