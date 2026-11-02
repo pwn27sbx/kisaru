@@ -43,6 +43,13 @@ test("every panel has exactly one tool bar, and it is the shared one", () => {
         assert.equal(uses, 1, `${file} must place one ToolBar`);
         assert.ok(!/SearchField\s*\{/.test(source), `${file} still places its own search field`);
     }
+    const names = { "modules/manga/MangaReader.qml": "manga",
+                    "modules/anime/AnimePanel.qml": "anime",
+                    "modules/novel/NovelReader.qml": "novel" };
+    for (const [file, panel] of Object.entries(names)) {
+        assert.match(read(file), new RegExp(`ToolBar\\s*\\{[^}]*panel: "${panel}"`, "s"),
+            `${file} must hand its own panel to the tool bar`);
+    }
     assert.match(read("components/ToolBar.qml"), /MenuSelect\s*\{/, "the tool bar has no filter menu");
     assert.match(read("components/ToolBar.qml"), /SearchField\s*\{/, "the tool bar has no search field");
     assert.match(read("components/ToolBar.qml"), /ViewModeToggle\s*\{/, "the tool bar has no layout toggle");

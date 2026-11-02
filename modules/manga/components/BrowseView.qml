@@ -252,11 +252,11 @@ Item {
                 }
 
                 delegate: ListRow {
-                    // The list reserves the bar's lane; the row's inset is the
-                    // panel gutter, so the text starts where the cards start.
-                    width: mangaRows.width - mangaRows.rightMargin
+                    // The list's anchors are already the gutter box, so the
+                    // row adds no inset of its own (owner §32.1).
+                    width: mangaRows.width
                     height: implicitHeight
-                    inset: Gutter.left
+                    inset: Style.space(0)
                     source: modelData.thumbUrl || ""
                     title: modelData.title || ""
                     bodyFont: browseView.fontBody

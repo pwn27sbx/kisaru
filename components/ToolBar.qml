@@ -16,9 +16,9 @@ import qs.components
 // copied six times.
 //
 // The panel keeps its search behaviour: this component forwards `edited` and
-// `cleared` and publishes the field's contract (`text`, `activeFocus`,
-// `forceFocus()`, `blur()`, `clear()`) so the `/` shortcut and the debounce stay
-// where they were.
+// `cleared` and publishes the field's contract (`text`, `searchActiveFocus`,
+// `forceFocus()`, `blur()`, `clear()`, `setText()`) so the `/` shortcut, the
+// debounce and "search this title elsewhere" stay where they were.
 RowLayout {
     id: root
 

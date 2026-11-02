@@ -158,10 +158,9 @@ Item {
             visible: Manga.libraryList.length > 0 && libraryView.listMode
             topMargin: Style.spacing.xl
             bottomMargin: Style.spacing.xl
-            // Rows stop before the bar's lane; the inset puts their text on
-            // the cards' left edge (owner §32.1).
-            rightMargin: Style.spacing.lg
+            // One gutter with the top zone, lane included (owner §32.1).
             leftMargin: Gutter.left
+            rightMargin: Gutter.right
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             model: Manga.libraryList
