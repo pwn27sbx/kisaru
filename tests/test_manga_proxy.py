@@ -5,8 +5,11 @@ installed (the app venv); otherwise they are skipped.
 """
 
 import os
+import shutil
 import sys
+import tempfile
 import unittest
+from urllib.parse import quote
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
@@ -261,6 +264,163 @@ class HealthPayloadTest(unittest.TestCase):
         self.assertTrue(manga_server.img_host_down(host, now=500.0))
         self.assertTrue(manga_server.img_host_down(host, now=500.0 + manga_server.IMG_HOST_TTL - 1))
         self.assertFalse(manga_server.img_host_down(host, now=500.0 + manga_server.IMG_HOST_TTL))
+
+
+class FakeResponse:
+    def __init__(self, body=b"\xff\xd8\xff\xe0cover", ctype="image/jpeg"):
+        self.content = body
+        self.headers = {"Content-Type": ctype}
+
+    def raise_for_status(self):
+        pass
+
+
+class FakeSession:
+    """Records the headers of every request it is given."""
+
+    def __init__(self, body=b"\xff\xd8\xff\xe0cover", ctype="image/jpeg"):
+        self.calls = []
+        self.body = body
+        self.ctype = ctype
+
+    def get(self, url, headers=None, timeout=None):
+        self.calls.append(headers or {})
+        return FakeResponse(self.body, self.ctype)
+
+
+CHALLENGE = b"<!doctype html><html><head><title>MangaDex - Browser verification</title>"
+
+
+@unittest.skipUnless(HAVE_SERVER, "manga_server needs curl_cffi/requests")
+class MangaDexFetchPolicyTest(unittest.TestCase):
+    """MangaDex challenges impersonation: covers go out as kisaru itself.
+
+    The CDN answers 302 to /edge/challenge for the Firefox impersonation and
+    200 for an honest client, so the image proxy must stop pretending — for
+    MangaDex hosts only, because every other source still needs the browser.
+    """
+
+    def setUp(self):
+        self.orig_plain, self.orig_session = manga_server._plain_session, manga_server._session
+
+    def tearDown(self):
+        manga_server._plain_session, manga_server._session = self.orig_plain, self.orig_session
+
+    def _forbid_plain(self):
+        def never():
+            raise AssertionError("the honest session must not be used here")
+        manga_server._plain_session = never
+
+    def _forbid_impersonation(self):
+        def never():
+            raise AssertionError("the impersonating session must not be used here")
+        manga_server._session = never
+
+    def test_a_mangadex_cover_is_fetched_with_the_honest_user_agent(self):
+        plain = FakeSession()
+        manga_server._plain_session = lambda: plain
+        self._forbid_impersonation()
+        body, ctype = manga_server._raw_get("https://uploads.mangadex.org/covers/abc/512.jpg")
+        sent = plain.calls[0]
+        self.assertEqual(sent["User-Agent"], manga_server.app_meta.user_agent())
+        self.assertEqual(sent["Accept"], "image/*")
+        self.assertNotIn("Referer", sent)
+        self.assertEqual([k for k in sent if k.lower().startswith(("sec-", "upgrade-", "dnt"))], [])
+        self.assertEqual(ctype, "image/jpeg")
+        self.assertTrue(body.startswith(b"\xff\xd8"))
+
+    def test_an_at_home_node_keeps_the_site_referer(self):
+        plain = FakeSession()
+        manga_server._plain_session = lambda: plain
+        self._forbid_impersonation()
+        manga_server._raw_get("https://cmdxd98sb0x3yprd.mangadex.network/data-saver/h/1.webp")
+        sent = plain.calls[0]
+        self.assertEqual(sent["Referer"], "https://mangadex.org/")
+        self.assertEqual(sent["User-Agent"], manga_server.app_meta.user_agent())
+
+    def test_every_other_host_keeps_the_impersonating_session(self):
+        imp = FakeSession()
+        manga_server._session = lambda: imp
+        self._forbid_plain()
+        manga_server._raw_get("https://img1mw.xyz/manhwas/x/001.jpg")
+        sent = imp.calls[0]
+        self.assertTrue(sent["User-Agent"].startswith("Mozilla/5.0"), sent["User-Agent"])
+        self.assertEqual(sent["Referer"], "https://manhwaweb.com/")
+
+    def test_the_policy_matches_by_host_not_by_substring(self):
+        for url in ("https://evil-mangadex.network.example.com/x.jpg",
+                    "https://notmangadex.network/x.jpg",
+                    "https://uploads.mangadex.org.example.com/x.jpg",
+                    "https://mangadex.network/x.jpg",
+                    "https://uploads.mangadex.org.evil.example/x.jpg"):
+            self.assertFalse(manga_server.uses_mangadex_image_policy(url), url)
+        for url in ("https://uploads.mangadex.org/x.jpg",
+                    "https://UPLOADS.MANGADEX.ORG/x.jpg",
+                    "https://cmdxd98sb0x3yprd.mangadex.network/data-saver/h/1.webp"):
+            self.assertTrue(manga_server.uses_mangadex_image_policy(url), url)
+
+    def test_a_challenge_page_is_never_served_or_cached(self):
+        """The honest UA is for fetch policy, not for skipping the image check."""
+        handler = RecordingHandler()
+        url = "https://uploads.mangadex.org/covers/abc/512.jpg"
+        plain = FakeSession(CHALLENGE, "text/html")
+        manga_server._plain_session = lambda: plain
+        self._forbid_impersonation()
+        original_get = manga_server._img_get
+        manga_server._img_get = lambda target: None
+        try:
+            manga_server.proxy_image(handler, url)
+        finally:
+            manga_server._img_get = original_get
+        self.assertEqual(handler.errors, [502])
+        self.assertNotIn(url, manga_server._img_cache)
+
+
+@unittest.skipUnless(HAVE_SERVER, "manga_server needs curl_cffi/requests")
+class DownloadImageGuardTest(unittest.TestCase):
+    """A challenge page must never be written to disk as a page or a cover."""
+
+    CHAPTER_URL = "https://cmdxd98sb0x3yprd.mangadex.network/data-saver/h/1.jpg"
+    COVER_URL   = "https://uploads.mangadex.org/covers/abc/512.jpg"
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.orig = (manga_server.DOWNLOADS_DIR, manga_server._download_pages,
+                     manga_server._raw_get, manga_server._img_get,
+                     manga_server._img_put)
+        manga_server.DOWNLOADS_DIR = self.tmp
+        manga_server._download_pages = lambda cid: [{
+            "page": 1,
+            "img": "http://127.0.0.1:5150/image?url=" + quote(self.CHAPTER_URL, safe=""),
+        }]
+        manga_server._img_get = lambda url: None
+        manga_server._img_put = lambda *a, **k: None
+        manga_server._dl_jobs["ch1"] = {"status": "queued", "total": 0, "done": 0}
+
+    def tearDown(self):
+        (manga_server.DOWNLOADS_DIR, manga_server._download_pages,
+         manga_server._raw_get, manga_server._img_get,
+         manga_server._img_put) = self.orig
+        manga_server._dl_jobs.pop("ch1", None)
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _chapter_dir(self):
+        return os.path.join(self.tmp, "s1", "ch1")
+
+    def test_a_challenge_page_is_never_saved_as_a_page(self):
+        manga_server._raw_get = lambda url, timeout=30: (CHALLENGE, "text/html")
+        manga_server._dl_worker("s1/Title", "ch1", "1", "Chapter 1", "Title", "")
+        self.assertEqual(manga_server._dl_jobs["ch1"]["status"], "error")
+        self.assertEqual(os.listdir(self._chapter_dir()), [])
+
+    def test_a_challenge_page_is_never_saved_as_the_series_cover(self):
+        jpeg = b"\xff\xd8\xff\xe0page"
+        manga_server._raw_get = lambda url, timeout=30: (
+            (jpeg, "image/jpeg") if url == self.CHAPTER_URL else (CHALLENGE, "text/html"))
+        manga_server._dl_worker("s1/Title", "ch1", "1", "Chapter 1", "Title", self.COVER_URL)
+        self.assertEqual(manga_server._dl_jobs["ch1"]["status"], "done")
+        self.assertEqual(sorted(os.listdir(self._chapter_dir())), ["001.jpg", "meta.json"])
+        self.assertFalse(os.path.exists(os.path.join(self.tmp, "s1", "cover.jpg")))
 
 
 if __name__ == "__main__":

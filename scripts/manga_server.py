@@ -179,9 +179,72 @@ def image_headers(url):
     return {**HEADERS, "Referer": referer} if referer else HEADERS
 
 
+# MangaDex challenges a client that pretends to be a browser: its CDN answers
+# 302 to /edge/challenge for the Firefox impersonation and 200 for an honest
+# client whose User-Agent names it. The API client already identifies itself
+# (manga_sources calls app_meta.user_agent()), so the image proxy does too — for
+# these hosts only, because every other source here sits behind Cloudflare,
+# which still insists on a browser fingerprint.
+MANGADEX_IMAGE_HOST  = "uploads.mangadex.org"
+MANGADEX_NODE_SUFFIX = ".mangadex.network"
+
+
+def uses_mangadex_image_policy(url):
+    """True for MangaDex covers and at-home pages: honest UA, no impersonation.
+
+    Exact host or dot-suffix, never a substring: `evil-mangadex.network.example`
+    is somebody else's host, and `uploads.mangadex.org.example` is not MangaDex.
+    """
+    host = (urlparse(url).hostname or "").lower()
+    return host == MANGADEX_IMAGE_HOST or host.endswith(MANGADEX_NODE_SUFFIX)
+
+
+def mangadex_image_headers(url):
+    """Honest headers for a MangaDex image host: no browser fingerprint.
+
+    The at-home nodes still answer 404 without the site as referer, and
+    referer_for() owns that rule; uploads.mangadex.org answers without one.
+    """
+    headers = {"User-Agent": app_meta.user_agent(), "Accept": "image/*"}
+    referer = referer_for(urlparse(url).hostname or "")
+    if referer:
+        headers["Referer"] = referer
+    return headers
+
+
+# The plain session keeps its own thread-local slot: _get() throws _tls.session
+# away on a retry, and the honest session must not disappear with it. It is
+# built from requests' own defaults and never gets HEADERS, so the Firefox
+# fingerprint of the requests fallback can never leak into a MangaDex request.
+_tls_plain = threading.local()
+
+
+def _plain_session():
+    sess = getattr(_tls_plain, "session", None)
+    if sess is None:
+        import requests
+        sess = requests.Session()
+        _tls_plain.session = sess
+    return sess
+
+
+def _plain_get(url, headers, timeout):
+    """GET without browser impersonation, one retry on connection errors."""
+    try:
+        return _plain_session().get(url, headers=headers, timeout=timeout)
+    except Exception as e:
+        if getattr(e, "response", None) is not None:
+            raise
+        _tls_plain.session = None
+        return _plain_session().get(url, headers=headers, timeout=timeout)
+
+
 def _raw_get(url, timeout=30):
     """Return raw bytes + content-type for image proxy."""
-    r = _get(url, image_headers(url), timeout)
+    if uses_mangadex_image_policy(url):
+        r = _plain_get(url, mangadex_image_headers(url), timeout)
+    else:
+        r = _get(url, image_headers(url), timeout)
     r.raise_for_status()
     return r.content, r.headers.get("Content-Type", "image/jpeg")
 
@@ -592,6 +655,12 @@ def _dl_worker(manga_id, chapter_id, chapter_num, chapter_title, manga_title, ra
                     body = cached[0]
                 else:
                     body, ctype = _raw_get(real_url)
+                    if not is_image_response(ctype, body):
+                        # A bot check served as a page must fail the job, not
+                        # land on disk as 001.jpg.
+                        raise RuntimeError(
+                            "upstream returned %s, not a page: %s"
+                            % (ctype or "no type", real_url[:90]))
                     _img_put(real_url, body, ctype)
                 with open(fname, "wb") as f:
                     f.write(body)
@@ -618,9 +687,11 @@ def _dl_worker(manga_id, chapter_id, chapter_num, chapter_title, manga_title, ra
         cover_path = os.path.join(series_dir, "cover.jpg")
         if not os.path.exists(cover_path) and raw_cover_url:
             try:
-                body, _ = _raw_get(raw_cover_url, timeout=15)
-                with open(cover_path, "wb") as f:
-                    f.write(body)
+                body, ctype = _raw_get(raw_cover_url, timeout=15)
+                # Same rule as the pages: an HTML challenge is not a cover.
+                if is_image_response(ctype, body):
+                    with open(cover_path, "wb") as f:
+                        f.write(body)
             except Exception:
                 pass
 
