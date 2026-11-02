@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.abspath(_APP_META_ROOT))
 import app_meta  # noqa: E402
 
 DATA_DIR = app_meta.resolve_by_content(
-    os.path.join(app_meta.data_home(), app_meta.DATA_DIR),
+    os.path.join(app_meta.data_home(), app_meta.DATA_DIR, "novel"),
     os.path.join(app_meta.LEGACY_DATA_HOME, app_meta.LEGACY_NOVEL_DIR),
     ("favorites.json", "downloads"),
 )

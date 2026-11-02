@@ -51,7 +51,11 @@ PAGE_LIMIT  = 32
 HREF        = r'href="(?:https://weebcentral\.com)?'
 
 # ── Persistent storage ─────────────────────────────────────────────────────
-DATA_DIR       = os.path.expanduser("~/.local/share/quickshell-manga")
+DATA_DIR = app_meta.resolve_by_content(
+    os.path.join(app_meta.data_home(), app_meta.DATA_DIR, "manga"),
+    os.path.join(app_meta.LEGACY_DATA_HOME, "quickshell-manga"),
+    ("favorites.json", "downloads"),
+)
 FAVORITES_FILE = os.path.join(DATA_DIR, "favorites.json")
 DOWNLOADS_DIR  = os.path.join(DATA_DIR, "downloads")
 os.makedirs(DATA_DIR,      exist_ok=True)
