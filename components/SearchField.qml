@@ -51,6 +51,15 @@ Rectangle {
         input.focus = false
     }
 
+    // "Search this title across the other sources" needs to fill the field
+    // without pretending a person typed: silent, like clear(), and it does fire
+    // nothing by itself.
+    function setText(value) {
+        root._silent = true
+        input.text = String(value === undefined || value === null ? "" : value)
+        root._silent = false
+    }
+
     implicitHeight: Style.space(30)
     radius: Style.cornerRadius
     color: Colors.surface_container

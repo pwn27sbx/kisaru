@@ -19,11 +19,15 @@ ClickableRect {
     property string label: ""
     property bool current: false
     property string bodyFont: ""
+    // The tool bar makes its controls one height (§32.1); 0 keeps the chip formula.
+    property int cellHeight: 0
 
     // A square cell: the height a chip gets, and the same for the width, which
     // is what an icon button of this family looks like.
     implicitWidth: implicitHeight
-    implicitHeight: metrics.implicitHeight + 2 * Style.spacing.controlPaddingY
+    implicitHeight: chip.cellHeight > 0
+        ? chip.cellHeight
+        : metrics.implicitHeight + 2 * Style.spacing.controlPaddingY
     cursorShape: Qt.PointingHandCursor
     // The glyph comes from a fallback font whose line is a pixel taller than the
     // body font's, so the cell measures a normal line instead: the toggle's row

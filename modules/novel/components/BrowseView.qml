@@ -33,6 +33,21 @@ Item {
         Novel.fetchHot()
     }
 
+    // The tool bar's filter menu (owner §32): same two entries, same call.
+    readonly property var filterOptions: [
+        { value: "hot", label: I18n.t("novel.filter.hot") },
+        { value: "latest", label: I18n.t("novel.filter.latest") }
+    ]
+    readonly property string filterValue: browseView.currentFilter
+    // A search puts the list in "search": the menu dims and keeps naming the
+    // last real filter instead of pretending the filter is in force.
+    readonly property bool filterDimmed: browseView.currentFilter === "search"
+    readonly property string filterFallbackLabel: I18n.t("novel.filter.hot")
+
+    function chooseFilter(value) {
+        browseView._switchFilter(value)
+    }
+
     function _switchFilter(f) {
         if (currentFilter === f) return
         currentFilter = f
@@ -46,55 +61,33 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Filter chips + grid/list toggle, one row ──────────────────────────
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Style.spacing.sm
+        // Row 3 is gone (owner §32): the filters live in the tool bar the panel
+        // owns, with the layout toggle. This view starts at the covers.
 
-            FilterBar {
-                Layout.fillWidth: true
-                fontFamily: browseView.fontBody
-                options: [
-                    { label: I18n.t("novel.filter.hot") },
-                    { label: I18n.t("novel.filter.latest") }
-                ]
-                currentIndex: browseView.currentFilter === "hot" ? 0 : browseView.currentFilter === "latest" ? 1 : -1
-                onActivated: function(index) { browseView._switchFilter(index === 0 ? "hot" : "latest") }
-            }
-            // The layout switch: two bare icon cells, pinned to the cards' right
-            // edge, lane included (owner §30).
-            ViewModeToggle {
-                Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: Style.spacing.xl + Style.space(ScrollMetrics.LANE)
-                panel: "novel"
-                listMode: browseView.listMode
-                fontFamily: browseView.fontBody
-            }
-        }
-
-        // ── Novel grid ────────────────────────────────────────────────────────
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
 
             // Loading overlay: ghost cards where the first page will land
             SkeletonGrid {
                 anchors.fill: parent; z: 10
-                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 active: (Novel.isFetchingNovel || Novel.isSwitchingProvider)
                     && Novel.novelList.length === 0
                 columns: CardMetrics.columns
-                padding: Style.spacing.xl
-                cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.xl) / CardMetrics.columns)
+                padding: Style.space(0)
+                cellHeight: CardMetrics.cellHeight(width / CardMetrics.columns)
             }
 
             // Rows take over the same area in list mode.
             SkeletonList {
                 anchors.fill: parent
-                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 z: 10
                 rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
                 cover: true
-                dividerInset: Style.spacing.xl
+                inset: Style.space(0)
                 active: browseView.listMode && Novel.isFetchingNovel && Novel.novelList.length === 0
             }
 
@@ -127,9 +120,9 @@ Item {
                 anchors.fill: parent
                 anchors.topMargin: Style.spacing.xl
                 anchors.bottomMargin: Style.spacing.xl
-                anchors.leftMargin: Style.spacing.xl
-                // The right side keeps the scrollbar's lane (owner §30).
-                anchors.rightMargin: Style.spacing.xl + Style.space(ScrollMetrics.LANE)
+                // One gutter with the tool bar (owner §32.1).
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 cellWidth: Math.floor(width / CardMetrics.columns)
                 cellHeight: CardMetrics.cellHeight(cellWidth)
                 clip: true; boundsBehavior: Flickable.StopAtBounds
@@ -178,8 +171,9 @@ Item {
                 anchors.fill: parent
                 anchors.topMargin: Style.spacing.xl
                 anchors.bottomMargin: Style.spacing.xl
-                // Rows stop before the bar's lane (owner §30).
-                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
+                // One gutter with the tool bar (owner §32.1).
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 visible: browseView.listMode
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
@@ -196,6 +190,7 @@ Item {
                 delegate: ListRow {
                     width: novelRows.width
                     height: implicitHeight
+                    inset: Style.space(0)
                     source: modelData.coverUrl || ""
                     title: modelData.title || ""
                     bodyFont: browseView.fontBody

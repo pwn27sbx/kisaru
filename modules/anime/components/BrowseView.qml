@@ -19,6 +19,34 @@ Item {
     // stop sharing manga's choice.
     readonly property bool listMode: UiPrefs.viewModeFor("anime") === "list"
 
+    // The tool bar's filter menu (owner §32). The same five entries the chips
+    // had; one value stands for the (view, country) pair the old chips set in
+    // two steps.
+    readonly property var filterOptions: [
+        { value: "popular", label: I18n.t("anime.filter.popular") },
+        { value: "latest", label: I18n.t("anime.filter.latest") },
+        { value: "JP", label: I18n.t("anime.filter.japan") },
+        { value: "CN", label: I18n.t("anime.filter.china") },
+        { value: "KR", label: I18n.t("anime.filter.korea") }
+    ]
+    readonly property string filterValue:
+        Anime.currentView === "popular" ? "popular"
+        : Anime.currentCountry === "JP" ? "JP"
+        : Anime.currentCountry === "CN" ? "CN"
+        : Anime.currentCountry === "KR" ? "KR" : "latest"
+    // A search replaces the list the filter describes, so the menu steps back
+    // instead of claiming a filter that is not in force.
+    readonly property bool filterDimmed: Anime.currentView === "search"
+    readonly property string filterFallbackLabel: I18n.t("anime.filter.latest")
+
+    // The body of the old chip handler, unchanged.
+    function chooseFilter(value) {
+        browseView.searchCleared()
+        Anime.currentCountry = value === "JP" ? "JP" : value === "CN" ? "CN" : value === "KR" ? "KR" : "ALL"
+        if (value === "popular") Anime.fetchPopular(true)
+        else Anime.fetchLatest(true)
+    }
+
     // Passes the full show object so DetailView can seed itself immediately
     signal animeSelected(var show)
 
@@ -37,46 +65,8 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Filter chips + grid/list toggle, one row ──────────────────────────
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Style.spacing.sm
-
-            FilterBar {
-                Layout.fillWidth: true
-                fontFamily: browseView.fontBody
-                options: [
-                    { label: I18n.t("anime.filter.popular") },
-                    { label: I18n.t("anime.filter.latest") },
-                    { label: I18n.t("anime.filter.japan") },
-                    { label: I18n.t("anime.filter.china") },
-                    { label: I18n.t("anime.filter.korea") }
-                ]
-                currentIndex: {
-                    if (Anime.currentView === "popular") return 0
-                    if (Anime.currentCountry === "JP") return 2
-                    if (Anime.currentCountry === "CN") return 3
-                    if (Anime.currentCountry === "KR") return 4
-                    return 1
-                }
-                onActivated: function(index) {
-                    browseView.searchCleared()
-                    Anime.currentCountry = index === 2 ? "JP" : index === 3 ? "CN" : index === 4 ? "KR" : "ALL"
-                    if (index === 0) Anime.fetchPopular(true)
-                    else Anime.fetchLatest(true)
-                }
-            }
-            // The layout switch, two bare icon cells, pinned to the cards' right
-            // edge (owner §30): the same inset the grid gives its last column,
-            // including the scrollbar's lane.
-            ViewModeToggle {
-                Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: Style.spacing.xl + Style.space(ScrollMetrics.LANE)
-                panel: "anime"
-                listMode: browseView.listMode
-                fontFamily: browseView.fontBody
-            }
-        }
+        // Row 3 is gone (owner §32): the filters live in the tool bar the panel
+        // owns, and the layout toggle lives there too.
 
         // ── Content area ──────────────────────────────────────────────────────
         Item {
@@ -86,19 +76,23 @@ Item {
             // Loading: ghost cards where the first page will land
             SkeletonGrid {
                 anchors.fill: parent; z: 10
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 active: !browseView.listMode && Anime.isFetchingAnime && Anime.animeList.length === 0
                 columns: CardMetrics.columns
-                padding: Style.spacing.xl
-                cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.xl) / CardMetrics.columns)
+                padding: Style.space(0)
+                cellHeight: CardMetrics.cellHeight(width / CardMetrics.columns)
             }
 
             // Rows take over the same area in list mode.
             SkeletonList {
                 anchors.fill: parent
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 z: 10
                 rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
                 cover: true
-                dividerInset: Style.spacing.xl
+                inset: Style.space(0)
                 active: browseView.listMode && Anime.isFetchingAnime && Anime.animeList.length === 0
             }
 
@@ -139,10 +133,9 @@ Item {
                 anchors.fill: parent
                 anchors.topMargin: Style.spacing.xl
                 anchors.bottomMargin: Style.spacing.xl
-                anchors.leftMargin: Style.spacing.xl
-                // The right side keeps the scrollbar's lane, so the bar never
-                // covers the last column (owner §30).
-                anchors.rightMargin: Style.spacing.xl + Style.space(ScrollMetrics.LANE)
+                // One gutter with the tool bar (owner §32.1).
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 cellWidth: Math.floor(width / CardMetrics.columns)
                 cellHeight: CardMetrics.cellHeight(cellWidth)
                 clip: true
@@ -197,8 +190,10 @@ Item {
                 anchors.fill: parent
                 anchors.topMargin: Style.spacing.xl
                 anchors.bottomMargin: Style.spacing.xl
-                // The bar's lane: rows stop before it (owner §30).
-                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
+                // One gutter with the tool bar (owner §32.1); the row's own
+                // inset is gone, the box already is the gutter.
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 visible: browseView.listMode
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
@@ -215,6 +210,7 @@ Item {
                 delegate: ListRow {
                     width: animeRows.width
                     height: implicitHeight
+                    inset: Style.space(0)
                     source: modelData.thumbnail || ""
                     title: modelData.englishName || modelData.name || ""
                     bodyFont: browseView.fontBody

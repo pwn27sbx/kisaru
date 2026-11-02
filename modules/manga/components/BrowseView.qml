@@ -29,11 +29,12 @@ Item {
     // The card's box, from the constants in services/manga_card.js: the cover
     // ratio plus the info band under it. The GridView and the SkeletonGrid
     // that stands in for it both read these, so the ghosts sit exactly where
-    // the covers land and the panel does not jump on load. The right inset also
-    // carries the scrollbar's lane (owner §30), so no card sits under the bar.
-    readonly property real gridRightInset: Style.spacing.xl + Style.space(ScrollMetrics.LANE)
+    // the covers land and the panel does not jump on load. The left and right
+    // insets are the panel's one gutter (services/Gutter.qml, owner §32.1), the
+    // same the tool bar uses, and the right one already carries the scrollbar's
+    // lane, so no card sits under the bar.
     readonly property real cardWidth:
-        Math.max(0, (width - Style.spacing.xl - gridRightInset) / columnCount)
+        Math.max(0, (width - Gutter.left - Gutter.right) / columnCount)
     readonly property real cardHeight: CardMetrics.cellHeight(cardWidth)
 
     // The layout the user picked (persisted in settings.json). Both branches
@@ -45,6 +46,26 @@ Item {
     signal mangaSelected(string mangaId)
 
     property string currentTagId: ""
+
+    // The tool bar's filter menu (owner §32). The labels are the same five the
+    // chips showed; the values are what fetchByOrigin expects.
+    readonly property var filterOptions: [
+        { value: "", label: I18n.t("manga.filter.hot") },
+        { value: "latest", label: I18n.t("manga.filter.latest") },
+        // Origin tags are data values, identical in both languages.
+        { value: "ja", label: "Manga" }, // i18n-ignore — origin tag
+        { value: "ko", label: "Manhwa" }, // i18n-ignore — origin tag
+        { value: "zh", label: "Manhua" } // i18n-ignore — origin tag
+    ]
+    readonly property var filterValue: browseView.currentTagId
+
+    // Exactly what a chip's onActivated did, so the fetch behaviour does not
+    // move with the control.
+    function chooseFilter(tagId) {
+        browseView.currentTagId = tagId
+        browseView.searchCleared()
+        Manga.fetchByOrigin(tagId, true)
+    }
 
     // Emitted when an in-panel filter change invalidates the current search;
     // the panel clears its search bar in response.
@@ -62,55 +83,9 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Row 3: filter chips + grid/list toggle ───────────────────────────
-        // One row, as the owner drew it (round 4): the chips at the left and
-        // scroll horizontally when they do not fit, the two-cell layout toggle
-        // pinned at the right. The results heading that used to sit under it is
-        // gone — its count now lives in the status bar.
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Style.spacing.sm
-
-            FilterBar {
-                Layout.fillWidth: true
-                fontFamily: browseView.fontBody
-                options: [
-                    { label: I18n.t("manga.filter.hot") },
-                    { label: I18n.t("manga.filter.latest") },
-                    // Origin tags are data values, identical in both languages.
-                    { label: "Manga" }, // i18n-ignore — origin tag
-                    { label: "Manhwa" }, // i18n-ignore — origin tag
-                    { label: "Manhua" } // i18n-ignore — origin tag
-                ]
-                currentIndex: {
-                    if (browseView.currentTagId === "") return 0
-                    if (browseView.currentTagId === "latest") return 1
-                    if (browseView.currentTagId === "ja") return 2
-                    if (browseView.currentTagId === "ko") return 3
-                    if (browseView.currentTagId === "zh") return 4
-                    return -1
-                }
-                onActivated: function(index) {
-                    var tagId = ["", "latest", "ja", "ko", "zh"][index]
-                    browseView.currentTagId = tagId
-                    browseView.searchCleared()
-                    Manga.fetchByOrigin(tagId, true)
-                }
-            }
-
-            // Grid/list toggle, inside one segmented box: a faint surface with a
-            // hairline and the theme radius around both cells. Its twin lives in
-            // LibraryView.qml: the shared section header is a bare Text in
-            // qs.Ui, and giving it children would reach into a component every
-            // panel uses.
-            ViewModeToggle {
-                Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: browseView.gridRightInset
-                panel: "manga"
-                listMode: browseView.listMode
-                fontFamily: browseView.fontBody
-            }
-        }
+        // Row 3 is gone (owner §32): the filters live in the tool bar the panel
+        // owns, and the grid/list toggle lives there too. This view starts at
+        // the covers.
 
         // ── Main content area ────────────────────────────────────────────────
         Item {
@@ -125,8 +100,10 @@ Item {
             // row skeleton takes over.
             SkeletonGrid {
                 anchors.fill: parent
-                // The ghost stops where the cards stop: the lane is not for it.
-                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
+                // The ghosts sit in the cards' box: same gutter, no inner padding.
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
+                padding: Style.space(0)
                 z: 10
                 active: !browseView.listMode && Manga.isFetchingManga && Manga.mangaList.length === 0
                 columns: browseView.columnCount
@@ -135,11 +112,12 @@ Item {
 
             SkeletonList {
                 anchors.fill: parent
-                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 z: 10
                 rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
                 cover: true
-                dividerInset: Style.spacing.xl
+                inset: Style.space(0)
                 active: browseView.listMode && Manga.isFetchingManga && Manga.mangaList.length === 0
             }
 
@@ -186,10 +164,9 @@ Item {
                 anchors.fill: parent
                 anchors.topMargin: Style.spacing.xl
                 anchors.bottomMargin: Style.spacing.xl
-                anchors.leftMargin: Style.spacing.xl
-                // The right side keeps the scrollbar's lane (owner §30); the
-                // card width above subtracts the same number.
-                anchors.rightMargin: browseView.gridRightInset
+                // One gutter with the tool bar (owner §32.1).
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 visible: !browseView.listMode
                 // `width` already excludes the margins above, so the three
                 // columns share it whole (the old `(width - 10) / 4` left a
@@ -275,8 +252,11 @@ Item {
                 }
 
                 delegate: ListRow {
-                    width: mangaRows.width
+                    // The list reserves the bar's lane; the row's inset is the
+                    // panel gutter, so the text starts where the cards start.
+                    width: mangaRows.width - mangaRows.rightMargin
                     height: implicitHeight
+                    inset: Gutter.left
                     source: modelData.thumbUrl || ""
                     title: modelData.title || ""
                     bodyFont: browseView.fontBody

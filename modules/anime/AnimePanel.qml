@@ -57,24 +57,24 @@ Item {
         sequence: "/"
         context: Qt.WindowShortcut
         enabled: root.visible && !root.settingsMode && root.tabIndex === 0
-                 && !(searchField && searchField.activeFocus)
+                 && !(toolBar && toolBar.searchActiveFocus)
         onActivated: root.focusSearch()
     }
 
     function focusSearch() {
-        if (searchField) searchField.forceFocus()
+        if (toolBar) toolBar.forceFocus()
     }
 
     // Clears the text only: Browse calls this when a filter invalidates the
     // query, and the field stays where the user was typing.
     function clearSearch() {
-        if (searchField) searchField.clear()
+        if (toolBar) toolBar.clear()
     }
 
     // Esc: empty the field, hand the focus back and show the unfiltered list.
     function closeSearch() {
-        if (!searchField) return
-        searchField.blur()
+        if (!toolBar) return
+        toolBar.blur()
         browseView.resetList()
     }
 
@@ -118,18 +118,19 @@ Item {
             onMinimizeClicked: root.minimize()
         }
 
-        // ── Search field (always on screen, under the header) ────────────────
-        SearchField {
-            id: searchField
-            visible: root.tabIndex === 0 && !root.settingsMode
-            Layout.fillWidth: true
-            Layout.preferredHeight: Style.space(30)
-            Layout.leftMargin: Style.spacing.md
-            Layout.rightMargin: Style.spacing.md
-            Layout.topMargin: Style.spacing.sm
-            Layout.bottomMargin: Style.spacing.sm
-            placeholder: I18n.t("anime.search")
+        // ── Row 2: filter menu · search · layout toggle (owner §32) ───────────
+        ToolBar {
+            id: toolBar
+            panel: "anime"
+            listMode: root.tabIndex === 0 ? browseView.listMode : libraryView.listMode
+            filterOptions: root.tabIndex === 0 && !root.settingsMode ? browseView.filterOptions : []
+            filterValue: browseView.filterValue
+            filterDimmed: browseView.filterDimmed
+            fallbackFilterLabel: browseView.filterFallbackLabel
+            showSearch: root.tabIndex === 0 && !root.settingsMode
+            searchPlaceholder: I18n.t("anime.search")
             fontFamily: root.fontBody
+            onFilterChosen: function(value) { browseView.chooseFilter(value) }
             onEdited: searchDebounce.restart()
             onCleared: root.closeSearch()
         }
@@ -140,8 +141,8 @@ Item {
             id: searchDebounce
             interval: 350
             onTriggered: {
-                if (searchField.text.trim().length > 0)
-                    Anime.searchAnime(searchField.text.trim(), true)
+                if (toolBar.text.trim().length > 0)
+                    Anime.searchAnime(toolBar.text.trim(), true)
                 else
                     browseView.resetList()
             }
@@ -187,6 +188,7 @@ Item {
             // ── Library tab ───────────────────────────────────────────────────
             Item {
                 LibraryView {
+                    id: libraryView
                     anchors.fill: parent
                     visible: root.libraryStack === 0
                     opacity: visible ? 1 : 0

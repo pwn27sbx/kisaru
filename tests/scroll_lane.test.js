@@ -55,13 +55,16 @@ test("every scrolling view attaches the shared bar", () => {
 });
 
 test("every scrolling view reserves the lane for the bar", () => {
+    // Since §32 the lane is part of the panel gutter (services/Gutter.qml), so a
+    // view reserves it by taking the gutter on both sides — one constant, not a
+    // number per file.
     for (const file of SCROLLING_VIEWS) {
         const source = read(file);
-        assert.ok(source.includes("scroll_metrics.js"),
-            `${file} must import the scroll metrics`);
-        assert.ok(source.includes("ScrollMetrics.LANE"),
-            `${file} must reserve ScrollMetrics.LANE on the right`);
+        assert.ok(source.includes("Gutter."), `${file} must take the panel gutter`);
     }
+    const gutter = read("services/Gutter.qml");
+    assert.match(gutter, /right:\s*Style\.spacing\.lg\s*\+\s*Style\.space\(Metrics\.LANE\)/,
+        "the right gutter must include the scrollbar lane");
 });
 
 test("the toggle has no frame and takes its height from the chips", () => {
@@ -72,10 +75,11 @@ test("the toggle has no frame and takes its height from the chips", () => {
     const chip = read("components/ViewModeChip.qml");
     // The chip's height is the body line plus the control padding, exactly like
     // components/Chip.qml; that is what makes the row line up.
-    assert.match(chip, /implicitHeight:\s*metrics\.implicitHeight\s*\+\s*2\s*\*\s*Style\.spacing\.controlPaddingY/,
-        "the cell must measure itself like a filter chip");
-    assert.ok(read("components/Chip.qml").includes("2 * Style.spacing.controlPaddingY"),
-        "the filter chip must keep measuring itself the same way");
+    // Owner §32: the tool bar gives every control one height, so the cell takes
+    // it when it is given and falls back to the chip formula when it is not.
+    assert.match(chip, /cellHeight\s*>\s*0/, "the cell must accept the tool bar's height");
+    assert.ok(read("components/ToolBar.qml").includes("cellHeight: root.controlHeight"),
+        "the tool bar must hand its one height to the toggle");
 });
 
 test("reduced motion comes from the override or GTK's switch", () => {

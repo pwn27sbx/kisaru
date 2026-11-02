@@ -151,7 +151,9 @@ Item {
         id: brandLoader
         anchors {
             left: parent.left
-            leftMargin: Style.spacing.md
+            // The brand's text is the left edge of the panel's content, same as
+            // the cards and the tool bar (owner, §32.1).
+            leftMargin: Gutter.left
             verticalCenter: parent.verticalCenter
         }
         sourceComponent: root.brand
@@ -190,7 +192,8 @@ Item {
         id: actionsRow
         anchors {
             right: parent.right
-            rightMargin: Style.spacing.md
+            // The header's icons end where the cards end, lane included.
+            rightMargin: Gutter.right
             verticalCenter: parent.verticalCenter
         }
         spacing: Style.spacing.controlGap

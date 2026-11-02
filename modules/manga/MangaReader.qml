@@ -59,20 +59,20 @@ Item {
     // leaves, and the one debounce below stays the only path to
     // Manga.searchManga.
     function focusSearch() {
-        if (searchField) searchField.forceFocus()
+        if (toolBar) toolBar.forceFocus()
     }
 
     // Clears the text only: Browse calls this when a filter invalidates the
     // query, and the field must stay where the user is typing.
     function clearSearch() {
-        if (searchField) searchField.clear()
+        if (toolBar) toolBar.clear()
     }
 
     // Esc: empty the field, hand the focus back and show the unfiltered list
     // again — the end state the closed overlay used to leave.
     function closeSearch() {
-        if (!searchField) return
-        searchField.blur()
+        if (!toolBar) return
+        toolBar.blur()
         browseView.resetList()
     }
 
@@ -82,9 +82,9 @@ Item {
         const title = Manga.detailTitle || ""
         root.tabIndex = 0
         root.browseStack = 0
-        if (searchField) {
-            searchField.text = title
-            searchField.forceActiveFocus()
+        if (toolBar) {
+            toolBar.setText(title)
+            toolBar.forceFocus()
         }
         if (title.length > 0)
             Manga.searchManga(title, true)
@@ -100,7 +100,7 @@ Item {
         sequence: "/"
         context: Qt.WindowShortcut
         enabled: root.visible && !root.settingsMode && root.tabIndex === 0
-                 && !(searchField && searchField.activeFocus)
+                 && !(toolBar && toolBar.searchActiveFocus)
         onActivated: root.focusSearch()
     }
 
@@ -112,8 +112,8 @@ Item {
         id: searchDebounce
         interval: 350
         onTriggered: {
-            if (searchField.text.trim().length > 0)
-                Manga.searchManga(searchField.text.trim(), true)
+            if (toolBar.text.trim().length > 0)
+                Manga.searchManga(toolBar.text.trim(), true)
             else
                 browseView.resetList()
         }
@@ -157,20 +157,21 @@ Item {
             onMinimizeClicked: root.minimize()
         }
 
-        // ── Search field (always on screen, under the header) ─────────────────
-        // The shared pill (components/SearchField.qml): the panel keeps the
-        // debounce and the service call, nothing else.
-        SearchField {
-            id: searchField
-            visible: root.tabIndex === 0 && !root.settingsMode
-            Layout.fillWidth: true
-            Layout.preferredHeight: Style.space(30)
-            Layout.leftMargin: Style.spacing.md
-            Layout.rightMargin: Style.spacing.md
-            Layout.topMargin: Style.spacing.sm
-            Layout.bottomMargin: Style.spacing.sm
-            placeholder: I18n.t("manga.search")
+        // ── Row 2: filter menu · search · layout toggle (owner §32) ───────────
+        // One line, one height, one pair of edges: the tool bar's margins are the
+        // same gutter the grid, the list and their skeletons use, so the menu's
+        // left edge is the first card's left edge and the toggle's right edge is
+        // the last card's. The panel keeps the debounce and the service call.
+        ToolBar {
+            id: toolBar
+            panel: "manga"
+            listMode: root.tabIndex === 0 ? browseView.listMode : libraryView.listMode
+            filterOptions: root.tabIndex === 0 && !root.settingsMode ? browseView.filterOptions : []
+            filterValue: browseView.filterValue
+            showSearch: root.tabIndex === 0 && !root.settingsMode
+            searchPlaceholder: I18n.t("manga.search")
             fontFamily: root.fontBody
+            onFilterChosen: function(value) { browseView.chooseFilter(value) }
             onEdited: searchDebounce.restart()
             onCleared: root.closeSearch()
         }
@@ -226,6 +227,7 @@ Item {
 
             Item {
                 LibraryView {
+                    id: libraryView
                     anchors.fill: parent
                     visible: root.libraryStack === 0
                     opacity: visible ? 1 : 0

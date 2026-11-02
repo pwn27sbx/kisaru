@@ -29,25 +29,8 @@ Item {
         // names the section and the count lives in the status bar now, exactly
         // like the manga library after round 4 (owner, round 6).
 
-        // ── Grid/list toggle, alone on its row ───────────────────────────────
-        // The same segmented box the other two panels use; each panel keeps its
-        // own layout preference (owner, round 6).
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Style.spacing.sm
-
-            Item { Layout.fillWidth: true }
-
-            // Two bare icon cells, pinned to the cards' right edge: the library
-            // grid's own inset plus the scrollbar's lane (owner §30).
-            ViewModeToggle {
-                Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: Style.spacing.lg + Style.space(ScrollMetrics.LANE)
-                panel: "anime"
-                listMode: libraryView.listMode
-                fontFamily: libraryView.fontBody
-            }
-        }
+        // Row 3 is gone (owner §32): the layout toggle lives in the tool bar the
+        // panel owns, next to the search. This view starts at the content.
 
         // ── Empty state ───────────────────────────────────────────────────────
         Item {
@@ -66,33 +49,34 @@ Item {
         SkeletonGrid {
             Layout.fillWidth: true; Layout.fillHeight: true
             // The ghost stops where the cards stop: the lane is not for it.
-            Layout.rightMargin: Style.space(ScrollMetrics.LANE)
+            Layout.leftMargin: Gutter.left
+            Layout.rightMargin: Gutter.right
             visible: !libraryView.listMode && !Anime.libraryLoaded
             active: !libraryView.listMode && !Anime.libraryLoaded
-            padding: Style.spacing.lg
-            cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns, Style.space(28))
+            padding: Style.space(0)
+            cellHeight: CardMetrics.cellHeight(width / CardMetrics.columns, Style.space(28))
             footerHeight: 28
         }
 
         // ── Library grid ──────────────────────────────────────────────────────
         SkeletonList {
             Layout.fillWidth: true; Layout.fillHeight: true
-            Layout.rightMargin: Style.space(ScrollMetrics.LANE)
+            Layout.leftMargin: Gutter.left
+            Layout.rightMargin: Gutter.right
             visible: libraryView.listMode && !Anime.libraryLoaded
             active: libraryView.listMode && !Anime.libraryLoaded
             rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
             cover: true
-            inset: Style.spacing.lg
-            dividerInset: Style.spacing.lg
+            inset: Style.space(0)
         }
 
         GridView {
             id: libGrid
             Layout.fillWidth: true; Layout.fillHeight: true
             visible: !libraryView.listMode && Anime.libraryList.length > 0
-            topMargin: Style.spacing.xl; leftMargin: Style.spacing.lg; bottomMargin: Style.spacing.xl
+            topMargin: Style.spacing.xl; leftMargin: Gutter.left; bottomMargin: Style.spacing.xl
             // The bar's lane goes on top of the grid's own inset (owner §30).
-            rightMargin: Style.spacing.lg + Style.space(ScrollMetrics.LANE)
+            rightMargin: Gutter.right
             cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
             cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(28))
             clip: true; boundsBehavior: Flickable.StopAtBounds
@@ -156,8 +140,9 @@ Item {
             visible: Anime.libraryList.length > 0 && libraryView.listMode
             topMargin: Style.spacing.xl
             bottomMargin: Style.spacing.xl
-            // Rows stop before the bar's lane (owner §30).
-            rightMargin: Style.space(ScrollMetrics.LANE)
+            // One gutter with the tool bar (owner §32.1).
+            leftMargin: Gutter.left
+            rightMargin: Gutter.right
             clip: true; boundsBehavior: Flickable.StopAtBounds
             model: Anime.libraryList
 
@@ -173,7 +158,7 @@ Item {
                 source: entry.thumbnail || ""
                 title: entry.englishName || entry.name || ""
                 bodyFont: libraryView.fontBody
-                inset: Style.spacing.lg
+                inset: Style.space(0)
                 score: {
                     var value = Number(entry.score)
                     return (entry.score !== null && entry.score !== undefined

@@ -56,24 +56,24 @@ Item {
         sequence: "/"
         context: Qt.WindowShortcut
         enabled: root.visible && !root.settingsMode && root.tabIndex === 0
-                 && !(searchField && searchField.activeFocus)
+                 && !(toolBar && toolBar.searchActiveFocus)
         onActivated: root.focusSearch()
     }
 
     function focusSearch() {
-        if (searchField) searchField.forceFocus()
+        if (toolBar) toolBar.forceFocus()
     }
 
     // Clears the text only: Browse calls this when a filter invalidates the
     // query, and the field stays where the user was typing.
     function clearSearch() {
-        if (searchField) searchField.clear()
+        if (toolBar) toolBar.clear()
     }
 
     // Esc: empty the field, hand the focus back and show the unfiltered list.
     function closeSearch() {
-        if (!searchField) return
-        searchField.blur()
+        if (!toolBar) return
+        toolBar.blur()
         browseView.resetList()
     }
 
@@ -107,130 +107,36 @@ Item {
             onMinimizeClicked: root.minimize()
 
             // The provider picker stays in the header (owner, round 6: it is
-            // used all the time to switch sources), as one cell of the row.
-            extraCell: Item {
-                id: providerButton
-                implicitWidth: providerRow.implicitWidth + Style.spacing.xl * 2
-
-                // One cell of the header row: plain until hovered, like the
-                // tabs beside it (owner, round 6).
-                Rectangle {
-                    anchors.fill: parent
-                    color: providerDropArea.containsMouse
-                        ? Style.hoverFillFor(Colors.muted, Colors.primary) : "transparent"
-                    Behavior on color { ColorAnimation { duration: Motion.base } }
-                }
-
-                Row {
-                    id: providerRow
-                    anchors.centerIn: parent
-                    spacing: Style.space(5)
-
-                    StyledText {
-                        text: {
-                            for (var i = 0; i < Novel.availableProviders.length; i++) {
-                                if (Novel.availableProviders[i].name === Novel.activeProvider)
-                                    return Novel.availableProviders[i].label
-                            }
-                            return Novel.activeProvider
-                        }
-                        font.family: root.fontBody; font.pixelSize: Style.font.bodySmall
-                        font.letterSpacing: 0.3
-                        color: Novel.isSwitchingProvider ? Colors.on_surface_variant : Colors.on_surface
-                        anchors.verticalCenter: parent.verticalCenter
-                        Behavior on color { ColorAnimation { duration: Motion.base } }
-                    }
-
-                    Spinner {
-                        visible: Novel.isSwitchingProvider
-                        width: 10; border.width: 1.5
-                        anchors.verticalCenter: parent.verticalCenter
-                        duration: Motion.loop
-                        running: Novel.isSwitchingProvider
-                    }
-
-                    // The arrow is a Material Design Icons glyph: the text
-                    // "▾" this used to draw is not in the theme font and showed
-                    // up as a dot in the round-6 capture (owner report).
-                    MaterialIcon {
-                        visible: !Novel.isSwitchingProvider
-                        text: "󰅀"
-                        font.pixelSize: Style.font.caption
-                        color: Colors.on_surface_variant
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-
-                MouseArea {
-                    id: providerDropArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: if (!Novel.isSwitchingProvider) providerPopup.visible = !providerPopup.visible
-                }
-
-                Rectangle {
-                    id: providerPopup
-                    visible: false
-                    anchors { top: parent.bottom; right: parent.right; topMargin: Style.spacing.md }
-                    width: 160
-                    height: providerList.implicitHeight + Style.spacing.md * 2
-                    radius: Style.cornerRadius
-                    color: Colors.surface_container_high
-                    border.color: Colors.outline_variant
-                    border.width: 1
-                    z: 100
-
-                    Column {
-                        id: providerList
-                        anchors { fill: parent; margins: Style.spacing.md }
-                        spacing: Style.spacing.xs
-
-                        Repeater {
-                            model: Novel.availableProviders
-
-                            delegate: ClickableRect {
-                                required property var modelData
-
-                                width: parent.width
-                                height: 30
-                                radius: Style.cornerRadius
-                                color: modelData.name === Novel.activeProvider
-                                    ? Style.selectedFillFor(Colors.text, Colors.primary) : "transparent"
-                                cursorShape: Qt.PointingHandCursor
-
-                                StyledText {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.left: parent.left
-                                    anchors.leftMargin: Style.spacing.sm
-                                    text: modelData.label
-                                    font.family: root.fontBody
-                                    font.pixelSize: Style.font.bodySmall
-                                    color: modelData.name === Novel.activeProvider ? Colors.text : Colors.on_surface_variant
-                                }
-
-                                onClicked: {
-                                    Novel.setProvider(modelData.name)
-                                    providerPopup.visible = false
-                                }
-                            }
-                        }
-                    }
-                }
+            // used all the time to switch sources). It is the same MenuSelect as
+            // the tool bar's filter menu (owner, §32: never a second copy), so it
+            // also gains the keyboard it never had: Enter/Space opens, ↑/↓ move,
+            // Enter picks, Esc closes.
+            extraCell: MenuSelect {
+                controlHeight: Style.space(48)
+                options: Novel.availableProviders.map(function(provider) {
+                    return { label: provider.label, value: provider.name }
+                })
+                currentValue: Novel.activeProvider
+                busy: Novel.isSwitchingProvider
+                dimmed: Novel.isSwitchingProvider
+                fontFamily: root.fontBody
+                onChosen: function(value) { Novel.setProvider(value) }
             }
         }
 
-        // ── Search field (always on screen, under the header) ────────────────
-        SearchField {
-            id: searchField
-            visible: root.tabIndex === 0 && !root.settingsMode
-            Layout.fillWidth: true
-            Layout.preferredHeight: Style.space(30)
-            Layout.leftMargin: Style.spacing.md
-            Layout.rightMargin: Style.spacing.md
-            Layout.topMargin: Style.spacing.sm
-            Layout.bottomMargin: Style.spacing.sm
-            placeholder: I18n.t("novel.search")
+        // ── Row 2: filter menu · search · layout toggle (owner §32) ───────────
+        ToolBar {
+            id: toolBar
+            panel: "novel"
+            listMode: root.tabIndex === 0 ? browseView.listMode : libraryView.listMode
+            filterOptions: root.tabIndex === 0 && !root.settingsMode ? browseView.filterOptions : []
+            filterValue: browseView.filterValue
+            filterDimmed: browseView.filterDimmed
+            fallbackFilterLabel: browseView.filterFallbackLabel
+            showSearch: root.tabIndex === 0 && !root.settingsMode
+            searchPlaceholder: I18n.t("novel.search")
             fontFamily: root.fontBody
+            onFilterChosen: function(value) { browseView.chooseFilter(value) }
             onEdited: searchDebounce.restart()
             onCleared: root.closeSearch()
         }
@@ -240,9 +146,9 @@ Item {
             id: searchDebounce
             interval: 350
             onTriggered: {
-                if (searchField.text.trim().length > 0) {
+                if (toolBar.text.trim().length > 0) {
                     browseView.currentFilter = "search"
-                    Novel.searchNovels(searchField.text.trim(), "", "All", true)
+                    Novel.searchNovels(toolBar.text.trim(), "", "All", true)
                 } else {
                     browseView.resetList()
                 }
@@ -299,6 +205,7 @@ Item {
 
             Item {
                 LibraryView {
+                    id: libraryView
                     anchors.fill: parent
                     visible: root.libraryStack === 0
                     opacity: visible ? 1 : 0

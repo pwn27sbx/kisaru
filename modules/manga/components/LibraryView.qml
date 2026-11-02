@@ -41,32 +41,8 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // ── Grid/list toggle, alone on its row ───────────────────────────────
-        // The heading ("Library" plus its exact count) is gone: the tab already
-        // names the section and the count moved to the status bar (owner, round
-        // 4), so this row keeps the same shape as Browse's — the layout control
-        // pinned at the right, nothing else.
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Style.spacing.sm
-
-            // The stretch holds the toggle against the right edge, exactly
-            // where Browse's filter row puts it.
-            Item { Layout.fillWidth: true }
-
-            // Two bare icon cells, pinned to the cards' right edge: the library
-            // grid's inset plus the scrollbar's lane (owner §30). Its twin lives
-            // in BrowseView.qml: the shared section header is a bare Text in
-            // qs.Ui, and giving it children would reach into a component every
-            // panel uses.
-            ViewModeToggle {
-                Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: Style.spacing.lg + Style.space(ScrollMetrics.LANE)
-                panel: "manga"
-                listMode: libraryView.listMode
-                fontFamily: libraryView.fontBody
-            }
-        }
+        // Row 3 is gone (owner §32): the layout toggle lives in the tool bar
+        // the panel owns. This view starts at the shelf.
 
         // ── Empty state ───────────────────────────────────────────────────────
         Item {
@@ -86,14 +62,15 @@ Item {
         SkeletonGrid {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.rightMargin: Style.space(ScrollMetrics.LANE)
+            Layout.leftMargin: Gutter.left
+            Layout.rightMargin: Gutter.right
             visible: !Manga.libraryLoaded && !libraryView.listMode
             active: !Manga.libraryLoaded && !libraryView.listMode
             // Same columns and the same cell box as the grid below, from the
             // one source the six grids share.
             columns: CardMetrics.columns
-            padding: Style.spacing.lg
-            cellHeight: CardMetrics.cellHeight((width - 2 * Style.spacing.lg) / CardMetrics.columns, Style.space(30))
+            padding: Style.space(0)
+            cellHeight: CardMetrics.cellHeight(width / CardMetrics.columns, Style.space(30))
             footerHeight: 30
         }
 
@@ -101,11 +78,11 @@ Item {
         SkeletonList {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.rightMargin: Style.space(ScrollMetrics.LANE)
+            Layout.leftMargin: Gutter.left
+            Layout.rightMargin: Gutter.right
             rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
             cover: true
-            inset: Style.spacing.lg
-            dividerInset: Style.spacing.lg
+            inset: Style.space(0)
             active: !Manga.libraryLoaded && libraryView.listMode
         }
 
@@ -115,9 +92,9 @@ Item {
             Layout.fillHeight: true
             visible: Manga.libraryList.length > 0 && !libraryView.listMode
             topMargin: Style.spacing.xl
-            leftMargin: Style.spacing.lg
-            // The bar's lane goes on top of the grid's own inset (owner §30).
-            rightMargin: Style.spacing.lg + Style.space(ScrollMetrics.LANE)
+            // One gutter with the tool bar (owner §32.1).
+            leftMargin: Gutter.left
+            rightMargin: Gutter.right
             bottomMargin: Style.spacing.xl
             cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
             cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(30))
@@ -181,8 +158,10 @@ Item {
             visible: Manga.libraryList.length > 0 && libraryView.listMode
             topMargin: Style.spacing.xl
             bottomMargin: Style.spacing.xl
-            // Rows stop before the bar's lane (owner §30).
-            rightMargin: Style.space(ScrollMetrics.LANE)
+            // Rows stop before the bar's lane; the inset puts their text on
+            // the cards' left edge (owner §32.1).
+            rightMargin: Style.spacing.lg
+            leftMargin: Gutter.left
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             model: Manga.libraryList
@@ -193,8 +172,8 @@ Item {
             delegate: ListRow {
                 width: libRows.width - libRows.leftMargin - libRows.rightMargin
                 height: implicitHeight
-                // The library grid and its header use `lg`; the rows follow.
-                inset: Style.spacing.lg
+                inset: Style.space(0)
+                // The rows' box is already the gutter's; no inner padding.
 
                 readonly property var libEntry: modelData
 

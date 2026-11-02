@@ -204,8 +204,8 @@ Item {
         anchors {
             fill: parent
             topMargin: readerView.headerVisible ? Style.space(54) : 0
-            // The bar keeps a lane to itself, so no page sits under it (§30).
-            rightMargin: Style.space(ScrollMetrics.LANE)
+            // One gutter with the top zone (§32.1); the bar keeps its lane.
+            rightMargin: Gutter.right
         }
         clip: true
         boundsBehavior: Flickable.StopAtBounds

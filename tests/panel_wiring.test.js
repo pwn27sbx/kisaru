@@ -81,11 +81,16 @@ test("the header holds no search state and no panel preferences", () => {
     assert.match(header, /extraCell/);
 });
 
-test("every panel shows the shared search field, and anime keeps its mode in settings", () => {
+test("every panel shows the shared tool bar, and anime keeps its mode in settings", () => {
+    // Owner §32: the search field lives inside components/ToolBar.qml now, so the
+    // panel is asserted to own the tool bar and the one debounce behind it — the
+    // field itself is asserted once, in the component.
     for (const file of PANELS) {
-        assert.match(read(file), /SearchField\s*\{/, `${file}: no shared search field`);
+        assert.match(read(file), /ToolBar\s*\{/, `${file}: no shared tool bar`);
         assert.match(read(file), /onEdited:\s*searchDebounce\.restart\(\)/, `${file}: field is not debounced`);
+        assert.ok(!/SearchField\s*\{/.test(read(file)), `${file}: still carries its own search field`);
     }
+    assert.match(read("components/ToolBar.qml"), /SearchField\s*\{/, "the tool bar has no search field");
     const anime = read("modules/anime/AnimePanel.qml");
     // The audio mode is a settings row now, persisted, and named in the bar.
     assert.match(anime, /PanelSettings\s*\{[^}]*modes:/s);
@@ -217,8 +222,9 @@ test("every panel remembers its own grid/list choice", () => {
         assert.match(qml, new RegExp(`viewModeFor\\("${panel}"\\)`), `${file}: reads another panel's layout`);
         // One shared control: the view names its panel and never carries its
         // own copy of the segmented box.
-        assert.match(qml, /ViewModeToggle\s*\{/, `${file}: no shared layout toggle`);
-        assert.match(qml, new RegExp(`panel: "${panel}"`), `${file}: the toggle names another panel`);
+        // Owner §32: the toggle moved to the panel's tool bar, so the view keeps
+        // its preference read and nothing else.
+        assert.ok(!/ViewModeToggle\s*\{/.test(qml), `${file}: the view still places the toggle`);
         // The hand-built blocks declared `Row { id: cellsRow }` / `viewCells`.
         assert.ok(!qml.includes("id: cellsRow") && !qml.includes("id: viewCells"),
             `${file}: still carries a hand-built toggle`);

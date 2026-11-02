@@ -22,6 +22,9 @@ Row {
     required property string panel
     required property bool listMode
     property string fontFamily: Style.font.family
+    // The tool bar sets one height for every control in its row; 0 keeps the
+    // chip formula (a body line plus the control padding).
+    property int cellHeight: 0
 
     spacing: Style.spacing.xxs
 
@@ -30,6 +33,7 @@ Row {
         label: I18n.t("view.grid")
         current: !root.listMode
         bodyFont: root.fontFamily
+        cellHeight: root.cellHeight
         onClicked: UiPrefs.setViewMode(root.panel, "grid")
     }
 
@@ -38,6 +42,7 @@ Row {
         label: I18n.t("view.list")
         current: root.listMode
         bodyFont: root.fontFamily
+        cellHeight: root.cellHeight
         onClicked: UiPrefs.setViewMode(root.panel, "list")
     }
 }

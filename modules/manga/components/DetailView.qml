@@ -554,8 +554,9 @@ Item {
             ListView {
                 id: chapterList
                 anchors.fill: parent; clip: true
-                // The bar keeps a lane to itself, so no row sits under it (§30).
-                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
+                // One gutter with the top zone (§32.1).
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 boundsBehavior: Flickable.StopAtBounds
                 model: detailView._processedChapters   // ← filtered + sorted
 
