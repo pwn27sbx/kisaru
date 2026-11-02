@@ -6,6 +6,7 @@ import qs.Commons
 import qs.services
 import qs.components
 import "../../../services/list_metrics.js" as ListMetrics
+import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
     id: libraryView
@@ -33,14 +34,15 @@ Item {
         // own layout preference (owner, round 6).
         RowLayout {
             Layout.fillWidth: true
-            Layout.rightMargin: Style.spacing.xl
             spacing: Style.spacing.sm
 
             Item { Layout.fillWidth: true }
 
+            // Two bare icon cells, pinned to the cards' right edge: the library
+            // grid's own inset plus the scrollbar's lane (owner §30).
             ViewModeToggle {
                 Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: Style.spacing.xl
+                Layout.rightMargin: Style.spacing.lg + Style.space(ScrollMetrics.LANE)
                 panel: "anime"
                 listMode: libraryView.listMode
                 fontFamily: libraryView.fontBody
@@ -63,6 +65,8 @@ Item {
         // ── Loading ───────────────────────────────────────────────────────────
         SkeletonGrid {
             Layout.fillWidth: true; Layout.fillHeight: true
+            // The ghost stops where the cards stop: the lane is not for it.
+            Layout.rightMargin: Style.space(ScrollMetrics.LANE)
             visible: !libraryView.listMode && !Anime.libraryLoaded
             active: !libraryView.listMode && !Anime.libraryLoaded
             padding: Style.spacing.lg
@@ -73,6 +77,7 @@ Item {
         // ── Library grid ──────────────────────────────────────────────────────
         SkeletonList {
             Layout.fillWidth: true; Layout.fillHeight: true
+            Layout.rightMargin: Style.space(ScrollMetrics.LANE)
             visible: libraryView.listMode && !Anime.libraryLoaded
             active: libraryView.listMode && !Anime.libraryLoaded
             rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
@@ -85,7 +90,9 @@ Item {
             id: libGrid
             Layout.fillWidth: true; Layout.fillHeight: true
             visible: !libraryView.listMode && Anime.libraryList.length > 0
-            topMargin: Style.spacing.xl; leftMargin: Style.spacing.lg; rightMargin: Style.spacing.lg; bottomMargin: Style.spacing.xl
+            topMargin: Style.spacing.xl; leftMargin: Style.spacing.lg; bottomMargin: Style.spacing.xl
+            // The bar's lane goes on top of the grid's own inset (owner §30).
+            rightMargin: Style.spacing.lg + Style.space(ScrollMetrics.LANE)
             cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
             cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(28))
             clip: true; boundsBehavior: Flickable.StopAtBounds
@@ -149,6 +156,8 @@ Item {
             visible: Anime.libraryList.length > 0 && libraryView.listMode
             topMargin: Style.spacing.xl
             bottomMargin: Style.spacing.xl
+            // Rows stop before the bar's lane (owner §30).
+            rightMargin: Style.space(ScrollMetrics.LANE)
             clip: true; boundsBehavior: Flickable.StopAtBounds
             model: Anime.libraryList
 
@@ -158,7 +167,8 @@ Item {
             delegate: ListRow {
                 readonly property var entry: modelData
 
-                width: libRows.width
+                // The list's margins are not part of a delegate's width.
+                width: libRows.width - libRows.leftMargin - libRows.rightMargin
                 height: implicitHeight
                 source: entry.thumbnail || ""
                 title: entry.englishName || entry.name || ""

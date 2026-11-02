@@ -8,6 +8,7 @@ import qs.services
 import qs.components
 import qs.Ui
 import "../../../services/list_metrics.js" as ListMetrics
+import "../../../services/scroll_metrics.js" as ScrollMetrics
 import "../../../services/manga_card.js" as MangaCard
 
 Item {
@@ -60,11 +61,11 @@ Item {
                 currentIndex: browseView.currentFilter === "hot" ? 0 : browseView.currentFilter === "latest" ? 1 : -1
                 onActivated: function(index) { browseView._switchFilter(index === 0 ? "hot" : "latest") }
             }
-            // The layout switch, in the same segmented box the manga
-            // panel uses, pinned to the right of the chips.
+            // The layout switch: two bare icon cells, pinned to the cards' right
+            // edge, lane included (owner §30).
             ViewModeToggle {
                 Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: Style.spacing.xl
+                Layout.rightMargin: Style.spacing.xl + Style.space(ScrollMetrics.LANE)
                 panel: "novel"
                 listMode: browseView.listMode
                 fontFamily: browseView.fontBody
@@ -78,6 +79,7 @@ Item {
             // Loading overlay: ghost cards where the first page will land
             SkeletonGrid {
                 anchors.fill: parent; z: 10
+                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
                 active: (Novel.isFetchingNovel || Novel.isSwitchingProvider)
                     && Novel.novelList.length === 0
                 columns: CardMetrics.columns
@@ -88,6 +90,7 @@ Item {
             // Rows take over the same area in list mode.
             SkeletonList {
                 anchors.fill: parent
+                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
                 z: 10
                 rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
                 cover: true
@@ -121,7 +124,12 @@ Item {
             GridView {
                 id: novelGrid
                 visible: !browseView.listMode
-                anchors.fill: parent; anchors.margins: Style.spacing.xl
+                anchors.fill: parent
+                anchors.topMargin: Style.spacing.xl
+                anchors.bottomMargin: Style.spacing.xl
+                anchors.leftMargin: Style.spacing.xl
+                // The right side keeps the scrollbar's lane (owner §30).
+                anchors.rightMargin: Style.spacing.xl + Style.space(ScrollMetrics.LANE)
                 cellWidth: Math.floor(width / CardMetrics.columns)
                 cellHeight: CardMetrics.cellHeight(cellWidth)
                 clip: true; boundsBehavior: Flickable.StopAtBounds
@@ -129,9 +137,9 @@ Item {
                 // page inserts rows instead of resetting the view (and its scroll).
                 model: ScriptModel { values: Novel.novelList }
 
-                ScrollBar.vertical: ScrollBar {
-                    policy: ScrollBar.AsNeeded
-                    contentItem: Rectangle { implicitWidth: 3; color: Colors.primary; opacity: 0.45; radius: Style.cornerRadius }
+                // The shared bar, like every other view: this grid had its own
+                // copy and could not follow the lane or the auto-hide.
+                ScrollBar.vertical: StyledScrollBar {
                 }
 
                 onContentYChanged: {
@@ -170,6 +178,8 @@ Item {
                 anchors.fill: parent
                 anchors.topMargin: Style.spacing.xl
                 anchors.bottomMargin: Style.spacing.xl
+                // Rows stop before the bar's lane (owner §30).
+                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
                 visible: browseView.listMode
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds

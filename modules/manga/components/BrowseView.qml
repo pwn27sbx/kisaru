@@ -9,6 +9,7 @@ import qs.components
 import qs.Ui
 import "../../../services/manga_card.js" as MangaCard
 import "../../../services/list_metrics.js" as ListMetrics
+import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
     id: browseView
@@ -28,9 +29,11 @@ Item {
     // The card's box, from the constants in services/manga_card.js: the cover
     // ratio plus the info band under it. The GridView and the SkeletonGrid
     // that stands in for it both read these, so the ghosts sit exactly where
-    // the covers land and the panel does not jump on load.
+    // the covers land and the panel does not jump on load. The right inset also
+    // carries the scrollbar's lane (owner §30), so no card sits under the bar.
+    readonly property real gridRightInset: Style.spacing.xl + Style.space(ScrollMetrics.LANE)
     readonly property real cardWidth:
-        Math.max(0, (width - 2 * Style.spacing.xl) / columnCount)
+        Math.max(0, (width - Style.spacing.xl - gridRightInset) / columnCount)
     readonly property real cardHeight: CardMetrics.cellHeight(cardWidth)
 
     // The layout the user picked (persisted in settings.json). Both branches
@@ -102,7 +105,7 @@ Item {
             // panel uses.
             ViewModeToggle {
                 Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: Style.spacing.xl
+                Layout.rightMargin: browseView.gridRightInset
                 panel: "manga"
                 listMode: browseView.listMode
                 fontFamily: browseView.fontBody
@@ -122,6 +125,8 @@ Item {
             // row skeleton takes over.
             SkeletonGrid {
                 anchors.fill: parent
+                // The ghost stops where the cards stop: the lane is not for it.
+                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
                 z: 10
                 active: !browseView.listMode && Manga.isFetchingManga && Manga.mangaList.length === 0
                 columns: browseView.columnCount
@@ -130,6 +135,7 @@ Item {
 
             SkeletonList {
                 anchors.fill: parent
+                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
                 z: 10
                 rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
                 cover: true
@@ -178,7 +184,12 @@ Item {
             GridView {
                 id: mangaGrid
                 anchors.fill: parent
-                anchors.margins: Style.spacing.xl
+                anchors.topMargin: Style.spacing.xl
+                anchors.bottomMargin: Style.spacing.xl
+                anchors.leftMargin: Style.spacing.xl
+                // The right side keeps the scrollbar's lane (owner §30); the
+                // card width above subtracts the same number.
+                anchors.rightMargin: browseView.gridRightInset
                 visible: !browseView.listMode
                 // `width` already excludes the margins above, so the three
                 // columns share it whole (the old `(width - 10) / 4` left a
@@ -248,6 +259,8 @@ Item {
                 anchors.fill: parent
                 anchors.topMargin: Style.spacing.xl
                 anchors.bottomMargin: Style.spacing.xl
+                // Rows stop before the bar's lane (owner §30).
+                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
                 visible: browseView.listMode
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds

@@ -6,6 +6,7 @@ import qs.Commons
 import qs.services
 import qs.components
 import "../../../services/chapters.js" as Chapters
+import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
     id: detailView
@@ -545,6 +546,7 @@ Item {
             // Loading overlay
             SkeletonList {
                 anchors.fill: parent; z: 5
+                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
                 active: Manga.isFetchingDetail
                 rowHeight: 58
             }
@@ -552,6 +554,8 @@ Item {
             ListView {
                 id: chapterList
                 anchors.fill: parent; clip: true
+                // The bar keeps a lane to itself, so no row sits under it (§30).
+                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
                 boundsBehavior: Flickable.StopAtBounds
                 model: detailView._processedChapters   // ← filtered + sorted
 

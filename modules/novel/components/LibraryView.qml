@@ -6,6 +6,7 @@ import qs.Commons
 import qs.services
 import qs.components
 import "../../../services/list_metrics.js" as ListMetrics
+import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
     id: libraryView
@@ -29,14 +30,15 @@ Item {
         // keeps its own layout preference (owner, round 6).
         RowLayout {
             Layout.fillWidth: true
-            Layout.rightMargin: Style.spacing.xl
             spacing: Style.spacing.sm
 
             Item { Layout.fillWidth: true }
 
+            // Two bare icon cells, pinned to the cards' right edge: the library
+            // grid's inset plus the scrollbar's lane (owner §30).
             ViewModeToggle {
                 Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: Style.spacing.xl
+                Layout.rightMargin: Style.spacing.lg + Style.space(ScrollMetrics.LANE)
                 panel: "novel"
                 listMode: libraryView.listMode
                 fontFamily: libraryView.fontBody
@@ -58,6 +60,7 @@ Item {
 
         SkeletonGrid {
             Layout.fillWidth: true; Layout.fillHeight: true
+            Layout.rightMargin: Style.space(ScrollMetrics.LANE)
             visible: !libraryView.listMode && !Novel.libraryLoaded
             active: !libraryView.listMode && !Novel.libraryLoaded
             padding: Style.spacing.lg
@@ -67,6 +70,7 @@ Item {
 
         SkeletonList {
             Layout.fillWidth: true; Layout.fillHeight: true
+            Layout.rightMargin: Style.space(ScrollMetrics.LANE)
             visible: libraryView.listMode && !Novel.libraryLoaded
             active: libraryView.listMode && !Novel.libraryLoaded
             rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
@@ -80,15 +84,16 @@ Item {
             Layout.fillWidth: true; Layout.fillHeight: true
             visible: !libraryView.listMode && Novel.libraryList.length > 0
             topMargin: Style.spacing.xl; leftMargin: Style.spacing.lg
-            rightMargin: Style.spacing.lg; bottomMargin: Style.spacing.xl
+            // The bar's lane goes on top of the grid's own inset (owner §30).
+            rightMargin: Style.spacing.lg + Style.space(ScrollMetrics.LANE)
+            bottomMargin: Style.spacing.xl
             cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
             cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(30))
             clip: true; boundsBehavior: Flickable.StopAtBounds
             model: Novel.libraryList
 
-            ScrollBar.vertical: ScrollBar {
-                policy: ScrollBar.AsNeeded
-                contentItem: Rectangle { implicitWidth: 3; color: Colors.primary; opacity: 0.45; radius: Style.cornerRadius }
+            // The shared bar, like every other view.
+            ScrollBar.vertical: StyledScrollBar {
             }
 
             delegate: Item {
@@ -128,6 +133,8 @@ Item {
             visible: Novel.libraryList.length > 0 && libraryView.listMode
             topMargin: Style.spacing.xl
             bottomMargin: Style.spacing.xl
+            // Rows stop before the bar's lane (owner §30).
+            rightMargin: Style.space(ScrollMetrics.LANE)
             clip: true; boundsBehavior: Flickable.StopAtBounds
             model: Novel.libraryList
 
@@ -135,7 +142,8 @@ Item {
             }
 
             delegate: ListRow {
-                width: libRows.width
+                // The list's margins are not part of a delegate's width.
+                width: libRows.width - libRows.leftMargin - libRows.rightMargin
                 height: implicitHeight
                 source: modelData.coverUrl || ""
                 title: modelData.title || ""

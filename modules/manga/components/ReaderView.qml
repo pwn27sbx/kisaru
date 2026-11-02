@@ -6,6 +6,7 @@ import qs.Commons
 import qs.services
 import qs.components
 import "../../../components/wheel_scroll.js" as WheelScroll
+import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
     id: readerView
@@ -203,6 +204,8 @@ Item {
         anchors {
             fill: parent
             topMargin: readerView.headerVisible ? Style.space(54) : 0
+            // The bar keeps a lane to itself, so no page sits under it (§30).
+            rightMargin: Style.space(ScrollMetrics.LANE)
         }
         clip: true
         boundsBehavior: Flickable.StopAtBounds
@@ -366,10 +369,10 @@ Item {
             }
         }
 
+        // The shared bar: thinner, in its own lane and auto-hiding (§30). The
+        // reader only dims it a little more than the panels do.
         ScrollBar.vertical: StyledScrollBar {
-            thickness: 2
             handleOpacity: 0.35
-            handleRadius: 1
         }
     }
 

@@ -8,6 +8,7 @@ import qs.services
 import qs.components
 import qs.Ui
 import "../../../services/list_metrics.js" as ListMetrics
+import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
     id: browseView
@@ -65,11 +66,12 @@ Item {
                     else Anime.fetchLatest(true)
                 }
             }
-            // The layout switch, in the same segmented box the manga
-            // panel uses, pinned to the right of the chips.
+            // The layout switch, two bare icon cells, pinned to the cards' right
+            // edge (owner §30): the same inset the grid gives its last column,
+            // including the scrollbar's lane.
             ViewModeToggle {
                 Layout.alignment: Qt.AlignVCenter
-                Layout.rightMargin: Style.spacing.xl
+                Layout.rightMargin: Style.spacing.xl + Style.space(ScrollMetrics.LANE)
                 panel: "anime"
                 listMode: browseView.listMode
                 fontFamily: browseView.fontBody
@@ -134,7 +136,13 @@ Item {
             GridView {
                 id: animeGrid
                 visible: !browseView.listMode
-                anchors.fill: parent; anchors.margins: Style.spacing.xl
+                anchors.fill: parent
+                anchors.topMargin: Style.spacing.xl
+                anchors.bottomMargin: Style.spacing.xl
+                anchors.leftMargin: Style.spacing.xl
+                // The right side keeps the scrollbar's lane, so the bar never
+                // covers the last column (owner §30).
+                anchors.rightMargin: Style.spacing.xl + Style.space(ScrollMetrics.LANE)
                 cellWidth: Math.floor(width / CardMetrics.columns)
                 cellHeight: CardMetrics.cellHeight(cellWidth)
                 clip: true
@@ -189,6 +197,8 @@ Item {
                 anchors.fill: parent
                 anchors.topMargin: Style.spacing.xl
                 anchors.bottomMargin: Style.spacing.xl
+                // The bar's lane: rows stop before it (owner §30).
+                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
                 visible: browseView.listMode
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds

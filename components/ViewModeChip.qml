@@ -7,6 +7,11 @@ import "../services/header_cell.js" as HeaderCell
 // One segment of the grid/list toggle. Both manga views used to inline this
 // block; one file means a change to the fill, the glyph or the tooltip lands
 // once instead of drifting between Browse and Library.
+//
+// Owner §30: no frame, and the cell is exactly as tall as a filter chip —
+// components/Chip.qml is a line of body text plus `controlPaddingY` above and
+// below, and this cell measures its glyph the same way, so the two controls
+// cannot disagree about the row's height.
 ClickableRect {
     id: chip
 
@@ -14,14 +19,22 @@ ClickableRect {
     property string label: ""
     property bool current: false
     property string bodyFont: ""
-    // Cell size. The default is the kit's control height, which is what the
-    // loose chips used; a caller that puts the chip inside a segmented box
-    // passes the compact cell Stitch draws.
-    property int cellSize: Style.spacing.controlHeight
 
-    implicitWidth: chip.cellSize
-    implicitHeight: chip.cellSize
+    // A square cell: the height a chip gets, and the same for the width, which
+    // is what an icon button of this family looks like.
+    implicitWidth: implicitHeight
+    implicitHeight: metrics.implicitHeight + 2 * Style.spacing.controlPaddingY
     cursorShape: Qt.PointingHandCursor
+    // The glyph comes from a fallback font whose line is a pixel taller than the
+    // body font's, so the cell measures a normal line instead: the toggle's row
+    // height then equals the filter chips' by construction, not by luck.
+    Text {
+        id: metrics
+        visible: false
+        text: "Mg" // i18n-ignore — font metric sample, never drawn
+        font.family: chip.bodyFont
+        font.pixelSize: Style.font.body
+    }
     // Selected is the solid accent; pressed and hover keep their fills, in the
     // same precedence services/header_cell.js uses for the header cells
     // (pressed first, then hover, then selected).
@@ -35,8 +48,10 @@ ClickableRect {
                 ? Style.hoverFillFor(Colors.muted, Colors.primary)
                 : "transparent"
     border.width: 0
+    Behavior on color { ColorAnimation { duration: Motion.fast } }
 
     StyledText {
+        id: glyphText
         anchors.centerIn: parent
         text: chip.glyph
         font.family: chip.bodyFont
