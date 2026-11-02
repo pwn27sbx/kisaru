@@ -335,9 +335,8 @@ test("settings and libraries read the new name first, the inherited one only as 
         const qml = read(file);
         assert.match(qml, new RegExp(`Paths\\.libraryPath\\(root\\._dataHome, "${panel}", false\\)`),
             `${file}: no new library path`);
-        // The inherited libraries were written with a literal ~/.local/share,
-        // so their candidate comes from HOME, not from XDG_DATA_HOME.
-        assert.match(qml, new RegExp(`Paths\\.legacyLibraryPath\\(Quickshell\\.env\\("HOME"\\), "${panel}"\\)`),
+        // The inherited candidate follows the same (XDG-aware) data home.
+        assert.match(qml, new RegExp(`Paths\\.legacyLibraryPath\\(root\\._dataHome, "${panel}"\\)`),
             `${file}: no inherited library path to fall back to`);
         assert.match(qml, /id: oldLibraryProbe/, `${file}: no probe for the inherited library`);
         // The read can fail before the probe settles; without this the empty

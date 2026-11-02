@@ -81,7 +81,7 @@ Singleton {
     readonly property string _dataHome:
         Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")
     readonly property string _newLibraryPath: Paths.libraryPath(root._dataHome, "manga", false)
-    readonly property string _oldLibraryPath: Paths.legacyLibraryPath(Quickshell.env("HOME"), "manga")
+    readonly property string _oldLibraryPath: Paths.legacyLibraryPath(root._dataHome, "manga")
     property bool _newLibrarySeen: false
     property bool _oldLibrarySeen: false
     property bool _oldLibraryChecked: false

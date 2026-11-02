@@ -46,16 +46,17 @@ test("the three libraries have one name each, in both folders", () => {
         HOME + "/.local/share/quickshell/manga_library.json");
 });
 
-test("the inherited library path is HOME-based, exactly like the old code", () => {
-    // The pre-migration services read Quickshell.env("HOME") + "/.local/share/…",
-    // so the fallback must not be re-derived from XDG_DATA_HOME: that variable
-    // never pointed at the old files.
-    assert.equal(paths.legacyLibraryPath("/home/someone", "manga"),
+test("the inherited library path honours a non-default data home", () => {
+    // Owner decision (2026-11-02): the fallback follows XDG_DATA_HOME, so this
+    // test uses a value that is NOT what the home default would produce.
+    assert.equal(paths.legacyLibraryPath("/mnt/other/data", "manga"),
+        "/mnt/other/data/quickshell/manga_library.json");
+    assert.equal(paths.legacyLibraryPath("/mnt/other/data", "anime"),
+        "/mnt/other/data/quickshell/anime_library.json");
+    assert.equal(paths.legacyLibraryPath("/mnt/other/data", "novel"),
+        "/mnt/other/data/quickshell/new_novel_library.json");
+    assert.notEqual(paths.legacyLibraryPath("/mnt/other/data", "manga"),
         "/home/someone/.local/share/quickshell/manga_library.json");
-    assert.equal(paths.legacyLibraryPath("/home/someone", "anime"),
-        "/home/someone/.local/share/quickshell/anime_library.json");
-    assert.equal(paths.legacyLibraryPath("/home/someone", "novel"),
-        "/home/someone/.local/share/quickshell/new_novel_library.json");
 });
 
 test("an unknown library is an error, not a silent empty path", () => {
