@@ -28,22 +28,22 @@ copyright del código original se conservan, y `NOTICE` recoge el aviso de modif
 pide la GPL-3.0 §5a junto con el rango de commits del fork. Los errores del código original se
 reportan al upstream, no aquí.
 
-## El nombre interno sigue siendo `qs-novelmangareader`
-
-El proyecto se llama **kisaru**, pero por dentro conserva el nombre heredado, y esto es a
-propósito:
+## Los nombres
 
 | Qué | Valor |
 |---|---|
-| Carpeta de configuración | `~/.config/qs-novelmangareader` |
-| Comando | `qs-novelmangareader` |
+| Carpeta de configuración | `~/.config/kisaru` (enlace a este repo) |
+| Comando | `kisaru` |
+| Venv de los backends | `~/.local/share/kisaru/venv` |
+| Datos (bibliotecas, descargas) | `~/.local/share/kisaru/` |
+| Cachés (portadas, capítulos) | `~/.cache/kisaru/` |
+| Secretos del canary | `~/.config/kisaru-canary/canary.env` (modo `600`, fuera del repo) |
 | Destinos IPC | `animePlayer`, `mangaReader`, `novelReader` |
-| Widget de barra | `pwnsxb.novelmangareader` |
-| Datos | `~/.local/share/quickshell*` |
+| Widget de barra | `pwnsxb.kisaru` |
 
-Renombrar todo eso es una migración aparte —configuración, comando en el `PATH`, widget y
-bibliotecas de lectura— y no se hace de tapadillo: mientras no ocurra, lo que leas aquí usa los
-nombres de la tabla.
+El proyecto se llamó `qs-novelmangareader` hasta la migración de noviembre de 2026; los datos,
+la configuración y la caché de esa época se leen mientras solo existan en su sitio viejo, y
+desaparecen cuando pasa la limpieza (`D4` del plan de migración).
 
 ## Requisitos
 
@@ -57,11 +57,11 @@ nombres de la tabla.
 ## Instalar
 
 ```sh
-git clone https://github.com/pwn27sbx/kisaru ~/.config/qs-novelmangareader
-~/.config/qs-novelmangareader/install.sh
+git clone https://github.com/pwn27sbx/kisaru ~/.config/kisaru
+~/.config/kisaru/install.sh
 ```
 
-Vive en su propia carpeta, `~/.config/qs-novelmangareader`, fuera de
+Vive en su propia carpeta, `~/.config/kisaru`, fuera de
 `~/.config/quickshell`, así que corre junto a tu propia configuración de Quickshell (o sin
 ninguna) sin tocarla.
 
@@ -72,48 +72,48 @@ ninguna) sin tocarla.
   Quickshell, así que te dice dónde conseguirlo)
 - descarga la fuente Symbols Nerd Font en `~/.local/share/fonts` si no tienes ninguna Nerd
   Font
-- enlaza la carpeta a `~/.config/qs-novelmangareader` si la clonaste en otro sitio
-- pone el comando `qs-novelmangareader` en tu `PATH`: en `~/.local/bin` si está en él; si
+- enlaza la carpeta a `~/.config/kisaru` si la clonaste en otro sitio
+- pone el comando `kisaru` en tu `PATH`: en `~/.local/bin` si está en él; si
   no, (tras preguntar) en `/usr/local/bin`, para que funcione en cualquier shell y en los
   atajos del compositor desde el primer momento
 - crea un venv con `flask`, `requests` y `curl_cffi` en
-  `~/.local/share/qs-novelmangareader/venv` para los backends
+  `~/.local/share/kisaru/venv` para los backends
 
 Opciones: `--no-deps` (omite paquetes y fuentes), `--no-venv`, `--copy` (copia la carpeta
 en vez de enlazarla), `--yes` (no pregunta).
 
-Arranca al iniciar sesión con `qs-novelmangareader` (queda callado hasta que abres un panel).
+Arranca al iniciar sesión con `kisaru` (queda callado hasta que abres un panel).
 
 ## Comandos y atajos
 
 ```sh
-qs-novelmangareader           # arráncalo
-qs-novelmangareader anime     # abre/cierra el reproductor de anime
-qs-novelmangareader manga     # abre/cierra el lector de manga
-qs-novelmangareader novel     # abre/cierra el lector de novelas
-qs-novelmangareader stop      # ciérralo
-qs-novelmangareader log       # su registro
+kisaru           # arráncalo
+kisaru anime     # abre/cierra el reproductor de anime
+kisaru manga     # abre/cierra el lector de manga
+kisaru novel     # abre/cierra el lector de novelas
+kisaru stop      # ciérralo
+kisaru log       # su registro
 ```
 
-Por debajo es `qs -p ~/.config/qs-novelmangareader …`, con los destinos IPC `animePlayer`,
+Por debajo es `qs -p ~/.config/kisaru …`, con los destinos IPC `animePlayer`,
 `mangaReader` y `novelReader` (cada uno con `toggle`).
 
 Hyprland:
 
 ```ini
-exec-once = qs-novelmangareader
-bind = SUPER ALT, A, exec, qs-novelmangareader anime
-bind = SUPER ALT, M, exec, qs-novelmangareader manga
-bind = SUPER ALT, N, exec, qs-novelmangareader novel
+exec-once = kisaru
+bind = SUPER ALT, A, exec, kisaru anime
+bind = SUPER ALT, M, exec, kisaru manga
+bind = SUPER ALT, N, exec, kisaru novel
 ```
 
 Sway:
 
 ```
-exec qs-novelmangareader
-bindsym $mod+Alt+a exec qs-novelmangareader anime
-bindsym $mod+Alt+m exec qs-novelmangareader manga
-bindsym $mod+Alt+n exec qs-novelmangareader novel
+exec kisaru
+bindsym $mod+Alt+a exec kisaru anime
+bindsym $mod+Alt+m exec kisaru manga
+bindsym $mod+Alt+n exec kisaru novel
 ```
 
 El botón de minimizar del header oculta el panel pero guarda tu lugar; el siguiente toggle
@@ -126,7 +126,7 @@ lo devuelve como lo dejaste.
 | **UI** (textos de los paneles) | `QS_LANG` | `QS_LANG` → `settings.json` del app → `LANG` → `en` |
 | **Contenido** (subtítulos, capítulos) | `QS_CONTENT_LANG` | lista ordenada separada por comas; por defecto `es` |
 
-El toggle **EN/ES** del panel escribe `<config>/qs-novelmangareader/settings.json` y
+El toggle **EN/ES** del panel escribe `<config>/kisaru/settings.json` y
 cambia la UI **en vivo**. `QS_LANG` manda sobre el archivo, y no se escribe nunca en el
 código: el wrapper pasa el entorno tal cual. Así puedes leer contenido en español con la
 UI en inglés, o al revés.
@@ -143,7 +143,7 @@ El botón **`󰒓`** del header, en cualquiera de los tres paneles, abre la vist
 - **Audio (SUB/DUB)** — solo en anime: subtítulos o doblaje, se aplica en vivo y se guarda.
 
 Se cierra con la flecha de volver o `Esc`. Todo se guarda en
-`<config>/qs-novelmangareader/settings.json`:
+`<config>/kisaru/settings.json`:
 
 ```json
 {
@@ -198,7 +198,7 @@ los nombres de rol que usan las vistas a los colores del sistema.
 
 ## Widget de barra de Omarchy
 
-El widget `pwnsxb.novelmangareader` vive en `omarchy/pwnsxb.novelmangareader/` y tiene su
+El widget `pwnsxb.kisaru` vive en `omarchy/pwnsxb.kisaru/` y tiene su
 propio README con la instalación (copiar o enlazar a `~/.config/omarchy/plugins/`) y cómo
 añadirlo a la barra.
 
@@ -209,7 +209,7 @@ La app se escribe contra **una línea de Omarchy: `4.0`**. Al arrancar ejecuta
 aviso en el log; **no bloquea**: los paneles siguen abriendo.
 
 ```sh
-qs-novelmangareader log | grep -i omarchy
+kisaru log | grep -i omarchy
 ```
 
 El camino de actualización (actualizar, reiniciar shell y app, leer el log, correr las
@@ -218,12 +218,12 @@ suites y subir `supported` a propósito) está documentado en el README del widg
 
 ## Tus datos
 
-- Bibliotecas y progreso de lectura: `~/.local/share/quickshell/{anime,manga}_library.json`,
-  `~/.local/share/quickshell/new_novel_library.json`
-- Descargas y cachés: `~/.local/share/quickshell-manga`, `~/.local/share/quickshell-novel`
+- Bibliotecas y progreso de lectura: `~/.local/share/kisaru/{anime,manga}_library.json`,
+  `~/.local/share/kisaru/new_novel_library.json`
+- Descargas y cachés: `~/.local/share/kisaru/downloads`, `~/.cache/kisaru/`
 
-Son las mismas rutas que usa el rice completo, así que moverse entre los dos conserva tu
-biblioteca.
+Las versiones anteriores vivían en `~/.local/share/quickshell*`; se leen mientras solo existan
+allí y la migración las copia a `~/.local/share/kisaru/`.
 
 ## Desarrollo y pruebas
 

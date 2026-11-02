@@ -7,12 +7,12 @@ capítulos, lector, imagen). No es un test de la app: es un test de los sitios d
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cp extras/systemd/qs-nmr-canary.{service,timer} ~/.config/systemd/user/
+cp extras/systemd/kisaru-canary.{service,timer} ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now qs-nmr-canary.timer
+systemctl --user enable --now kisaru-canary.timer
 ```
 
-El archivo de secretos va aparte, en `~/.config/qs-nmr/canary.env` (modo `600`, fuera del repo):
+El archivo de secretos va aparte, en `~/.config/kisaru-canary/canary.env` (modo `600`, fuera del repo):
 
 ```
 QS_DISCORD_WEBHOOK=https://discord.com/api/webhooks/…

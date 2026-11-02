@@ -1,13 +1,13 @@
-# pwnsxb.novelmangareader — Omarchy bar widget
+# pwnsxb.kisaru — Omarchy bar widget
 
 One bar icon that opens a small menu with **Anime / Manga / Novelas**. Each
-entry runs `qs-novelmangareader anime|manga|novel`, which toggles the matching
-reader panel of the `qs-novelmangareader` Quickshell app.
+entry runs `kisaru anime|manga|novel`, which toggles the matching
+reader panel of the `kisaru` Quickshell app.
 
 ## Requirements
 
 - Omarchy (Quickshell shell) with a bar.
-- `qs-novelmangareader` installed and on `PATH` (`bin/qs-novelmangareader`).
+- `kisaru` installed and on `PATH` (`bin/kisaru`).
 
 ## Supported Omarchy
 
@@ -20,16 +20,16 @@ At startup it runs `omarchy version` and, when the running line is not `4.0`,
 logs one warning — it never blocks and the panels still open:
 
 ```bash
-qs-novelmangareader log | grep -i omarchy
+kisaru log | grep -i omarchy
 ```
 
 ## Updating Omarchy
 
 1. Update Omarchy (`omarchy update`, or your channel's updater), then
    `omarchy-restart-shell`.
-2. Restart the app (`qs-novelmangareader stop`, then `qs-novelmangareader`) and
-   open the three panels: `qs-novelmangareader anime`, `manga`, `novel`.
-3. Read the log: `qs-novelmangareader log`. There must be no `ERROR`,
+2. Restart the app (`kisaru stop`, then `kisaru`) and
+   open the three panels: `kisaru anime`, `manga`, `novel`.
+3. Read the log: `kisaru log`. There must be no `ERROR`,
    `TypeError`, `Unable to assign` or `Cannot read property` lines, and the
    version warning above tells you whether the line moved.
 4. Check the palette still follows the theme: the `SMOKE` line must report the
@@ -49,9 +49,9 @@ Copy (or symlink) this directory into your user plugin directory:
 
 ```bash
 # copy
-cp -r omarchy/pwnsxb.novelmangareader ~/.config/omarchy/plugins/
+cp -r omarchy/pwnsxb.kisaru ~/.config/omarchy/plugins/
 # or symlink (keeps it in sync with the repo)
-ln -s "$PWD/omarchy/pwnsxb.novelmangareader" ~/.config/omarchy/plugins/pwnsxb.novelmangareader
+ln -s "$PWD/omarchy/pwnsxb.kisaru" ~/.config/omarchy/plugins/pwnsxb.kisaru
 ```
 
 Omarchy hot-reloads plugin code on save; if the widget does not appear, run:
@@ -70,7 +70,7 @@ save). The exact section (`left` / `center` / `right`) is your choice, e.g.:
   "bar": {
     "right": [
       // ... your existing widgets ...
-      { "id": "pwnsxb.novelmangareader" }
+      { "id": "pwnsxb.kisaru" }
     ]
   }
 }
@@ -79,7 +79,7 @@ save). The exact section (`left` / `center` / `right`) is your choice, e.g.:
 Or move it with the bar CLI:
 
 ```bash
-omarchy bar move pwnsxb.novelmangareader --section right
+omarchy bar move pwnsxb.kisaru --section right
 ```
 
 ## Use

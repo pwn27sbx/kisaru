@@ -59,5 +59,6 @@ Summary of the modifications:
   * Source chain hardening for manga (MangaDex, InManga, ZonaTMO, ManhwaWeb,
     WeebCentral) and a local image proxy.
 
-The project keeps the internal name "qs-novelmangareader" for its configuration
-directory, command, IPC targets, bar widget and data paths; see the README.
+The project is distributed as "kisaru". Its configuration directory, command,
+bar widget, data paths and caches use that name; the IPC targets
+(animePlayer, mangaReader, novelReader) keep their original names.
