@@ -137,6 +137,12 @@ test("the open field's text reads like the header's own", () => {
     // The placeholder uses the inactive tab's dim, not a faded one.
     assert.match(field, /color:\s*Colors\.muted/);
     assert.ok(!/opacity:\s*0\.6/.test(field), "the placeholder is faded again");
-    // The caret is the text's height, not the default hairline.
+    // The caret is the text's height, not the default hairline, and it stands in
+    // the room reserved to its LEFT so it never sits on the first character
+    // (owner, 2026-11-02).
     assert.match(field, /cursorDelegate/);
+    assert.match(field, /readonly property int caretRoom/);
+    assert.match(field, /x:\s*-width - Style\.space\(2\)/, "the caret must be drawn before the text");
+    assert.match(field, /leftMargin:\s*Gutter\.left \+ Gutter\.ink \+ root\.caretRoom/,
+        "the text must start right of the caret's room");
 });

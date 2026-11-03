@@ -61,6 +61,9 @@ Rectangle {
         root._silent = false
     }
 
+    // Width the caret needs plus a hair of air, so the text never collides with it.
+    readonly property int caretRoom: Style.space(2) + Style.space(2)
+
     implicitHeight: Style.space(30)
     radius: Style.cornerRadius
     color: Colors.surface_container
@@ -74,18 +77,23 @@ Rectangle {
             verticalCenter: parent.verticalCenter
             left: parent.left
             right: keyArea.left
-            // The header's brand ink line: with the field at the panel corner,
-            // the text starts exactly where MANGAREADER starts when it is closed
-            // (owner, 2026-11-02).
-            leftMargin: Gutter.left + Gutter.ink
+            // The header's brand ink line plus the room the caret needs: the
+            // caret stands at the ink line and the first character starts right
+            // of it, so an empty field never has the caret on top of the
+            // placeholder (owner, 2026-11-02).
+            leftMargin: Gutter.left + Gutter.ink + root.caretRoom
             rightMargin: Style.spacing.sm
         }
         color: Colors.on_surface
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
-        clip: true
-        // A caret the height of the text, not the default hairline.
+        // No clip here: the caret is drawn in the room reserved to its LEFT, and
+        // clipping would cut it away. The field itself clips, so the text still
+        // cannot paint outside it.
+        // A caret the height of the text, drawn in the room reserved for it:
+        // negative x puts it before the first character instead of over it.
         cursorDelegate: Rectangle {
+            x: -width - Style.space(2)
             width: Style.space(2)
             height: Math.round(input.font.pixelSize * 1.25)
             color: Colors.primary
