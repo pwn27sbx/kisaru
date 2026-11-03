@@ -142,6 +142,8 @@ test("the open field's text reads like the header's own", () => {
     // (owner, 2026-11-02).
     assert.match(field, /cursorDelegate/);
     assert.match(field, /readonly property int caretRoom/);
+    // The delegate itself is written by TextInput; the bar lives inside it.
+    assert.match(field, /cursorDelegate: Item \{\s*width: 0/, "the delegate must be a zero-width anchor");
     assert.match(field, /x:\s*-width - Style\.space\(2\)/, "the caret must be drawn before the text");
     assert.match(field, /leftMargin:\s*Gutter\.left \+ Gutter\.ink \+ root\.caretRoom/,
         "the text must start right of the caret's room");

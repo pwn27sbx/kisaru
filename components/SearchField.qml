@@ -90,13 +90,21 @@ Rectangle {
         // No clip here: the caret is drawn in the room reserved to its LEFT, and
         // clipping would cut it away. The field itself clips, so the text still
         // cannot paint outside it.
-        // A caret the height of the text, drawn in the room reserved for it:
-        // negative x puts it before the first character instead of over it.
-        cursorDelegate: Rectangle {
-            x: -width - Style.space(2)
-            width: Style.space(2)
+        // TextInput writes the delegate's x from cursorRectangle on every move, so
+        // the delegate itself must stay a zero-width anchor: the visible bar is a
+        // child and takes the negative offset, landing before the first character
+        // instead of over it (diagnosis, 2026-11-02).
+        cursorDelegate: Item {
+            width: 0
             height: Math.round(input.font.pixelSize * 1.25)
-            color: Colors.primary
+
+            Rectangle {
+                x: -width - Style.space(2)
+                width: Style.space(2)
+                height: parent.height
+                anchors.verticalCenter: parent.verticalCenter
+                color: Colors.primary
+            }
         }
         onTextChanged: if (!root._silent) root.edited()
         // Esc clears and leaves: `cleared()` is what tells the panel to
