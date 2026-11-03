@@ -40,9 +40,11 @@ test("the header holds the whole row: filter, search icon, gear, minimize", () =
 
 test("the search field grows from its icon towards the brand", () => {
     const header = read("components/PanelHeader.qml");
-    // Anchored on its right edge at the icon, width animated: it grows leftwards.
-    assert.match(header, /id: searchField[\s\S]*?anchors\.right:\s*searchButton\.left/);
-    assert.match(header, /width:\s*root\.searchOpen[\s\S]*?Behavior on width/);
+    // Its right edge is the icon and its left edge is fixed, so x follows the
+    // width: the box grows out of the icon towards the brand.
+    assert.match(header, /id: searchField[\s\S]*?fullWidth:[\s\S]*?searchButton\.mapToItem/);
+    assert.match(header, /x:\s*\(Gutter\.left \+ Gutter\.ink\) \+ \(fullWidth - width\)/);
+    assert.match(header, /width:\s*root\.searchOpen \? fullWidth : 0[\s\S]*?Behavior on width/);
     assert.match(header, /property bool searchOpen/);
     // And it stops where the brand starts, on the cards' ink line.
     assert.match(header, /Gutter\.left \+ Gutter\.ink/);

@@ -78,6 +78,10 @@ Item {
     // refetch Browse just because the search was open).
     function collapseSearch() {
         if (!header) return
+        // A query typed a moment before closing must not fire afterwards: stop
+        // the timer and drop the text (review R3-search-debounce-after-close).
+        searchDebounce.stop()
+        header.clear()
         header.blur()
         root.searchOpen = false
     }
