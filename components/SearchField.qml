@@ -1,6 +1,7 @@
 import QtQuick
 import qs.app
 import qs.Commons
+import qs.services
 
 // The always-visible search pill (owner, round 6: one look for all three panels).
 //
@@ -67,31 +68,28 @@ Rectangle {
     border.width: input.activeFocus ? 1.5 : 1
     Behavior on border.width { NumberAnimation { duration: Motion.fast } }
 
-    StyledText {
-        anchors {
-            left: parent.left
-            leftMargin: Style.spacing.md
-            verticalCenter: parent.verticalCenter
-        }
-        text: "⌕"
-        color: Colors.muted
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.body
-    }
-
     TextInput {
         id: input
         anchors {
             verticalCenter: parent.verticalCenter
             left: parent.left
             right: keyArea.left
-            leftMargin: Style.space(26)
+            // The header's brand ink line: with the field at the panel corner,
+            // the text starts exactly where MANGAREADER starts when it is closed
+            // (owner, 2026-11-02).
+            leftMargin: Gutter.left + Gutter.ink
             rightMargin: Style.spacing.sm
         }
         color: Colors.on_surface
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
         clip: true
+        // A caret the height of the text, not the default hairline.
+        cursorDelegate: Rectangle {
+            width: Style.space(2)
+            height: Math.round(input.font.pixelSize * 1.25)
+            color: Colors.primary
+        }
         onTextChanged: if (!root._silent) root.edited()
         // Esc clears and leaves: `cleared()` is what tells the panel to
         // restore its list and hand the focus back.
@@ -104,11 +102,11 @@ Rectangle {
             left: input.left
         }
         text: root.placeholder
-        color: Colors.on_surface_variant
+        // The inactive tab's dim, not the near-invisible one (owner, 2026-11-02).
+        color: Colors.muted
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
         visible: !root.hasText
-        opacity: 0.6
     }
 
     // The "/" key hint; it becomes the clear cell once there is text, so the

@@ -127,3 +127,16 @@ test("the open field has no \"/\" hint badge (owner, 2026-11-02)", () => {
     // The clear cell still exists for when there is text.
     assert.match(field, /userClear\(\)/, "the clear cell was removed with the badge");
 });
+
+test("the open field's text reads like the header's own", () => {
+    const field = read("components/SearchField.qml");
+    // The leading magnifier is gone: the icon on the right already says it.
+    assert.ok(!/text:\s*"⌕"/.test(field), "the leading magnifier is still drawn");
+    // The text starts on the brand's ink line, so it replaces the name.
+    assert.match(field, /leftMargin:\s*Gutter\.left \+ Gutter\.ink/);
+    // The placeholder uses the inactive tab's dim, not a faded one.
+    assert.match(field, /color:\s*Colors\.muted/);
+    assert.ok(!/opacity:\s*0\.6/.test(field), "the placeholder is faded again");
+    // The caret is the text's height, not the default hairline.
+    assert.match(field, /cursorDelegate/);
+});
