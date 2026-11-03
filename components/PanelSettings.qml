@@ -25,12 +25,16 @@ Item {
     // the language"). `[{ id, label }]`; empty hides the row.
     property var modes: []
     property string mode: ""
+    // The grid/list switch lives here now (owner §33): [{ id: "grid", label }, …].
+    property var layouts: []
+    property string layout: ""
     property string fontFamily: Style.font.family
     // The panels do not hand focus to this view, and Esc needs a focused item.
     property bool active: false
 
     signal closeRequested()
     signal modeSelected(string id)
+    signal layoutSelected(string id)
 
     Item {
         id: keyCatcher
@@ -152,6 +156,36 @@ Item {
                         current: active
                         bodyFont: root.fontFamily
                         onClicked: root.modeSelected(String(modelData.id || ""))
+                    }
+                }
+            }
+        }
+
+        // ── Layout: grid or list (owner §33) ───────────────────────────────
+        // It used to be a control in the header; it is a preference, so it lives
+        // with the other preferences. One row, same card as the language one.
+        SettingsCard {
+            Layout.fillWidth: true
+            visible: root.layouts.length > 0
+            label: I18n.t("settings.layout")
+            description: I18n.t("settings.layoutHint")
+            fontFamily: root.fontFamily
+
+            Row {
+                spacing: Style.spacing.sm
+
+                Repeater {
+                    model: root.layouts
+
+                    delegate: Chip {
+                        required property var modelData
+
+                        readonly property bool active: String(modelData.id || "") === root.layout
+
+                        text: String(modelData.label || "")
+                        current: active
+                        bodyFont: root.fontFamily
+                        onClicked: root.layoutSelected(String(modelData.id || ""))
                     }
                 }
             }

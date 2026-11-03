@@ -563,8 +563,6 @@ Item {
                 // The model arrives after the click that asked for a jump.
                 onCountChanged: detailView._applyPendingJump()
 
-                ScrollBar.vertical: StyledScrollBar {
-                }
 
                 delegate: ClickableRect {
                     id: chapterRowAreaRect

@@ -19,10 +19,13 @@ import "../services/header_cell.js" as HeaderCell
 // carries no number (the status bar already counts the loaded list) and an
 // empty Library hides its badge instead of showing a zero (owner, A-8).
 //
-// The search is not here: each panel puts the always-visible `SearchField` under
-// this row (owner, round 6), so the header has no search state and no overlay.
-// Panel-wide preferences that used to live here (SUB/DUB) moved to the settings
-// page for the same reason the language did: they are settings, not navigation.
+// Owner §33: the header is the WHOLE chrome now. The filter menu, the search and
+// the icons share its one row, and the search is an icon that grows a field
+// leftwards over the brand and the tabs when it is used. There is no second row
+// under it any more, and the grid/list switch moved to the settings page.
+//
+// Everything lines up with the cards' ink (services/Gutter.qml): the brand's
+// first pixel and the last icon end on the same lines the covers do.
 Item {
     id: root
 
@@ -43,9 +46,33 @@ Item {
     property Component extraCell: null
     property string fontFamily: Style.font.family
 
+    // ── The tool row, inside the header (owner §33) ───────────────────────
+    // The filter menu (manga/anime/novel Browse). Empty hides it, which is what
+    // Library does.
+    property var filters: []
+    property var filterValue: undefined
+    property string filterFallbackLabel: ""
+    property bool filterDimmed: false
+    // The growing search field over the left side.
+    property bool searchOpen: false
+    property string searchPlaceholder: ""
+
     signal tabActivated(int index)
     signal settingsClicked()
     signal minimizeClicked()
+    signal filterChosen(var value)
+    signal searchClicked()
+    signal searchEdited()
+    signal searchCleared()
+
+    // The search field's contract, so the panels keep their debounce and their
+    // "/" shortcut exactly where they were.
+    readonly property string searchText: searchField.text
+    readonly property bool searchActiveFocus: searchField.activeFocus
+    function forceFocus() { searchField.forceFocus() }
+    function clear() { searchField.clear() }
+    function blur() { searchField.blur() }
+    function setText(value) { searchField.setText(value) }
 
     implicitHeight: Style.space(48)
     implicitWidth: parent ? parent.width : 0
@@ -151,9 +178,8 @@ Item {
         id: brandLoader
         anchors {
             left: parent.left
-            // The brand's text is the left edge of the panel's content, same as
-            // the cards and the tool bar (owner, §32.1).
-            leftMargin: Gutter.left
+            // The brand's text is the left edge of the cards' ink (owner §33).
+            leftMargin: Gutter.left + Gutter.ink
             verticalCenter: parent.verticalCenter
         }
         sourceComponent: root.brand
@@ -209,6 +235,29 @@ Item {
             sourceComponent: root.extraCell
         }
 
+        // Owner §33: the filter menu first, then the search, then the two icons.
+        MenuSelect {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: root.filters !== undefined && root.filters.length > 0
+            controlHeight: root.implicitHeight
+            options: root.filters
+            currentValue: root.filterValue
+            fallbackLabel: root.filterFallbackLabel
+            dimmed: root.filterDimmed
+            fontFamily: root.fontFamily
+            onChosen: function(value) { root.filterChosen(value) }
+        }
+
+        PanelActionButton {
+            id: searchButton
+            iconText: "󰍉"
+            tooltipText: I18n.t("search.open")
+            focusable: true
+            hasCursor: root.searchOpen
+            size: root.implicitHeight
+            onClicked: root.searchClicked()
+        }
+
         PanelActionButton {
             iconText: "󰒓"
             tooltipText: I18n.t("settings.open")
@@ -223,5 +272,25 @@ Item {
             size: root.implicitHeight
             onClicked: root.minimizeClicked()
         }
+    }
+
+    // ── The search, grown leftwards over the brand and the tabs (owner §33) ──
+    // Its right edge is the search icon; its width is the distance from there to
+    // the brand's ink line, animated so it reads as growing out of the icon.
+    SearchField {
+        id: searchField
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.searchOpen || width > 1
+        // Its right edge is the search icon; its width runs back to the brand's
+        // ink line, and x follows so the box grows out of the icon leftwards.
+        readonly property real fullWidth: Math.max(0,
+            searchButton.mapToItem(root, 0, 0).x - Style.spacing.sm - (Gutter.left + Gutter.ink))
+        x: (Gutter.left + Gutter.ink) + (fullWidth - width)
+        width: root.searchOpen ? fullWidth : 0
+        Behavior on width { NumberAnimation { duration: Motion.base; easing.type: Motion.easeOut } }
+        placeholder: root.searchPlaceholder
+        fontFamily: root.fontFamily
+        onEdited: root.searchEdited()
+        onCleared: root.searchCleared()
     }
 }

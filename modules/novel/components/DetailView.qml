@@ -575,10 +575,6 @@ Item {
                 boundsBehavior: Flickable.StopAtBounds
                 model: detailView._processedChapters   // ← filtered + sorted
 
-                ScrollBar.vertical: ScrollBar {
-                    policy: ScrollBar.AsNeeded
-                    contentItem: Rectangle { implicitWidth: 3; color: Colors.primary; opacity: 0.45; radius: Style.cornerRadius }
-                }
 
                 delegate: ClickableRect {
                     id: rowAreaRect

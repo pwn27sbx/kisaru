@@ -181,8 +181,6 @@ Item {
                 // page inserts rows instead of resetting the view (and its scroll).
                 model: ScriptModel { values: Manga.mangaList }
 
-                ScrollBar.vertical: StyledScrollBar {
-                }
 
                 onContentYChanged: {
                     if (contentY + height > contentHeight - cellHeight * 2)
@@ -245,8 +243,6 @@ Item {
                 boundsBehavior: Flickable.StopAtBounds
                 model: ScriptModel { values: Manga.mangaList }
 
-                ScrollBar.vertical: StyledScrollBar {
-                }
 
                 onContentYChanged: {
                     if (ListMetrics.shouldFetchMore(contentY, height, contentHeight))

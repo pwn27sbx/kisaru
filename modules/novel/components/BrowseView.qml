@@ -132,10 +132,6 @@ Item {
                 // page inserts rows instead of resetting the view (and its scroll).
                 model: ScriptModel { values: Novel.novelList }
 
-                // The shared bar, like every other view: this grid had its own
-                // copy and could not follow the lane or the auto-hide.
-                ScrollBar.vertical: StyledScrollBar {
-                }
 
                 onContentYChanged: {
                     if (contentY + height > contentHeight - cellHeight * 2)
@@ -181,8 +177,6 @@ Item {
                 boundsBehavior: Flickable.StopAtBounds
                 model: ScriptModel { values: Novel.novelList }
 
-                ScrollBar.vertical: StyledScrollBar {
-                }
 
                 onContentYChanged: {
                     if (ListMetrics.shouldFetchMore(contentY, height, contentHeight))

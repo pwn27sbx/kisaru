@@ -59,11 +59,12 @@ test("a QML file imports whoever owns the singleton it uses", () => {
     assert.deepEqual(problems, []);
 });
 
-test("the shared layout toggle can reach the preference it writes", () => {
-    // The exact file the bug was in: keep the assertion even if the generic
-    // check above is ever narrowed.
-    const toggle = stripComments(
-        fs.readFileSync(path.join(ROOT, "components/ViewModeToggle.qml"), "utf8"));
-    assert.match(toggle, /import qs\.services/);
-    assert.match(toggle, /UiPrefs\.setViewMode\(root\.panel/);
+test("the settings page can reach the preference the layout row writes", () => {
+    // The switch moved from the header to the settings page (§33); the lesson of
+    // the original bug stays: the component that writes the preference imports
+    // the service that owns it.
+    const settings = stripComments(
+        fs.readFileSync(path.join(ROOT, "components/PanelSettings.qml"), "utf8"));
+    assert.match(settings, /import qs\.services/);
+    assert.match(settings, /signal layoutSelected/);
 });

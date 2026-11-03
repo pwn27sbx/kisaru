@@ -257,8 +257,6 @@ Item {
                 boundsBehavior: Flickable.StopAtBounds
                 model: Anime.currentAnime ? Anime.currentAnime.episodes : []
 
-                ScrollBar.vertical: StyledScrollBar {
-                }
 
                 delegate: ClickableRect {
                     id: epRowAreaRect

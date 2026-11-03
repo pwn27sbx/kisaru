@@ -62,38 +62,28 @@ test("the three panels share one header: no per-panel look flags", () => {
         "LanguageToggle.qml is back; the language is a setting");
 });
 
-test("the header holds no search state and no panel preferences", () => {
-    // A-2: the search is a field under the row, and SUB/DUB is a setting.
+test("the header owns the search now, and still no panel preferences", () => {
+    // Owner §33 reversed the round-6 rule: the field lives in the header and
+    // grows over the brand. What must stay out is a panel preference (SUB/DUB).
     const header = read("components/PanelHeader.qml");
-    // Declarations, not words: the comments still talk about the overlay ring.
-    for (const gone of [
-        "default property alias overlay",
-        "property bool showSearch",
-        "property bool searchOpen",
-        "signal searchClicked",
-        "readonly property bool showBrand",
-        "property var modes",
-        "signal modeSelected"
-    ]) {
-        assert.ok(!header.includes(gone), `PanelHeader still declares ${gone}`);
-    }
-    // The provider picker stays: it is used to switch sources all the time.
-    assert.match(header, /extraCell/);
+    assert.match(header, /SearchField\s*\{/, "the header has no search field");
+    assert.match(header, /property bool searchOpen/, "the header cannot open its search");
+    assert.ok(!/currentMode|animeMode|setViewMode/.test(header),
+        "the header must not carry a panel preference");
 });
 
-test("every panel shows the shared tool bar, and anime keeps its mode in settings", () => {
-    // Owner §32: the search field lives inside components/ToolBar.qml now, so the
-    // panel is asserted to own the tool bar and the one debounce behind it — the
-    // field itself is asserted once, in the component.
+test("every panel shows the shared header with the search in it (§33)", () => {
+    // The tool bar is gone: the header is the whole chrome, so the panel is
+    // asserted to give it the search and the one debounce behind it.
     for (const file of PANELS) {
-        assert.match(read(file), /ToolBar\s*\{/, `${file}: no shared tool bar`);
-        assert.match(read(file), /onEdited:\s*searchDebounce\.restart\(\)/, `${file}: field is not debounced`);
+        assert.ok(!/ToolBar\s*\{/.test(read(file)), `${file}: still places a tool bar row`);
+        assert.match(read(file), /PanelHeader\s*\{/, `${file}: no shared header`);
+        assert.match(read(file), /onSearchEdited:\s*searchDebounce\.restart\(\)/, `${file}: search is not debounced`);
         assert.ok(!/SearchField\s*\{/.test(read(file)), `${file}: still carries its own search field`);
     }
-    assert.match(read("components/ToolBar.qml"), /SearchField\s*\{/, "the tool bar has no search field");
     const anime = read("modules/anime/AnimePanel.qml");
     // The audio mode is a settings row now, persisted, and named in the bar.
-    assert.match(anime, /PanelSettings\s*\{[^}]*modes:/s);
+    assert.match(anime, /modes:\s*/, "the audio rows left the settings page");
     assert.match(anime, /onModeSelected/);
     assert.match(anime, /modeText:\s*Anime\.currentMode\.toUpperCase\(\)/);
     assert.match(read("services/Anime.qml"), /currentMode:\s*UiPrefs\.animeMode/);
@@ -208,29 +198,17 @@ test("one card: no per-panel anatomy and no inline delegates left", () => {
     }
 });
 
-test("every panel remembers its own grid/list choice", () => {
-    const views = [
-        ["modules/manga/components/BrowseView.qml", "manga"],
-        ["modules/manga/components/LibraryView.qml", "manga"],
-        ["modules/anime/components/BrowseView.qml", "anime"],
-        ["modules/anime/components/LibraryView.qml", "anime"],
-        ["modules/novel/components/BrowseView.qml", "novel"],
-        ["modules/novel/components/LibraryView.qml", "novel"],
-    ];
-    for (const [file, panel] of views) {
+test("every panel remembers its own grid/list choice, set from the settings page", () => {
+    // Owner §33: the switch left the header for the settings page, persisted per
+    // panel exactly as before.
+    for (const [file, panel] of PANELS.map((f, i) => [f, ["manga", "anime", "novel"][i]])) {
         const qml = read(file);
+        assert.ok(!/ViewModeToggle\s*\{/.test(qml), `${file}: the header still carries the switch`);
         assert.match(qml, new RegExp(`viewModeFor\\("${panel}"\\)`), `${file}: reads another panel's layout`);
-        // One shared control: the view names its panel and never carries its
-        // own copy of the segmented box.
-        // Owner §32: the toggle moved to the panel's tool bar, so the view keeps
-        // its preference read and nothing else.
-        assert.ok(!/ViewModeToggle\s*\{/.test(qml), `${file}: the view still places the toggle`);
-        // The hand-built blocks declared `Row { id: cellsRow }` / `viewCells`.
-        assert.ok(!qml.includes("id: cellsRow") && !qml.includes("id: viewCells"),
-            `${file}: still carries a hand-built toggle`);
-        assert.match(qml, /ListRow\s*\{/, `${file}: no list rows`);
+        assert.match(qml, new RegExp(`onLayoutSelected: function\\(id\\) \\{ UiPrefs\\.setViewMode\\("${panel}"`),
+            `${file}: does not persist its own layout`);
     }
-    assert.match(read("components/ViewModeToggle.qml"), /UiPrefs\.setViewMode\(root\.panel/, "the shared toggle does not write the panel's key");
+    assert.match(read("components/PanelSettings.qml"), /layoutSelected/, "the settings page has no layout option");
 });
 
 test("the anime score chip is legible: accent and bold", () => {

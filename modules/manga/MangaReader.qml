@@ -37,6 +37,8 @@ Item {
 
     // Gear in the header: the settings view replaces the content stack.
     property bool settingsMode: false
+    // Owner §33: the search is a header icon that grows a field over the brand.
+    property bool searchOpen: false
     readonly property int settingsPageIndex: 2   // third page of the content stack
 
     property int browseStack: 0
@@ -53,27 +55,44 @@ Item {
         visible = false
     }
 
-    // ── Search ────────────────────────────────────────────────────────────────
-    // The field is always on screen under the header (Stitch's sub-bar), so
-    // there is no open/closed state any more: "/" focuses it, Esc clears it and
-    // leaves, and the one debounce below stays the only path to
-    // Manga.searchManga.
+    // ── Search (owner §33: an icon in the header, not a bar under it) ────────
+    // The icon opens the field that grows leftwards over the brand and the tabs;
+    // Esc or clearing it puts it away. The one debounce below stays the only
+    // path to Manga.searchManga.
+    function toggleSearch() {
+        if (root.searchOpen) {
+            root.closeSearch()
+            return
+        }
+        if (root.settingsMode) return
+        root.focusSearch()
+    }
+
     function focusSearch() {
-        if (toolBar) toolBar.forceFocus()
+        if (!header) return
+        root.searchOpen = true
+        header.forceFocus()
+    }
+
+    // Puts the field away without touching the list (a tab change must not
+    // refetch Browse just because the search was open).
+    function collapseSearch() {
+        if (!header) return
+        header.blur()
+        root.searchOpen = false
     }
 
     // Clears the text only: Browse calls this when a filter invalidates the
-    // query, and the field must stay where the user is typing.
+    // query, and the field stays where the user is typing.
     function clearSearch() {
-        if (toolBar) toolBar.clear()
+        if (header) header.clear()
     }
 
-    // Esc: empty the field, hand the focus back and show the unfiltered list
-    // again — the end state the closed overlay used to leave.
+    // Esc: put the field away and show the unfiltered list again.
     function closeSearch() {
-        if (!toolBar) return
-        toolBar.blur()
-        browseView.resetList()
+        if (!header) return
+        root.collapseSearch()
+        if (root.tabIndex === 0) browseView.resetList()
     }
 
     // "Search other sources" from the no-Spanish notice: go back to Browse and
@@ -82,9 +101,10 @@ Item {
         const title = Manga.detailTitle || ""
         root.tabIndex = 0
         root.browseStack = 0
-        if (toolBar) {
-            toolBar.setText(title)
-            toolBar.forceFocus()
+        if (header) {
+            root.searchOpen = true
+            header.setText(title)
+            header.forceFocus()
         }
         if (title.length > 0)
             Manga.searchManga(title, true)
@@ -99,8 +119,10 @@ Item {
     Shortcut {
         sequence: "/"
         context: Qt.WindowShortcut
-        enabled: root.visible && !root.settingsMode && root.tabIndex === 0
-                 && !(toolBar && toolBar.searchActiveFocus)
+        // Both tabs: Browse queries the source, Library filters what is saved
+        // (owner §33.1).
+        enabled: root.visible && !root.settingsMode
+                 && !(header && header.searchActiveFocus)
         onActivated: root.focusSearch()
     }
 
@@ -112,8 +134,10 @@ Item {
         id: searchDebounce
         interval: 350
         onTriggered: {
-            if (toolBar.text.trim().length > 0)
-                Manga.searchManga(toolBar.text.trim(), true)
+            // Library filters locally (owner §33.1): no network here.
+            if (root.tabIndex !== 0) return
+            if (header.searchText.trim().length > 0)
+                Manga.searchManga(header.searchText.trim(), true)
             else
                 browseView.resetList()
         }
@@ -139,6 +163,7 @@ Item {
         // The search field moved out of the header: it is always visible below
         // it now, so the header's own expanding search would only duplicate it.
         PanelHeader {
+            id: header
             Layout.fillWidth: true
             z: 2
             tabs: [I18n.t("tab.browse"), I18n.t("tab.library")]
@@ -149,32 +174,30 @@ Item {
             tabCounts: [-1, Manga.libraryList.length]
             fontFamily: root.fontBody
             settingsMode: root.settingsMode
+            filters: root.tabIndex === 0 && !root.settingsMode ? browseView.filterOptions : []
+            filterValue: browseView.filterValue
+            filterFallbackLabel: ""
+            filterDimmed: false
+            searchOpen: root.searchOpen
+            searchPlaceholder: I18n.t("manga.search")
+            onFilterChosen: function(value) { browseView.chooseFilter(value) }
+            onSearchClicked: root.toggleSearch()
+            onSearchEdited: searchDebounce.restart()
+            onSearchCleared: root.closeSearch()
             onTabActivated: function(index) {
                 root.settingsMode = false
                 root.tabIndex = index
+                root.collapseSearch()
             }
-            onSettingsClicked: root.settingsMode = !root.settingsMode
+            onSettingsClicked: {
+                root.settingsMode = !root.settingsMode
+                root.collapseSearch()
+            }
             onMinimizeClicked: root.minimize()
         }
 
-        // ── Row 2: filter menu · search · layout toggle (owner §32) ───────────
-        // One line, one height, one pair of edges: the tool bar's margins are the
-        // same gutter the grid, the list and their skeletons use, so the menu's
-        // left edge is the first card's left edge and the toggle's right edge is
-        // the last card's. The panel keeps the debounce and the service call.
-        ToolBar {
-            id: toolBar
-            panel: "manga"
-            listMode: root.tabIndex === 0 ? browseView.listMode : libraryView.listMode
-            filterOptions: root.tabIndex === 0 && !root.settingsMode ? browseView.filterOptions : []
-            filterValue: browseView.filterValue
-            showSearch: root.tabIndex === 0 && !root.settingsMode
-            searchPlaceholder: I18n.t("manga.search")
-            fontFamily: root.fontBody
-            onFilterChosen: function(value) { browseView.chooseFilter(value) }
-            onEdited: searchDebounce.restart()
-            onCleared: root.closeSearch()
-        }
+        // No second row (owner §33): the header carries the filter, the search
+        // and the icons; the layout switch lives in the settings page.
 
         StackLayout {
             Layout.fillWidth: true
@@ -228,6 +251,7 @@ Item {
             Item {
                 LibraryView {
                     id: libraryView
+                    query: root.searchOpen && root.tabIndex === 1 ? header.searchText : ""
                     anchors.fill: parent
                     visible: root.libraryStack === 0
                     opacity: visible ? 1 : 0
@@ -270,6 +294,10 @@ Item {
             PanelSettings {
                 showScroll: true
                 active: root.settingsMode
+                layouts: [ { id: "grid", label: I18n.t("view.grid") },
+                           { id: "list", label: I18n.t("view.list") } ]
+                layout: UiPrefs.viewModeFor("manga")
+                onLayoutSelected: function(id) { UiPrefs.setViewMode("manga", id) }
                 onCloseRequested: root.settingsMode = false
             }
         }

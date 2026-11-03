@@ -369,11 +369,6 @@ Item {
             }
         }
 
-        // The shared bar: thinner, in its own lane and auto-hiding (§30). The
-        // reader only dims it a little more than the panels do.
-        ScrollBar.vertical: StyledScrollBar {
-            handleOpacity: 0.35
-        }
     }
 
     // ── Reading progress bar (bottom) ─────────────────────────────────────────

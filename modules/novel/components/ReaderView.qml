@@ -265,10 +265,6 @@ Item {
             }
         }
 
-        ScrollBar.vertical: ScrollBar {
-            policy: ScrollBar.AsNeeded
-            contentItem: Rectangle { implicitWidth: 2; color: Colors.primary; opacity: 0.25; radius: width / 2 } // style-ignore — scrollbar
-        }
     }
 
     Rectangle {

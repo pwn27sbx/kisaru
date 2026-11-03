@@ -35,6 +35,8 @@ Item {
 
     // Gear in the header: the settings view replaces the content stack.
     property bool settingsMode: false
+    // Owner §33: the search is a header icon that grows a field over the brand.
+    property bool searchOpen: false
     readonly property int settingsPageIndex: 2   // third page of the content stack
 
     property int browseStack:  0
@@ -55,26 +57,47 @@ Item {
     Shortcut {
         sequence: "/"
         context: Qt.WindowShortcut
-        enabled: root.visible && !root.settingsMode && root.tabIndex === 0
-                 && !(toolBar && toolBar.searchActiveFocus)
+        // Both tabs: Browse queries the source, Library filters what is saved
+        // (owner §33.1).
+        enabled: root.visible && !root.settingsMode
+                 && !(header && header.searchActiveFocus)
         onActivated: root.focusSearch()
     }
 
+    function toggleSearch() {
+        if (root.searchOpen) {
+            root.closeSearch()
+            return
+        }
+        if (root.settingsMode) return
+        root.focusSearch()
+    }
+
     function focusSearch() {
-        if (toolBar) toolBar.forceFocus()
+        if (header) {
+            root.searchOpen = true
+            header.forceFocus()
+        }
+    }
+
+    // Puts the field away without touching the list.
+    function collapseSearch() {
+        if (!header) return
+        header.blur()
+        root.searchOpen = false
     }
 
     // Clears the text only: Browse calls this when a filter invalidates the
     // query, and the field stays where the user was typing.
     function clearSearch() {
-        if (toolBar) toolBar.clear()
+        if (header) header.clear()
     }
 
     // Esc: empty the field, hand the focus back and show the unfiltered list.
     function closeSearch() {
-        if (!toolBar) return
-        toolBar.blur()
-        browseView.resetList()
+        if (!header) return
+        root.collapseSearch()
+        if (root.tabIndex === 0) browseView.resetList()
     }
 
     // Header brand: the app glyph plus this panel's short name (decision 1).
@@ -91,6 +114,7 @@ Item {
 
         // ── Header (brand · tabs · provider · settings · minimize) ────────────
         PanelHeader {
+            id: header
             Layout.fillWidth: true; z: 2
             tabs: [I18n.t("tab.browse"), I18n.t("tab.library")]
             tabIndex: root.tabIndex
@@ -99,11 +123,25 @@ Item {
             brand: brandComponent
             fontFamily: root.fontBody
             settingsMode: root.settingsMode
+            filters: root.tabIndex === 0 && !root.settingsMode ? browseView.filterOptions : []
+            filterValue: browseView.filterValue
+            filterFallbackLabel: browseView.filterFallbackLabel
+            filterDimmed: browseView.filterDimmed
+            searchOpen: root.searchOpen
+            searchPlaceholder: I18n.t("novel.search")
+            onFilterChosen: function(value) { browseView.chooseFilter(value) }
+            onSearchClicked: root.toggleSearch()
+            onSearchEdited: searchDebounce.restart()
+            onSearchCleared: root.closeSearch()
             onTabActivated: function(index) {
                 root.settingsMode = false
                 root.tabIndex = index
+                root.collapseSearch()
             }
-            onSettingsClicked: root.settingsMode = !root.settingsMode
+            onSettingsClicked: {
+                root.settingsMode = !root.settingsMode
+                root.collapseSearch()
+            }
             onMinimizeClicked: root.minimize()
 
             // The provider picker stays in the header (owner, round 6: it is
@@ -124,31 +162,19 @@ Item {
             }
         }
 
-        // ── Row 2: filter menu · search · layout toggle (owner §32) ───────────
-        ToolBar {
-            id: toolBar
-            panel: "novel"
-            listMode: root.tabIndex === 0 ? browseView.listMode : libraryView.listMode
-            filterOptions: root.tabIndex === 0 && !root.settingsMode ? browseView.filterOptions : []
-            filterValue: browseView.filterValue
-            filterDimmed: browseView.filterDimmed
-            fallbackFilterLabel: browseView.filterFallbackLabel
-            showSearch: root.tabIndex === 0 && !root.settingsMode
-            searchPlaceholder: I18n.t("novel.search")
-            fontFamily: root.fontBody
-            onFilterChosen: function(value) { browseView.chooseFilter(value) }
-            onEdited: searchDebounce.restart()
-            onCleared: root.closeSearch()
-        }
+        // No second row (owner §33): the header carries the filter, the search
+        // and the icons; the layout switch lives in the settings page.
 
         // The one debounce the field goes through.
         Timer {
             id: searchDebounce
             interval: 350
             onTriggered: {
-                if (toolBar.text.trim().length > 0) {
+                // Library filters locally (owner §33.1): no network here.
+                if (root.tabIndex !== 0) return
+                if (header.searchText.trim().length > 0) {
                     browseView.currentFilter = "search"
-                    Novel.searchNovels(toolBar.text.trim(), "", "All", true)
+                    Novel.searchNovels(header.searchText.trim(), "", "All", true)
                 } else {
                     browseView.resetList()
                 }
@@ -206,6 +232,7 @@ Item {
             Item {
                 LibraryView {
                     id: libraryView
+                    query: root.searchOpen && root.tabIndex === 1 ? header.searchText : ""
                     anchors.fill: parent
                     visible: root.libraryStack === 0
                     opacity: visible ? 1 : 0
@@ -249,6 +276,10 @@ Item {
             PanelSettings {
                 showScroll: true
                 active: root.settingsMode
+                layouts: [ { id: "grid", label: I18n.t("view.grid") },
+                           { id: "list", label: I18n.t("view.list") } ]
+                layout: UiPrefs.viewModeFor("novel")
+                onLayoutSelected: function(id) { UiPrefs.setViewMode("novel", id) }
                 onCloseRequested: root.settingsMode = false
             }
         }

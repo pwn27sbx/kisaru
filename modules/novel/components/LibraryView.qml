@@ -5,11 +5,18 @@ import qs.app
 import qs.Commons
 import qs.services
 import qs.components
+import "../../../services/library_filter.js" as LibraryFilter
 import "../../../services/list_metrics.js" as ListMetrics
 import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
     id: libraryView
+
+    // Owner §33.1: in Library the header's search filters the saved titles
+    // locally, by title, as the text arrives (no debounce, no network). Esc or
+    // clearing the field shows the whole shelf again.
+    property string query: ""
+    readonly property var shownList: LibraryFilter.filter(Novel.libraryList, query)
 
     readonly property string fontDisplay: Style.font.family
     readonly property string fontBody:    Style.font.family
@@ -76,11 +83,8 @@ Item {
             cellWidth: (width - leftMargin - rightMargin) / CardMetrics.columns
             cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(30))
             clip: true; boundsBehavior: Flickable.StopAtBounds
-            model: Novel.libraryList
+            model: libraryView.shownList
 
-            // The shared bar, like every other view.
-            ScrollBar.vertical: StyledScrollBar {
-            }
 
             delegate: Item {
                 width: libGrid.cellWidth
@@ -123,10 +127,8 @@ Item {
             leftMargin: Gutter.left
             rightMargin: Gutter.right
             clip: true; boundsBehavior: Flickable.StopAtBounds
-            model: Novel.libraryList
+            model: libraryView.shownList
 
-            ScrollBar.vertical: StyledScrollBar {
-            }
 
             delegate: ListRow {
                 // The list's margins are not part of a delegate's width.

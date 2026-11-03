@@ -64,11 +64,10 @@ test("the header and the filter chips share one cell contract", () => {
     const qml = fs.readFileSync(path.resolve(__dirname, "../components/PanelHeader.qml"), "utf8");
     assert.match(qml, /HeaderCell\.cellStyle\(/);
     assert.match(qml, /import "\.\.\/services\/header_cell\.js" as HeaderCell/);
-    // Every selected state reads the same recipe: the header cell, the shared
-    // chip (filter chips and SUB/DUB) and the layout cell.
+    // Every selected state reads the same recipe: the header cell and the shared
+    // chip (filter chips and SUB/DUB, and the layout choice in the settings page).
     for (const [file, symbol] of [
         ["components/Chip.qml", "chip"],
-        ["components/ViewModeChip.qml", "chip"],
     ]) {
         const text = fs.readFileSync(path.resolve(__dirname, "../", file), "utf8");
         assert.match(text, /HeaderCell\.cellStyle\(/, `${file}: the selected state has no shared recipe`);
