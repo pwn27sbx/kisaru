@@ -279,7 +279,14 @@ Item {
     // the brand's ink line, animated so it reads as growing out of the icon.
     SearchField {
         id: searchField
-        anchors.verticalCenter: parent.verticalCenter
+        // Above the brand, the tabs and the filter: the open field covers them
+        // (owner, 2026-11-02 — it was drawn underneath).
+        z: 10
+        // The full header block, like the tab and icon cells: one flat band, not
+        // a smaller pill inside it.
+        y: 0
+        height: root.implicitHeight
+        radius: Style.space(0) // style-ignore — the header cells are square
         visible: root.searchOpen || width > 1
         // Its right edge is the search icon; its width runs back to the brand's
         // ink line, and x follows so the box grows out of the icon leftwards.

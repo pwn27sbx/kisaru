@@ -48,6 +48,11 @@ test("the search field grows from its icon towards the brand", () => {
     assert.match(header, /property bool searchOpen/);
     // And it stops where the brand starts, on the cards' ink line.
     assert.match(header, /Gutter\.left \+ Gutter\.ink/);
+    // Owner, 2026-11-02: it must be drawn ABOVE the brand, the tabs and the
+    // filter, and take the whole header block — one flat band, not a pill.
+    assert.match(header, /id: searchField[\s\S]{0,300}?z:\s*10/, "the field must paint above the header items");
+    assert.match(header, /height:\s*root\.implicitHeight/, "the field must be as tall as the header cells");
+    assert.match(header, /radius:\s*Style\.space\(0\)/, "the open field must be square, not a pill");
 });
 
 test("no panel keeps a second row, a tool bar or a scrollbar", () => {
