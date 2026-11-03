@@ -123,22 +123,9 @@ Rectangle {
         width: Style.space(16)
         height: Style.space(16)
 
-        Rectangle {
-            anchors.fill: parent
-            visible: !root.hasText
-            radius: Style.cornerRadius
-            color: Colors.surface_container_highest
-            border.width: Style.spacing.hairline
-            border.color: Colors.outline_variant
-
-            StyledText {
-                anchors.centerIn: parent
-                text: "/"
-                color: Colors.muted
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
-            }
-        }
+        // The "/" key hint is gone (owner, 2026-11-02: "ese icon se va"); the
+        // status bar already teaches the shortcut. This slot is the clear cell
+        // once there is text, so it keeps its place without the badge.
 
         ClickableRect {
             anchors.fill: parent

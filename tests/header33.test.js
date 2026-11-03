@@ -48,11 +48,15 @@ test("the search field grows from its icon towards the brand", () => {
     assert.ok(!/fullWidth:[\s\S]{0,200}?mapToItem/.test(header),
         "fullWidth must not depend on mapToItem, which never re-evaluates");
     assert.match(header, /clip: true/, "the field must clip its own text");
-    assert.match(header, /x:\s*\(Gutter\.left \+ Gutter\.ink\) \+ \(fullWidth - width\)/);
+    // Owner, 2026-11-02: at full width it starts at the panel's left corner, so
+    // this is the one place the card-edge rule is overridden on purpose.
+    assert.match(header, /x:\s*fullWidth - width/);
     assert.match(header, /width:\s*root\.searchOpen \? fullWidth : 0[\s\S]*?Behavior on width/);
     assert.match(header, /property bool searchOpen/);
-    // And it stops where the brand starts, on the cards' ink line.
+    // The brand keeps the cards' ink line; the open field does not (it is chrome).
     assert.match(header, /Gutter\.left \+ Gutter\.ink/);
+    assert.ok(!/fullWidth:[\s\S]{0,200}?Gutter\.left/.test(header),
+        "the open field must reach the panel corner, not the brand's ink line");
     // Owner, 2026-11-02: it must be drawn ABOVE the brand, the tabs and the
     // filter, and take the whole header block — one flat band, not a pill.
     assert.match(header, /id: searchField[\s\S]{0,300}?z:\s*10/, "the field must paint above the header items");
@@ -115,4 +119,11 @@ test("each panel feeds the library view the live query", () => {
         assert.match(read(file), /query:\s*root\.searchOpen[^\n]*header\.searchText/,
             `${file} does not give the shelf the query`);
     }
+});
+
+test("the open field has no \"/\" hint badge (owner, 2026-11-02)", () => {
+    const field = read("components/SearchField.qml");
+    assert.ok(!/text:\s*"\/"/.test(field), "the / badge is still drawn inside the field");
+    // The clear cell still exists for when there is text.
+    assert.match(field, /userClear\(\)/, "the clear cell was removed with the badge");
 });

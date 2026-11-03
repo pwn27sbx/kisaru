@@ -296,11 +296,15 @@ Item {
         // (diagnosis, 2026-11-02: fullWidth froze at 0 and the field became a
         // 0-width square). searchButton.x and actionsRow.x are real properties,
         // so this re-evaluates when the layout moves.
+        // The open field runs from the panel's left corner to the search icon
+        // (owner, 2026-11-02). This is the one place the card-edge rule is
+        // overridden on purpose: the open field is chrome, not content.
         readonly property real fullWidth: Math.max(0,
-            searchButton.x + actionsRow.x - Style.spacing.sm - (Gutter.left + Gutter.ink))
+            searchButton.x + actionsRow.x - Style.spacing.sm)
         // The right edge is fixed (it follows the icon's left); the width grows
-        // from 0 to fullWidth and x follows it, so the box grows leftwards.
-        x: (Gutter.left + Gutter.ink) + (fullWidth - width)
+        // from 0 to fullWidth and x follows it, so the box grows leftwards and at
+        // full width it starts at x = 0, the panel's corner.
+        x: fullWidth - width
         width: root.searchOpen ? fullWidth : 0
         Behavior on width { NumberAnimation { duration: Motion.base; easing.type: Motion.easeOut } }
         placeholder: root.searchPlaceholder
