@@ -288,10 +288,18 @@ Item {
         height: root.implicitHeight
         radius: Style.space(0) // style-ignore — the header cells are square
         visible: root.searchOpen || width > 1
+        clip: true
         // Its right edge is the search icon; its width runs back to the brand's
         // ink line, and x follows so the box grows out of the icon leftwards.
+        // Reactive on purpose: mapToItem() is not, and a binding that calls it is
+        // evaluated once at creation, when the row has not laid out yet
+        // (diagnosis, 2026-11-02: fullWidth froze at 0 and the field became a
+        // 0-width square). searchButton.x and actionsRow.x are real properties,
+        // so this re-evaluates when the layout moves.
         readonly property real fullWidth: Math.max(0,
-            searchButton.mapToItem(root, 0, 0).x - Style.spacing.sm - (Gutter.left + Gutter.ink))
+            searchButton.x + actionsRow.x - Style.spacing.sm - (Gutter.left + Gutter.ink))
+        // The right edge is fixed (it follows the icon's left); the width grows
+        // from 0 to fullWidth and x follows it, so the box grows leftwards.
         x: (Gutter.left + Gutter.ink) + (fullWidth - width)
         width: root.searchOpen ? fullWidth : 0
         Behavior on width { NumberAnimation { duration: Motion.base; easing.type: Motion.easeOut } }

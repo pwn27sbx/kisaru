@@ -42,7 +42,12 @@ test("the search field grows from its icon towards the brand", () => {
     const header = read("components/PanelHeader.qml");
     // Its right edge is the icon and its left edge is fixed, so x follows the
     // width: the box grows out of the icon towards the brand.
-    assert.match(header, /id: searchField[\s\S]*?fullWidth:[\s\S]*?searchButton\.mapToItem/);
+    // Reactive on purpose: mapToItem() froze the width at creation (diagnosis,
+    // 2026-11-02), so the width must come from real properties only.
+    assert.match(header, /fullWidth:[\s\S]*?searchButton\.x \+ actionsRow\.x/);
+    assert.ok(!/fullWidth:[\s\S]{0,200}?mapToItem/.test(header),
+        "fullWidth must not depend on mapToItem, which never re-evaluates");
+    assert.match(header, /clip: true/, "the field must clip its own text");
     assert.match(header, /x:\s*\(Gutter\.left \+ Gutter\.ink\) \+ \(fullWidth - width\)/);
     assert.match(header, /width:\s*root\.searchOpen \? fullWidth : 0[\s\S]*?Behavior on width/);
     assert.match(header, /property bool searchOpen/);
