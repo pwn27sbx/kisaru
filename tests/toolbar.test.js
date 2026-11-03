@@ -59,11 +59,15 @@ test("the tool bar takes the panel gutter, and no control carries a margin", () 
     const toolbar = read("components/ToolBar.qml");
     assert.match(toolbar, /Layout\.leftMargin:\s*Gutter\.left/);
     assert.match(toolbar, /Layout\.rightMargin:\s*Gutter\.right/);
-    // A control with its own margin is exactly the bug §32.1 describes.
-    assert.ok(!/MenuSelect\s*\{[^}]*Layout\.(left|right)Margin/s.test(toolbar),
-        "the filter menu must not add a margin of its own");
+    // The rule is measured on INK (owner, 2026-11-02): the row takes the gutter
+    // and the two controls that own an edge take the card's ink inset, so their
+    // visible pixels — the label and the selected fill — sit on the cards' line.
+    assert.match(toolbar, /MenuSelect\s*\{[\s\S]*?Layout\.leftMargin:\s*Gutter\.ink/,
+        "the filter menu must start on the cards' ink line");
+    assert.match(toolbar, /ViewModeToggle\s*\{[\s\S]*?Layout\.rightMargin:\s*Gutter\.ink/,
+        "the toggle must end on the cards' ink line");
     assert.ok(!/SearchField\s*\{[^}]*Layout\.(left|right)Margin/s.test(toolbar),
-        "the search field must not add a margin of its own");
+        "the search field is interior: it must not add a margin of its own");
     // One height for the row, handed to the controls that measure themselves.
     assert.match(toolbar, /readonly property int controlHeight/);
     assert.match(toolbar, /cellHeight:\s*root\.controlHeight/);
@@ -86,8 +90,11 @@ test("the grids, the lists and the tool bar read one gutter", () => {
         assert.ok(source.includes("Gutter.right"), `${file} does not take the right gutter`);
     }
     const gutter = read("services/Gutter.qml");
+    // Owner, 2026-11-02: one margin for both sides, and the bar inside it.
     assert.match(gutter, /left:\s*Style\.spacing\.lg/);
-    assert.match(gutter, /right:\s*Style\.spacing\.lg\s*\+\s*Style\.space\(Metrics\.LANE\)/);
+    assert.match(gutter, /right:\s*Style\.spacing\.lg\n/);
+    assert.ok(!/right:\s*Style\.spacing\.lg\s*\+/.test(gutter),
+        "the right gutter must not be wider than the left one");
 });
 
 test("there is one dropdown implementation, and both users take it", () => {

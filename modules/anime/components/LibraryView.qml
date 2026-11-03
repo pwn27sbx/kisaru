@@ -67,7 +67,7 @@ Item {
             active: libraryView.listMode && !Anime.libraryLoaded
             rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
             cover: true
-            inset: Style.space(0)
+            inset: Gutter.ink
         }
 
         GridView {
@@ -77,7 +77,9 @@ Item {
             topMargin: Style.spacing.xl; leftMargin: Gutter.left; bottomMargin: Style.spacing.xl
             // The bar's lane goes on top of the grid's own inset (owner §30).
             rightMargin: Gutter.right
-            cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
+            // No floor: the columns share the width exactly, so the last card
+            // ends on the panel's right ink line (owner, 2026-11-02).
+            cellWidth: (width - leftMargin - rightMargin) / CardMetrics.columns
             cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(28))
             clip: true; boundsBehavior: Flickable.StopAtBounds
             model: Anime.libraryList
@@ -158,7 +160,7 @@ Item {
                 source: entry.thumbnail || ""
                 title: entry.englishName || entry.name || ""
                 bodyFont: libraryView.fontBody
-                inset: Style.space(0)
+                inset: Gutter.ink
                 score: {
                     var value = Number(entry.score)
                     return (entry.score !== null && entry.score !== undefined

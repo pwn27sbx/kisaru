@@ -32,6 +32,9 @@ Item {
     // The header cell opens its list to the left; the tool bar opens it below
     // the button's own left edge.
     property bool alignRight: false
+    // When true the label's ink sits on the panel's gutter ink (the tool bar),
+    // instead of being centred inside the button like the header's picker.
+    property bool edgeAligned: false
 
     signal chosen(var value)
 
@@ -98,7 +101,9 @@ Item {
 
     Row {
         id: buttonRow
-        anchors.centerIn: parent
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.horizontalCenter: root.edgeAligned ? undefined : parent.horizontalCenter
+        anchors.left: root.edgeAligned ? parent.left : undefined
         spacing: Style.spacing.sm
 
         StyledText {

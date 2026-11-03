@@ -25,6 +25,9 @@ Row {
     // The tool bar sets one height for every control in its row; 0 keeps the
     // chip formula (a body line plus the control padding).
     property int cellHeight: 0
+    // When set, the pair's glyphs sit on the cards' ink line (owner §32.1) instead
+    // of being centred inside their cells.
+    property bool edgeAligned: false
 
     spacing: Style.spacing.xxs
 
@@ -34,6 +37,8 @@ Row {
         current: !root.listMode
         bodyFont: root.fontFamily
         cellHeight: root.cellHeight
+        edgeAligned: root.edgeAligned
+        glyphRight: false
         onClicked: UiPrefs.setViewMode(root.panel, "grid")
     }
 
@@ -43,6 +48,8 @@ Row {
         current: root.listMode
         bodyFont: root.fontFamily
         cellHeight: root.cellHeight
+        edgeAligned: root.edgeAligned
+        glyphRight: true
         onClicked: UiPrefs.setViewMode(root.panel, "list")
     }
 }

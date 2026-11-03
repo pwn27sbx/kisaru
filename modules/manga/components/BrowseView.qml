@@ -117,7 +117,7 @@ Item {
                 z: 10
                 rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
                 cover: true
-                inset: Style.space(0)
+                inset: Gutter.ink
                 active: browseView.listMode && Manga.isFetchingManga && Manga.mangaList.length === 0
             }
 
@@ -236,8 +236,10 @@ Item {
                 anchors.fill: parent
                 anchors.topMargin: Style.spacing.xl
                 anchors.bottomMargin: Style.spacing.xl
-                // Rows stop before the bar's lane (owner §30).
-                anchors.rightMargin: Style.space(ScrollMetrics.LANE)
+                // The rows' box is the panel gutter, both sides (owner §32.1);
+                // the bar lives inside it.
+                anchors.leftMargin: Gutter.left
+                anchors.rightMargin: Gutter.right
                 visible: browseView.listMode
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
@@ -256,7 +258,7 @@ Item {
                     // row adds no inset of its own (owner §32.1).
                     width: mangaRows.width
                     height: implicitHeight
-                    inset: Style.space(0)
+                    inset: Gutter.ink
                     source: modelData.thumbUrl || ""
                     title: modelData.title || ""
                     bodyFont: browseView.fontBody

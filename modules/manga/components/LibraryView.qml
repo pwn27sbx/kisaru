@@ -82,7 +82,7 @@ Item {
             Layout.rightMargin: Gutter.right
             rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
             cover: true
-            inset: Style.space(0)
+            inset: Gutter.ink
             active: !Manga.libraryLoaded && libraryView.listMode
         }
 
@@ -96,7 +96,9 @@ Item {
             leftMargin: Gutter.left
             rightMargin: Gutter.right
             bottomMargin: Style.spacing.xl
-            cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
+            // No floor: the columns share the width exactly, so the last card
+            // ends on the panel's right ink line (owner, 2026-11-02).
+            cellWidth: (width - leftMargin - rightMargin) / CardMetrics.columns
             cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(30))
             clip: true
             boundsBehavior: Flickable.StopAtBounds
@@ -171,7 +173,7 @@ Item {
             delegate: ListRow {
                 width: libRows.width - libRows.leftMargin - libRows.rightMargin
                 height: implicitHeight
-                inset: Style.space(0)
+                inset: Gutter.ink
                 // The rows' box is already the gutter's; no inner padding.
 
                 readonly property var libEntry: modelData

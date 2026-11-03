@@ -62,9 +62,16 @@ test("every scrolling view reserves the lane for the bar", () => {
         const source = read(file);
         assert.ok(source.includes("Gutter."), `${file} must take the panel gutter`);
     }
+    // Owner, 2026-11-02: the visible margin is the same on both sides, and the
+    // bar lives INSIDE the gutter instead of claiming a lane of its own.
     const gutter = read("services/Gutter.qml");
-    assert.match(gutter, /right:\s*Style\.spacing\.lg\s*\+\s*Style\.space\(Metrics\.LANE\)/,
-        "the right gutter must include the scrollbar lane");
+    assert.match(gutter, /left:\s*Style\.spacing\.lg/, "the left margin must be the panel gutter");
+    assert.match(gutter, /right:\s*Style\.spacing\.lg/, "the right margin must be the same gutter");
+    assert.ok(!/right:\s*Style\.spacing\.lg\s*\+/.test(gutter),
+        "the right gutter must not add a lane on top of the left one");
+    assert.match(gutter, /ink:\s*Style\.space\(5\)/, "the card's ink inset must have a name");
+    assert.match(read("components/CoverCard.qml"), /anchors\.margins:\s*Style\.space\(5\)/,
+        "the card's own margin must be the ink the controls align to");
 });
 
 test("the toggle has no frame and takes its height from the chips", () => {

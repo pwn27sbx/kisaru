@@ -64,7 +64,11 @@ RowLayout {
         id: menu
         visible: root.filterOptions !== undefined && root.filterOptions.length > 0
         Layout.alignment: Qt.AlignVCenter
+        // The menu's box sits on the cards' ink line, so its label and its hover
+        // fill both start there (owner, 2026-11-02).
+        Layout.leftMargin: Gutter.ink
         controlHeight: root.controlHeight
+        edgeAligned: true
         options: root.filterOptions
         currentValue: root.filterValue
         dimmed: root.filterDimmed
@@ -95,9 +99,14 @@ RowLayout {
     ViewModeToggle {
         id: toggle
         Layout.alignment: Qt.AlignVCenter
+        // Its selected cell is a solid fill, so the PAIR sits on the cards' ink
+        // line and the glyphs hug the outer edges: whichever cell is selected,
+        // the last visible pixel is the cards' right edge (owner, 2026-11-02).
+        Layout.rightMargin: Gutter.ink
         panel: root.panel
         listMode: root.listMode
         fontFamily: root.fontFamily
         cellHeight: root.controlHeight
+        edgeAligned: true
     }
 }

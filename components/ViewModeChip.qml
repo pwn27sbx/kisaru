@@ -21,6 +21,13 @@ ClickableRect {
     property string bodyFont: ""
     // The tool bar makes its controls one height (§32.1); 0 keeps the chip formula.
     property int cellHeight: 0
+    // Ink alignment (owner, 2026-11-02): in the tool bar the glyph hugs the cell's
+    // outer edge instead of being centred, so the pair's first and last visible
+    // pixels sit on the cards' ink line whichever cell is selected. Outside the
+    // tool bar the glyph stays centred.
+    property bool edgeAligned: false
+    property bool glyphRight: false
+    property int glyphInset: 0
 
     // A square cell: the height a chip gets, and the same for the width, which
     // is what an icon button of this family looks like.
@@ -56,7 +63,12 @@ ClickableRect {
 
     StyledText {
         id: glyphText
-        anchors.centerIn: parent
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.horizontalCenter: chip.edgeAligned ? undefined : parent.horizontalCenter
+        anchors.left: chip.edgeAligned && !chip.glyphRight ? parent.left : undefined
+        anchors.right: chip.edgeAligned && chip.glyphRight ? parent.right : undefined
+        anchors.leftMargin: chip.glyphInset
+        anchors.rightMargin: chip.glyphInset
         text: chip.glyph
         font.family: chip.bodyFont
         font.pixelSize: Style.font.body

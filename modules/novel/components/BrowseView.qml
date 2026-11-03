@@ -87,7 +87,7 @@ Item {
                 z: 10
                 rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
                 cover: true
-                inset: Style.space(0)
+                inset: Gutter.ink
                 active: browseView.listMode && Novel.isFetchingNovel && Novel.novelList.length === 0
             }
 
@@ -123,7 +123,9 @@ Item {
                 // One gutter with the tool bar (owner §32.1).
                 anchors.leftMargin: Gutter.left
                 anchors.rightMargin: Gutter.right
-                cellWidth: Math.floor(width / CardMetrics.columns)
+                // No floor: the columns share the width exactly, so the last card
+                // ends on the panel's right ink line (owner, 2026-11-02).
+                cellWidth: width / CardMetrics.columns
                 cellHeight: CardMetrics.cellHeight(cellWidth)
                 clip: true; boundsBehavior: Flickable.StopAtBounds
                 // A ScriptModel diffs each new array against the last, so appending a
@@ -190,7 +192,7 @@ Item {
                 delegate: ListRow {
                     width: novelRows.width
                     height: implicitHeight
-                    inset: Style.space(0)
+                    inset: Gutter.ink
                     source: modelData.coverUrl || ""
                     title: modelData.title || ""
                     bodyFont: browseView.fontBody

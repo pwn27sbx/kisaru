@@ -60,7 +60,7 @@ Item {
             active: libraryView.listMode && !Novel.libraryLoaded
             rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
             cover: true
-            inset: Style.space(0)
+            inset: Gutter.ink
         }
 
         GridView {
@@ -71,7 +71,9 @@ Item {
             // The bar's lane goes on top of the grid's own inset (owner §30).
             rightMargin: Gutter.right
             bottomMargin: Style.spacing.xl
-            cellWidth: Math.floor((width - leftMargin - rightMargin) / CardMetrics.columns)
+            // No floor: the columns share the width exactly, so the last card
+            // ends on the panel's right ink line (owner, 2026-11-02).
+            cellWidth: (width - leftMargin - rightMargin) / CardMetrics.columns
             cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(30))
             clip: true; boundsBehavior: Flickable.StopAtBounds
             model: Novel.libraryList
@@ -133,7 +135,7 @@ Item {
                 source: modelData.coverUrl || ""
                 title: modelData.title || ""
                 bodyFont: libraryView.fontBody
-                inset: Style.space(0)
+                inset: Gutter.ink
                 meta: ""
                 progress: modelData.lastReadChapterNum ? I18n.t("ch", { 1: modelData.lastReadChapterNum }) : I18n.t("state.notStarted")
                 progressActive: !!modelData.lastReadChapterNum
