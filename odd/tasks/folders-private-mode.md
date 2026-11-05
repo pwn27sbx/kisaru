@@ -170,3 +170,12 @@ parts of S1-S4; everything else (private mode, locking, progress, logs, paths) s
 - **L14 (false alarm).** Two screenshots showed skeleton rows or a missing panel right after a
   file save: Quickshell's hot reload recreated the view while the library was re-reading. With a
   clean start the same clicks render the folder view; no QML error was logged.
+- **L15 (v2 review).** The v2 delta alone was reviewed (the full branch exceeded the native reviewer
+  budget). Four lenses admitted; the refuter confirmed one blocker: a folder opened while unlocked
+  kept its toolbar after a lock and `_toggleHidden` had no lock guard. Fixed in `c0b6561`: the folder
+  view and its hide/rename/delete depend on `!Privacy.locked`, the actions refuse while locked and
+  the status line never names a folder then. The targeted validator approved the correction; the
+  acknowledgement burned authority. Advisory findings left as later work: the three LibraryView /
+  DetailView copies have drifted (a shared component would be better), an empty folder shows a blank
+  area, `folder.new` and `folder.create` duplicate the same label, and a few picker metrics are
+  literals.
