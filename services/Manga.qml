@@ -6,6 +6,7 @@ import "library.js" as Library
 import qs.services
 import "app_paths.js" as Paths
 import "library_view.js" as LibraryViewJs
+import "search_paging.js" as SearchPaging
 
 Singleton {
     id: root
@@ -453,8 +454,14 @@ Singleton {
             mangaList = replace ? mapped : [...mangaList, ...mapped]
 
             hasMoreManga = isHot ? false : (data.hasMore || false)
-            if (!isHot && !isLatest)
-                currentOffset = data.nextOffset || (currentOffset + items.length)
+            if (!isHot && !isLatest) {
+                // The chain merges every source, so the page advances by the
+                // offset it reports and stops if that offset does not move
+                // (services/search_paging.js, where the rule is pinned).
+                var page = SearchPaging.nextPage(currentOffset, data, items.length)
+                hasMoreManga = page.hasMore
+                currentOffset = page.offset
+            }
 
             mangaError = ""
         } catch (e) {
