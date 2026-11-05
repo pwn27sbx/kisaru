@@ -162,6 +162,33 @@ Se cierra con la flecha de volver o `Esc`. Todo se guarda en
 Un solo escritor mantiene ese archivo (`services/UiPrefs.qml`): cambiar una clave nunca
 borra las demás.
 
+## Carpetas y modo privado
+
+La Biblioteca tiene una fila de carpetas bajo el header, en los tres paneles:
+**Todas**, cada carpeta y **+**. Crear, renombrar y borrar desde esa fila; borrar una
+carpeta **nunca borra títulos**, solo los devuelve a Todas. La carpeta de un título se
+elige en su ficha (**Detalle**), no en la tarjeta.
+
+Con una palabra secreta configurada aparece además el candado y la opción de **ocultar**
+una carpeta:
+
+```sh
+kisaru privado       # pide la palabra dos veces, sin eco y sin argumentos
+```
+
+La palabra no queda en el historial del shell ni en la interfaz. Se guarda como
+`privacy.json` (modo `0600`) con sal y una clave scrypt; la app solo guarda una etiqueta
+de un dígito para decidir si una búsqueda merece una comprobación. Una carpeta oculta y
+sus títulos **no existen** mientras el modo está bloqueado: no aparecen en la
+cuadrícula, la lista, el estado vacío, los contadores, la línea de estado ni la búsqueda
+de la biblioteca. Se desbloquea escribiendo la palabra en el buscador (sin mensaje); se
+vuelve a bloquear al cerrar, minimizar o cambiar de panel, al escribirla otra vez, con
+el candado, y al arrancar la app. `kisaru privado` también sirve para reemplazarla, tras
+confirmar.
+
+Esto oculta la interfaz, **no cifra nada**: los títulos siguen en texto plano en los
+archivos de la biblioteca. No hay bloqueo por inactividad.
+
 ## Fuentes por panel
 
 - **Anime:** hianime primero; si el stream no trae pista de subtítulos en español, cae a
@@ -225,6 +252,8 @@ suites y subir `supported` a propósito) está documentado en el README del widg
 
 - Bibliotecas y progreso de lectura: `~/.local/share/kisaru/{anime,manga}_library.json`,
   `~/.local/share/kisaru/new_novel_library.json`
+- Carpetas: `~/.local/share/kisaru/organizer.json`
+- Palabra del modo privado: `~/.local/share/kisaru/privacy.json` (modo `0600`)
 - Descargas y cachés: `~/.local/share/kisaru/downloads`, `~/.cache/kisaru/`
 
 Las versiones anteriores vivían en `~/.local/share/quickshell*`; la regla de compatibilidad

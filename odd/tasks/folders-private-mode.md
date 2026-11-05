@@ -71,15 +71,15 @@ Source plan: `~/Documents/MisokuVault/QS NovelMangaReader/2026-11-05-carpetas-mo
 
 | ID | Spec | Route | Status | Evidence |
 |----|------|-------|--------|----------|
-| T1 | S1,S3,S12 | inline | done | `library_view.js`, `lock_state.js`, `privacy.js`, path tests |
-| T2 | S6 | inline | done | `scripts/privado.py`, CLI + fold parity tests |
-| T3 | S1,S2 | inline | done | `Organizer.qml`, CRUD wiring |
-| T4 | S6,S7,S8 | inline | done | `Privacy.qml`, `shell.qml` hook |
-| T5 | S3,S4,S9 | inline | done | three `LibraryView.qml`, `FolderRow.qml`, `FolderPrompt.qml` |
-| T6 | S5,S9,S10 | inline | done | three `DetailView.qml`, service accessors |
-| T7 | S9,S11 | inline | done | services: visibility, progress guard, log scrub |
-| T8 | S7,S8 | inline | done | panels: debounce, secret hook, lock reset, counts/status |
-| T9 | S13 | inline | done | i18n tables, README |
+| T1 | S1,S3,S12 | inline | done | `66b118d` — `library_view.js`, `lock_state.js`, `privacy.js`, path tests |
+| T2 | S6 | inline | done | `66b118d` — `scripts/privado.py`, CLI + fold parity tests |
+| T3 | S1,S2 | inline | done | `d4bb6ca` + `60098b6` — `Organizer.qml`, CRUD wiring |
+| T4 | S6,S7,S8 | inline | done | `d4bb6ca` — `Privacy.qml`, `shell.qml` hook |
+| T5 | S3,S4,S9 | inline | done | `60098b6` — three `LibraryView.qml`, `FolderRow.qml`, `FolderPrompt.qml` |
+| T6 | S5,S9,S10 | inline | done | `60098b6` — three `DetailView.qml`, service accessors |
+| T7 | S9,S11 | inline | done | `d4bb6ca` — services: visibility, progress guard, log scrub |
+| T8 | S7,S8 | inline | done | `60098b6` — panels: debounce, secret hook, lock reset, counts/status |
+| T9 | S13 | inline | done | `60098b6` — i18n tables; README in the closing commit |
 | T10 | S14 | inline | done | `node --test` + live check |
 
 ## Log
@@ -95,3 +95,10 @@ Source plan: `~/Documents/MisokuVault/QS NovelMangaReader/2026-11-05-carpetas-mo
 - **L3 (decision).** The visible list is computed once per panel by `library_view.js`; services expose
   `visibleEntries`, `visibleCount`, `visibleEntryId` and `visibleEntry`, while the raw
   `isInLibrary` / `getLibraryEntry` / `libraryEntryId` stay untouched for writes.
+- **L4 (plan conflict, resolved).** Amendment 16 names `Muñeca` for the fold-parity test, while
+  amendment 21 refuses words under 8 folded characters and `Muñeca` is 6. The setup minimum stays
+  as written; the parity test writes a valid record for `Muñeca` directly and runs the real
+  `privado.py --check`, then verifies the same record with `services/privacy.js`. The short-word
+  refusal is tested on its own.
+- **L5 (RED first).** The view, lock and privacy tests failed before the modules existed; the CLI
+  tests drove the real helper from the start. The final `node --test` run is recorded in T10.
