@@ -401,8 +401,8 @@ test("the folder row and private mode are wired in all three panels", () => {
         assert.match(qml, /onLockRequested: Privacy\.lock\(\)/, `${file}: no padlock action`);
     }
     const row = read("components/FolderRow.qml");
-    assert.match(row, /anchors\.leftMargin: Gutter\.left/);
-    assert.match(row, /anchors\.rightMargin: Gutter\.right/);
+    assert.match(row, /anchors\.leftMargin: Gutter\.left \+ Gutter\.ink/);
+    assert.match(row, /anchors\.rightMargin: Gutter\.right \+ Gutter\.ink/);
     assert.match(row, /signal lockRequested\(\)/);
     assert.match(row, /visible: Privacy\.configured && !Privacy\.locked/);
 });

@@ -106,8 +106,10 @@ Item {
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: Gutter.left
-        anchors.rightMargin: Gutter.right
+        // The row is a band of controls, so its visible box lines up with the
+        // cards' ink and the header brand, not with their outer box.
+        anchors.leftMargin: Gutter.left + Gutter.ink
+        anchors.rightMargin: Gutter.right + Gutter.ink
         spacing: Style.spacing.sm
 
         Flickable {

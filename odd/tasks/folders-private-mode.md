@@ -80,7 +80,7 @@ Source plan: `~/Documents/MisokuVault/QS NovelMangaReader/2026-11-05-carpetas-mo
 | T7 | S9,S11 | inline | done | `d4bb6ca` — services: visibility, progress guard, log scrub |
 | T8 | S7,S8 | inline | done | `60098b6` — panels: debounce, secret hook, lock reset, counts/status |
 | T9 | S13 | inline | done | `60098b6` — i18n tables; README in the closing commit |
-| T10 | S14 | inline | done | `node --test` + live check |
+| T10 | S14 | inline | done | `node --test` 217 pass + live check (grid and list) |
 
 ## Log
 
@@ -102,3 +102,17 @@ Source plan: `~/Documents/MisokuVault/QS NovelMangaReader/2026-11-05-carpetas-mo
   refusal is tested on its own.
 - **L5 (RED first).** The view, lock and privacy tests failed before the modules existed; the CLI
   tests drove the real helper from the start. The final `node --test` run is recorded in T10.
+- **L6 (live check).** Sandbox at `/var/tmp/kisaru-live` (`XDG_DATA_HOME`/`XDG_CONFIG_HOME`), old-format library
+  files, one visible old entry, one folder entry and one hidden entry per kind, folders in `organizer.json`,
+  and a test word created with `scripts/privado.py`. The owner's libraries were never opened for writing.
+  Manga: locked Library showed 2 titles, the hidden folder absent, badge 2 and "2 en la biblioteca"; typing
+  the test word cleared the field and showed the hidden folder, title and badge 3; selecting the hidden
+  folder gave "3 en la biblioteca · Privado"; the padlock returned to Todas and 2. The same held in list
+  mode after a restart. Anime (1 visible, hidden folder absent, "1 en la biblioteca · SUB") and novel
+  (1 visible) load in the sandbox. No QML errors in the app log.
+- **L7 (measured misalignment, fixed).** The first render put the folder row's box at x=7 while the grid
+  cards and the header brand's ink start at x=12: exactly `Gutter.ink` (5 px). The row now uses
+  `Gutter.left + Gutter.ink` / `Gutter.right + Gutter.ink`; re-measured at x=12 for the chip row, the
+  first card and the brand, in both view modes.
+- **L8 (final process).** The owner's app is restarted from the real tree after the last commit; its
+  start time is checked against `git log -1` as the plan requires.
