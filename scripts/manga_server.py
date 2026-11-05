@@ -1092,9 +1092,13 @@ class Handler(BaseHTTPRequestHandler):
                 if not q:
                     return self._error("missing q", 400)
                 if use_chain:
+                    # merge=1 is a real search: every source is asked and the
+                    # answers are merged and ranked. Without it the endpoint
+                    # keeps its old shape, which is what the catalog uses.
                     self._json(manga_chain.search(q, param("type") or None,
                                                    int(param("offset", "0")),
-                                                   param("sort", "Best Match")))
+                                                   param("sort", "Best Match"),
+                                                   merge=param("merge", "0") == "1"))
                 else:
                     self._json(search(q, param("type") or None,
                                       int(param("offset", "0")),

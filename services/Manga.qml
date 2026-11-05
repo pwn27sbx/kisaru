@@ -384,7 +384,7 @@ Singleton {
                 _parseMangaResults(body)
             })
         } else {
-            _doSearch("a", _originType(origin), currentOffset, "Popularity")
+            _doSearch("a", _originType(origin), currentOffset, "Popularity", false, false)
         }
     }
 
@@ -394,27 +394,31 @@ Singleton {
         // that never comes back used to leave the panel blank.
         if (reset) currentOffset = 0
         currentSearchText = query
-        _doSearch(query, _originType(currentOrigin), currentOffset, "Best Match", reset)
+        _doSearch(query, _originType(currentOrigin), currentOffset, "Best Match", reset, true)
     }
 
     function fetchNextMangaPage() {
         if (!hasMoreManga || isFetchingManga) return
         if (currentSearchText.length > 0) {
-            _doSearch(currentSearchText, _originType(currentOrigin), currentOffset, "Best Match")
+            _doSearch(currentSearchText, _originType(currentOrigin), currentOffset, "Best Match", false, true)
         } else if (currentOrigin === "latest") {
             latestPage++
             fetchByOrigin("latest", false)
         } else {
-            _doSearch("a", _originType(currentOrigin), currentOffset, "Popularity")
+            _doSearch("a", _originType(currentOrigin), currentOffset, "Popularity", false, false)
         }
     }
 
-    function _doSearch(query, type, offset, sort, replace) {
+    function _doSearch(query, type, offset, sort, replace, merge) {
         isFetchingManga = true
         mangaError = ""
         fetchWatchdog.restart()
         let url = root.apiUrl + "/search?q=" + encodeURIComponent(query)
             + "&offset=" + offset + "&sort=" + encodeURIComponent(sort)
+        // merge=1 is a person searching: every source is asked and the answers
+        // are merged and ranked. The catalog lists through the same endpoint
+        // (`q=a` by popularity) and keeps its old single-source shape.
+        if (merge) url += "&merge=1"
         if (type) url += "&type=" + encodeURIComponent(type)
         Http.get(url, function(err, body) {
             fetchWatchdog.stop()

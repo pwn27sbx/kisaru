@@ -25,18 +25,38 @@ the chain, otherwise WeebCentral (handled by manga_server.py).
 
 import os
 import re
+import threading
+import time
 
 import error_report
 
 import content_lang
 import inmanga_source
 import manga_sources
+import search_merge
 import titles
 import manhwaweb_source
 import zonatmo_org_source
 import zonatmo_source
 
 NO_SPANISH_MESSAGE = "Sin capítulos en español"
+
+# How long a search waits for ONE source, in seconds. The sources run in
+# parallel, so this is the whole search's ceiling when a source hangs: a dead
+# domain or a slow mirror is skipped instead of holding the page. Overridable
+# because a slow network may need more than the default (6 s).
+SEARCH_SOURCE_TIMEOUT = 6.0
+
+
+def _search_timeout():
+    raw = os.environ.get("QS_MANGA_SEARCH_TIMEOUT", "").strip()
+    if raw:
+        try:
+            return float(raw)
+        except ValueError:
+            pass
+    return SEARCH_SOURCE_TIMEOUT
+
 
 _MODULES = {
     "mangadex": manga_sources,
@@ -156,7 +176,48 @@ def title_hint(prefixed_id):
     return " ".join(w[:1].upper() + w[1:] for w in words)
 
 
-def search(query, mtype=None, offset=0, sort="Best Match"):
+def _search_one(name, query, mtype, offset, sort, answers):
+    """Ask one source and leave its page in `answers` (thread target)."""
+    module = _MODULES.get(name)
+    if module is None:
+        return
+    answers[name] = _try(lambda: module.search(query, mtype, offset, sort), None,
+                         source=name, op="search")
+
+
+def _search_answers(chain, query, mtype, offset, sort):
+    """Every source's answer, in chain order, each bounded by the time limit.
+
+    Sources run in parallel and are joined against ONE deadline, so a hanging
+    source costs the search at most `timeout()` and never blocks the others.
+    A source that raises is reported and skipped, exactly like the other
+    endpoints in this chain.
+    """
+    answers = {}
+    workers = []
+    for name in chain:
+        if _MODULES.get(name) is None:
+            continue
+        worker = threading.Thread(target=_search_one, name=f"search-{name}", daemon=True,
+                                  args=(name, query, mtype, offset, sort, answers))
+        worker.start()
+        workers.append((name, worker))
+    deadline = time.monotonic() + _search_timeout()
+    for name, worker in workers:
+        worker.join(max(0.0, deadline - time.monotonic()))
+        if worker.is_alive():
+            # The HTTP call may still finish later; its page is simply not used.
+            _report(TimeoutError("search timed out"), name, "search")
+    return [(name, answers[name]) for name, _worker in workers if name in answers]
+
+
+def _search_first(query, mtype=None, offset=0, sort="Best Match"):
+    """First source with results (the catalog path, unchanged).
+
+    Browse asks for a listing through the search endpoint (`q=a`, sorted by
+    popularity); merging every source there would turn the catalog into a
+    ranked search, so that path keeps the old first-answer behaviour.
+    """
     for name in active_chain():
         module = _MODULES.get(name)
         if module is None:
@@ -166,6 +227,39 @@ def search(query, mtype=None, offset=0, sort="Best Match"):
         if result and result.get("results"):
             return {**result, "results": _prefix_list(name, result["results"])}
     return {"results": [], "hasMore": False, "nextOffset": offset}
+
+
+def search(query, mtype=None, offset=0, sort="Best Match", merge=False):
+    """Search EVERY active source and return one merged, ranked page.
+
+    The old chain stopped at the first source with results: MangaDex's near
+    matches for a Spanish query hid the ManhwaWeb title that actually matched.
+    Now every source answers (in parallel, each bounded by the time limit), the
+    pages are deduplicated by folded title and ranked against the query, and the
+    ids keep the prefix of the source that produced them.
+
+    Only a real search merges: browse lists through `_search_first` (see it),
+    so the catalog keeps its old shape.
+
+    Paging: `offset` is the window start asked of EVERY source, so a page is the
+    union of the sources' windows at that offset. `nextOffset` advances by the
+    largest window a source returned, which is what keeps the sources from being
+    asked for the same items twice; `hasMore` is true when any source has more.
+    Deduplication is per page (the endpoint is stateless), so an item that moves
+    between sources' windows can show up on a later page.
+    """
+    if not merge:
+        return _search_first(query, mtype, offset, sort)
+    offset = max(0, int(offset or 0))
+    answers = _search_answers(active_chain(), query, mtype, offset, sort)
+    merged = search_merge.merge(answers, query)
+    results = [_prefix_item(source, item) for source, item in merged["items"]]
+    window = merged["window"]
+    return {
+        "results": results,
+        "hasMore": merged["hasMore"],
+        "nextOffset": offset + window if window else offset,
+    }
 
 
 def latest(page=1):
