@@ -4,6 +4,7 @@ import qs.services
 import qs.Commons
 import qs.Ui
 import "../services/header_cell.js" as HeaderCell
+import "../services/panels.js" as Panels
 
 // The header row, shared by the three panels (owner, round 6).
 //
@@ -209,7 +210,14 @@ Item {
                     var value = Number(counts[index])
                     return isFinite(value) ? value : -1
                 }
-                onClicked: root.tabActivated(index)
+                onClicked: {
+                    // One shared hook: every panel leaves the Library through
+                    // this cell. A title/open-folder transition never lands
+                    // here, so it never locks.
+                    var leaveLibrary = Panels.locksOnTabChange(root.tabIndex, index)
+                    root.tabActivated(index)
+                    if (leaveLibrary) Privacy.lock()
+                }
             }
         }
     }

@@ -276,3 +276,10 @@ search and it shows; simple.
   fast (8 ms) speed: **30/30 and 30/30, 100%**, with tag-hit prefixes present (some words
   1–3). The reported unlock failure was wrong (the owner's later evidence showed the word
   unlocks); no Privacy change was made.
+- **L27 (tab lock).** Leaving the Library tab hides everything again. The rule lives
+  once in `services/panels.js::locksOnTabChange` and one shared hook in
+  `components/PanelHeader.qml` (the only tab cell the three panels use), so no panel
+  carries its own copy. A return to Library does not unlock, and opening or closing a
+  title stays inside the Library stack without changing the tab, so it never locks. A
+  hidden title open in Detail follows the existing lock behaviour and returns to the
+  Library stack. Pinned in `tests/panels.test.js` and `tests/panel_wiring.test.js`.

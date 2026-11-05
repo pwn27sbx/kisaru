@@ -609,3 +609,31 @@ test("the visible library and the lock state are the only display path", () => {
         assert.match(read(file), /function getLibraryEntry\(/);
     }
 });
+test("leaving the Library tab locks through the shared header", () => {
+    const header = read("components/PanelHeader.qml");
+    assert.match(header, /import "\.\.\/services\/panels\.js" as Panels/);
+    assert.match(header, /Panels\.locksOnTabChange\(root\.tabIndex, index\)/,
+        "the tab cell does not ask the shared rule");
+    assert.match(header, /if \(leaveLibrary\) Privacy\.lock\(\)/,
+        "leaving the Library tab does not lock");
+
+    // No panel carries its own lock copy: opening and closing a title stays
+    // inside the Library stack and never changes the tab.
+    for (const file of PANELS) {
+        const qml = read(file);
+        assert.ok(!qml.includes("Privacy.lock()"),
+            `${file}: a per-panel lock call is back`);
+    }
+
+    // A hidden title open in Detail while switching tabs follows the existing
+    // lock behaviour: the panel returns to the Library stack.
+    for (const [file, service] of [
+        ["modules/manga/MangaReader.qml", "Manga"],
+        ["modules/novel/NovelReader.qml", "Novel"],
+        ["modules/anime/AnimePanel.qml", "Anime"],
+    ]) {
+        assert.match(read(file),
+            new RegExp(`${service}\\.isHiddenLibraryEntry\\([\\s\\S]{0,500}root\\.tabIndex = 1`),
+            `${file}: a hidden open title no longer returns to the Library on lock`);
+    }
+});
