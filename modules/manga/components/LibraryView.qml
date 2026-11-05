@@ -54,11 +54,17 @@ Item {
         return items
     }
 
-    readonly property string activeFolderName:
-        (activeFolder === "" || Privacy.locked) ? "" : ((Organizer.folder("manga", activeFolder) || {}).name || "")
     readonly property bool activeFolderHidden:
         activeFolder !== "" && Organizer.isHidden("manga", activeFolder)
-    readonly property bool folderOpen: activeFolder !== "" && !_searching && !Privacy.locked
+    // Closed off only while locked and hidden or unresolved: a visible folder
+    // opens while locked and without a secret, and an unresolved one fails
+    // closed. The hidden folder itself is only reachable while unlocked.
+    readonly property bool activeFolderLockedOut:
+        LibraryViewJs.lockedOut(activeFolder, Organizer.folders("manga"),
+            { loaded: Organizer.loaded, locked: Privacy.locked })
+    readonly property string activeFolderName:
+        (activeFolder === "" || activeFolderLockedOut) ? "" : ((Organizer.folder("manga", activeFolder) || {}).name || "")
+    readonly property bool folderOpen: activeFolder !== "" && !_searching && !activeFolderLockedOut
 
     readonly property string fontDisplay: Style.font.family
     readonly property string fontBody: Style.font.family
@@ -98,7 +104,7 @@ Item {
     }
 
     function _renameFolder(folderId) {
-        if (Privacy.locked) return
+        if (activeFolderLockedOut) return
         var folder = Organizer.folder("manga", folderId)
         _promptAction = "rename"
         _promptFolder = folderId
@@ -106,7 +112,7 @@ Item {
     }
 
     function _confirmDelete(folderId) {
-        if (Privacy.locked) return
+        if (activeFolderLockedOut) return
         var folder = Organizer.folder("manga", folderId)
         if (!folder) return
         _promptAction = "delete"
@@ -135,7 +141,7 @@ Item {
     }
 
     function _toggleHidden() {
-        if (activeFolder === "" || Privacy.locked) return
+        if (activeFolder === "" || Privacy.locked || !Privacy.configured) return
         Organizer.setHidden("manga", activeFolder, !activeFolderHidden)
     }
 
@@ -214,7 +220,7 @@ Item {
             }
 
             ClickableRect {
-                visible: !Privacy.locked
+                visible: !activeFolderLockedOut
                 Layout.preferredWidth: Style.space(28)
                 Layout.preferredHeight: Style.space(28)
                 color: hovered ? Colors.surface_container_high : "transparent"
@@ -237,7 +243,7 @@ Item {
             }
 
             ClickableRect {
-                visible: !Privacy.locked
+                visible: !activeFolderLockedOut
                 Layout.preferredWidth: Style.space(28)
                 Layout.preferredHeight: Style.space(28)
                 color: hovered ? Colors.surface_container_high : "transparent"
@@ -438,7 +444,8 @@ Item {
     Connections {
         target: Privacy
         function onLockedChanged() {
-            if (Privacy.locked) libraryView.activeFolder = ""
+            if (Privacy.locked && libraryView.activeFolderLockedOut)
+                libraryView.activeFolder = ""
         }
     }
 

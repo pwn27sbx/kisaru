@@ -383,10 +383,10 @@ test("the folder cards, the create card and the header padlock are wired", () =>
     // v2: no chip row. The root is a card grid (folders first, then folderless
     // titles), the open folder carries back/rename/delete, and the padlock is
     // chrome in the header.
-    for (const [file, kind, service] of [
-        ["modules/manga/components/LibraryView.qml", "manga", "Manga"],
-        ["modules/anime/components/LibraryView.qml", "anime", "Anime"],
-        ["modules/novel/components/LibraryView.qml", "novel", "Novel"],
+    for (const [file, kind] of [
+        ["modules/manga/components/LibraryView.qml", "manga"],
+        ["modules/anime/components/LibraryView.qml", "anime"],
+        ["modules/novel/components/LibraryView.qml", "novel"],
     ]) {
         const qml = read(file);
         assert.ok(!qml.includes("FolderRow"), `${file}: the chip row came back`);
@@ -401,16 +401,32 @@ test("the folder cards, the create card and the header padlock are wired", () =>
         assert.match(qml, /onQueryChanged:/, `${file}: no unlock hook`);
         assert.match(qml, /Privacy\.consider\(query/, `${file}: the query never reaches the helper`);
         assert.match(qml, /signal secretEntered\(\)/, `${file}: no collapse signal`);
-        assert.match(qml, /Organizer\.setHidden\("(manga|anime|novel)"/,
+        assert.match(qml, new RegExp(`Organizer\\.setHidden\\("${kind}"`),
             `${file}: the open folder cannot be hidden`);
         assert.match(qml, /folder\.count/, `${file}: the folder card has no count`);
-        // Locked: no folder view, no action, no folder name in the bar.
-        assert.match(qml, /folderOpen: activeFolder !== "" && !_searching && !Privacy\.locked/,
-            `${file}: the folder view survives a lock`);
-        assert.match(qml, /function _toggleHidden\(\) \{\n\s*if \(activeFolder === "" \|\| Privacy\.locked\) return/,
-            `${file}: a locked hide toggle can still run`);
-        assert.match(qml, /activeFolderName:\n\s*\(activeFolder === "" \|\| Privacy\.locked\)/,
-            `${file}: the status line names a folder while locked`);
+        // Only a hidden or unresolved folder is closed while locked. A
+        // visible folder opens with no secret, while locked, and a lock from
+        // inside it keeps it open.
+        assert.match(qml, new RegExp(`activeFolderLockedOut:\\n\\s*LibraryViewJs\\.lockedOut\\(activeFolder, Organizer\\.folders\\("${kind}"\\)`),
+            `${file}: the lock gate does not use lockedOut`);
+        assert.match(qml, /folderOpen: activeFolder !== "" && !_searching && !activeFolderLockedOut/,
+            `${file}: a visible folder is still gated by the lock`);
+        assert.match(qml, /activeFolderName:\n\s*\(activeFolder === "" \|\| activeFolderLockedOut\)/,
+            `${file}: the status line hides a visible folder while locked`);
+        assert.match(qml, /function _renameFolder\(folderId\) \{\n\s*if \(activeFolderLockedOut\) return/,
+            `${file}: rename is gated by the lock, not by the folder`);
+        assert.match(qml, /function _confirmDelete\(folderId\) \{\n\s*if \(activeFolderLockedOut\) return/,
+            `${file}: delete is gated by the lock, not by the folder`);
+        assert.match(qml, /function _toggleHidden\(\) \{\n\s*if \(activeFolder === "" \|\| Privacy\.locked \|\| !Privacy\.configured\) return/,
+            `${file}: hide/show is not limited to unlocked with a secret`);
+        assert.match(qml, /visible: !activeFolderLockedOut/,
+            `${file}: the rename/delete controls are hidden for a visible locked folder`);
+        assert.match(qml, /visible: Privacy\.configured && !Privacy\.locked/,
+            `${file}: the hide/show control is shown while locked`);
+        assert.match(qml, /if \(Privacy\.locked && libraryView\.activeFolderLockedOut\)\n\s*libraryView\.activeFolder = ""/,
+            `${file}: a lock always sends the view back to the root`);
+        assert.ok(!qml.includes('folderOpen: activeFolder !== "" && !_searching && !Privacy.locked'),
+            `${file}: the old all-folders lock gate is back`);
     }
 
     const mosaic = read("components/CoverMosaic.qml");

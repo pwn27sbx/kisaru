@@ -74,6 +74,19 @@ function visibleCount(entries, folders, options) {
     return visibleEntries(entries, folders, options).length;
 }
 
+// Whether a folder is closed off by the lock. Only a hidden folder, or one
+// that cannot be resolved, is closed while locked: an ordinary folder opens
+// while locked and without any secret. Before the organizer loads nothing can
+// be resolved, so a pushed folder fails closed while locked.
+function lockedOut(folderId, folders, options) {
+    if (!folderId) return false;
+    var opts = options || {};
+    if (opts.locked === false) return false;
+    if (opts.loaded === false) return true;
+    var folder = findFolder(folders, folderId);
+    return !folder || folder.hidden === true;
+}
+
 // The folder chips: a hidden folder does not exist while locked.
 function visibleFolders(folders, locked) {
     var list = folders || [];
@@ -142,6 +155,7 @@ if (typeof module !== "undefined" && module.exports) {
         findFolder: findFolder,
         isHiddenFolder: isHiddenFolder,
         isVisible: isVisible,
+        lockedOut: lockedOut,
         visibleEntries: visibleEntries,
         visibleCount: visibleCount,
         visibleFolders: visibleFolders,

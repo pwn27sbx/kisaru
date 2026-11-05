@@ -113,3 +113,26 @@ test("an existing entry is returned whole, progress included", () => {
     assert.equal(entry.folder, "f2");
     assert.equal(view.findEntry(ENTRIES, "nope"), null);
 });
+test("a visible folder opens while locked, whether or not a secret exists", () => {
+    // Locked is the default state and the no-secret state: an ordinary folder
+    // must still open. The secret only matters for hidden folders.
+    assert.equal(view.lockedOut("f1", FOLDERS, { loaded: true, locked: true }), false);
+});
+
+test("a hidden folder is closed while locked and open while unlocked", () => {
+    assert.equal(view.lockedOut("f2", FOLDERS, { loaded: true, locked: true }), true);
+    assert.equal(view.lockedOut("f2", FOLDERS, { loaded: true, locked: false }), false);
+});
+
+test("an unresolved folder counts as hidden while locked", () => {
+    // Fail closed: a folder id that is not in the organizer must not open.
+    assert.equal(view.lockedOut("gone", FOLDERS, { loaded: true, locked: true }), true);
+    assert.equal(view.lockedOut("gone", FOLDERS, { loaded: true, locked: false }), false);
+    // Before the organizer file loads, no folder can be resolved.
+    assert.equal(view.lockedOut("f1", [], { loaded: false, locked: true }), true);
+});
+
+test("no folder and the unlocked state are never locked out", () => {
+    assert.equal(view.lockedOut("", FOLDERS, { loaded: true, locked: true }), false);
+    assert.equal(view.lockedOut("f2", FOLDERS, { loaded: true, locked: false }), false);
+});
