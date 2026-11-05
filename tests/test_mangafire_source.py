@@ -187,6 +187,15 @@ class ApiTest(unittest.TestCase):
         mangafire_source.search("x", offset=24)
         self.assertIn("page=2", self.urls[0])
 
+    def test_search_paging_advances_by_the_api_page_window(self):
+        # R3-search-pagination: a page with fewer results than the limit still
+        # covers a whole API page, so advancing by the result count would ask
+        # for the same page twice and the user could never reach later matches.
+        result = mangafire_source.search("x")
+        self.assertEqual(result["nextOffset"], mangafire_source.PAGE_LIMIT)
+        mangafire_source.search("x", offset=result["nextOffset"])
+        self.assertIn("page=2", self.urls[-1])
+
     def test_search_popularity_order(self):
         mangafire_source.search("x", sort="Popularity")
         self.assertIn("order%5Bviews_30d%5D=desc", self.urls[0])

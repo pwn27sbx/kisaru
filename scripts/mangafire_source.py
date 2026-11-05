@@ -397,10 +397,15 @@ def search(query, mtype=None, offset=0, sort="Best Match"):
     payload = _cached(key, TTL_SEARCH, lambda: _get_json("/titles", params))
     results = parse_items(payload)
     meta = (payload or {}).get("meta") or {}
+    has_more = bool(meta.get("hasNext"))
+    # The API pages by a fixed window, so a page that returned fewer items than
+    # the limit still consumed a full page: advancing by the result count would
+    # re-request the same page forever.
+    consumed = PAGE_LIMIT if has_more else len(results)
     return {
         "results": results,
-        "hasMore": bool(meta.get("hasNext")),
-        "nextOffset": offset + len(results),
+        "hasMore": has_more,
+        "nextOffset": offset + consumed,
     }
 
 
