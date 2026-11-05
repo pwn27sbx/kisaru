@@ -379,32 +379,63 @@ test("the fade is animated with a Motion token", () => {
     assert.match(shell, fade);
 });
 
-test("the folder row and private mode are wired in all three panels", () => {
-    // One row per library, on the shared gutter, with the same actions. The
-    // panels answer the secret query by collapsing the search (amendment 11).
-    for (const [file, kind] of [
-        ["modules/manga/components/LibraryView.qml", "manga"],
-        ["modules/anime/components/LibraryView.qml", "anime"],
-        ["modules/novel/components/LibraryView.qml", "novel"],
+test("the folder cards, the create card and the header padlock are wired", () => {
+    // v2: no chip row. The root is a card grid (folders first, then folderless
+    // titles), the open folder carries back/rename/delete, and the padlock is
+    // chrome in the header.
+    for (const [file, kind, service] of [
+        ["modules/manga/components/LibraryView.qml", "manga", "Manga"],
+        ["modules/anime/components/LibraryView.qml", "anime", "Anime"],
+        ["modules/novel/components/LibraryView.qml", "novel", "Novel"],
     ]) {
         const qml = read(file);
-        assert.match(qml, /FolderRow\s*\{/, `${file}: no folder row`);
-        assert.match(qml, new RegExp(`kind: "${kind}"`), `${file}: wrong folder kind`);
-        assert.match(qml, /visibleList:/, `${file}: display still reads the raw list`);
-        assert.match(qml, /\.visibleEntries\(libraryView\.activeFolder\)/,
-            `${file}: does not ask the visible view`);
+        assert.ok(!qml.includes("FolderRow"), `${file}: the chip row came back`);
+        assert.match(qml, /\.visibleEntries\(""\)/, `${file}: does not read the visible shelf`);
+        assert.match(qml, /FolderCards\.rootItems\(/, `${file}: no root cards`);
+        assert.match(qml, /FolderCards\.searchTitles\(/, `${file}: search does not cross folders`);
+        assert.match(qml, /FolderCard\s*\{/, `${file}: no folder card`);
+        assert.match(qml, /FolderListRow\s*\{/, `${file}: no folder row`);
+        assert.match(qml, /CreateFolderCard\s*\{/, `${file}: no create card`);
+        assert.match(qml, /kind: "create"/, `${file}: the create card is not in the model`);
+        assert.match(qml, /FolderPrompt\s*\{/, `${file}: no folder dialog`);
         assert.match(qml, /onQueryChanged:/, `${file}: no unlock hook`);
         assert.match(qml, /Privacy\.consider\(query/, `${file}: the query never reaches the helper`);
         assert.match(qml, /signal secretEntered\(\)/, `${file}: no collapse signal`);
-        assert.match(qml, /FolderPrompt\s*\{/, `${file}: no folder dialog`);
-        assert.match(qml, /anchors\.fill: parent/, `${file}: the dialog is not an overlay`);
-        assert.match(qml, /onLockRequested: Privacy\.lock\(\)/, `${file}: no padlock action`);
+        assert.match(qml, /Organizer\.setHidden\("(manga|anime|novel)"/,
+            `${file}: the open folder cannot be hidden`);
+        assert.match(qml, /folder\.count/, `${file}: the folder card has no count`);
     }
-    const row = read("components/FolderRow.qml");
-    assert.match(row, /anchors\.leftMargin: Gutter\.left \+ Gutter\.ink/);
-    assert.match(row, /anchors\.rightMargin: Gutter\.right \+ Gutter\.ink/);
-    assert.match(row, /signal lockRequested\(\)/);
-    assert.match(row, /visible: Privacy\.configured && !Privacy\.locked/);
+
+    const mosaic = read("components/CoverMosaic.qml");
+    assert.match(mosaic, /_box\(index\)/, "the 2x2 mosaic geometry is missing");
+    assert.match(read("components/FolderCard.qml"), /CoverMosaic\s*\{/);
+    assert.match(read("components/FolderListRow.qml"), /CoverMosaic\s*\{/);
+
+    // The padlock is a header action, and the panels only enable it unlocked.
+    const header = read("components/PanelHeader.qml");
+    assert.match(header, /property bool lockVisible/);
+    assert.match(header, /signal lockClicked\(\)/);
+    assert.match(header, /I18n\.t\("privacy\.lock"\)/);
+    for (const file of PANELS) {
+        const qml = read(file);
+        assert.match(qml, /lockVisible: Privacy\.configured && !Privacy\.locked/,
+            `${file}: the padlock is not gated`);
+        assert.match(qml, /onLockClicked: Privacy\.lock\(\)/,
+            `${file}: the padlock does nothing`);
+    }
+
+    // Detail's folder control is a real button that opens the folder list.
+    for (const file of [
+        "modules/manga/components/DetailView.qml",
+        "modules/anime/components/DetailView.qml",
+        "modules/novel/components/DetailView.qml",
+    ]) {
+        const qml = read(file);
+        assert.match(qml, /FolderPicker\s*\{/, `${file}: no folder list`);
+        assert.match(qml, /onCreateRequested: folderPrompt\.openText/, `${file}: cannot create from Detail`);
+        assert.match(qml, /I18n\.t\("folder\.current"/, `${file}: the button does not name the folder`);
+        assert.ok(!qml.includes("_folderOptions"), `${file}: the old menu remains`);
+    }
 });
 
 test("the row has no card context action, and the header keeps onSearchEdited", () => {

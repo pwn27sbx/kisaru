@@ -209,6 +209,8 @@ Item {
                 root.settingsMode = !root.settingsMode
                 root.collapseSearch()
             }
+            lockVisible: Privacy.configured && !Privacy.locked
+            onLockClicked: Privacy.lock()
             onMinimizeClicked: root.minimize()
         }
 

@@ -25,14 +25,10 @@ Item {
     property bool _simulatedSaved: false
     readonly property bool _inLibrary:
         Manga.currentManga ? (Manga.visibleEntryId() !== "" || _simulatedSaved) : false
-    readonly property var _folderOptions: {
-        var out = [{ label: I18n.t("folder.none"), value: "" }]
-        var list = Organizer.folders("manga")
-        for (var i = 0; i < list.length; i++) {
-            if (Privacy.locked && list[i].hidden) continue
-            out.push({ label: list[i].name, value: list[i].id })
-        }
-        return out
+    readonly property string _folderName: {
+        if (_folderValue === "") return ""
+        var folder = Organizer.folder("manga", _folderValue)
+        return folder ? folder.name : ""
     }
     readonly property string _folderValue: {
         var entry = Manga.visibleEntry()
@@ -407,16 +403,33 @@ Item {
 
                 Item { Layout.fillWidth: true }
 
-                MenuSelect {
+                Rectangle {
+                    id: folderButton
                     visible: Manga.currentManga !== null && Manga.visibleEntryId() !== ""
-                    controlHeight: Style.space(24)
-                    options: detailView._folderOptions
-                    currentValue: detailView._folderValue
-                    fallbackLabel: I18n.t("folder.none")
-                    popupWidth: Style.space(170)
-                    alignRight: true
-                    fontFamily: detailView.fontBody
-                    onChosen: function(value) { Manga.setFolder(Manga.libraryEntryId(), value) }
+                    width: folderLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
+                    height: Style.space(24)
+                    radius: Style.cornerRadius
+                    color: folderArea.containsMouse
+                        ? Colors.surface_container_high : Colors.surface_container
+                    border.color: Colors.outline_variant
+                    border.width: Style.spacing.hairline
+
+                    StyledText {
+                        id: folderLabel
+                        anchors.centerIn: parent
+                        text: I18n.t("folder.current", { 1: detailView._folderValue === ""
+                            ? I18n.t("folder.none") : detailView._folderName })
+                        font.family: detailView.fontBody
+                        font.pixelSize: Style.font.caption
+                        color: Colors.on_surface
+                    }
+                    MouseArea {
+                        id: folderArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: folderPicker.opened = true
+                    }
                 }
 
                 // Last-read badge — click it to jump to that chapter
@@ -693,5 +706,28 @@ Item {
     Connections {
         target: Manga
         function onCurrentMangaChanged() { detailView._simulatedSaved = false }
+    }
+
+    FolderPicker {
+        id: folderPicker
+        anchors.fill: parent
+        folders: Privacy.locked
+            ? Organizer.folders("manga").filter(function(folder) { return !folder.hidden })
+            : Organizer.folders("manga")
+        current: detailView._folderValue
+        bodyFont: detailView.fontBody
+        onChosen: function(folderId) { Manga.setFolder(Manga.libraryEntryId(), folderId) }
+        onCreateRequested: folderPrompt.openText(I18n.t("folder.create"), "")
+    }
+
+    FolderPrompt {
+        id: folderPrompt
+        anchors.fill: parent
+        onAccepted: function(value) {
+            var folderId = Organizer.addFolder("manga", value)
+            if (folderId !== "") {
+                Manga.setFolder(Manga.libraryEntryId(), folderId)
+            }
+        }
     }
 }

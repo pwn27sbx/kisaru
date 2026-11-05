@@ -50,6 +50,10 @@ var tables = {
         // ── Folders and private mode ────────────────────────────────────
         "folder.all": "Todas",
         "folder.none": "Sin carpeta",
+        "folder.count": { one: "1 título", other: "%1 títulos" },
+        "folder.create": "Nueva carpeta",
+        "folder.current": "Carpeta: %1",
+        "folder.pick": "Carpeta",
         "folder.new": "Nueva carpeta",
         "folder.rename": "Renombrar carpeta",
         "folder.delete": "Borrar carpeta",
@@ -165,6 +169,10 @@ var tables = {
         // ── Folders and private mode ────────────────────────────────────
         "folder.all": "All",
         "folder.none": "No folder",
+        "folder.count": { one: "1 title", other: "%1 titles" },
+        "folder.create": "New folder",
+        "folder.current": "Folder: %1",
+        "folder.pick": "Folder",
         "folder.new": "New folder",
         "folder.rename": "Rename folder",
         "folder.delete": "Delete folder",

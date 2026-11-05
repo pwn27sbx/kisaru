@@ -7,32 +7,80 @@ import qs.services
 import qs.components
 import "../../../services/library_filter.js" as LibraryFilter
 import "../../../services/library_view.js" as LibraryViewJs
-import qs.Ui
+import "../../../services/folder_cards.js" as FolderCards
 import "../../../services/manga_card.js" as MangaCard
 import "../../../services/list_metrics.js" as ListMetrics
-import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
     id: libraryView
 
-    // Owner §33.1: in Library the header's search filters the saved titles
-    // locally, by title, as the text arrives (no debounce, no network). Esc or
-    // clearing the field shows the whole shelf again.
+    // The header's local search. It crosses every visible title, whatever
+    // folder it lives in, so it starts from the whole visible shelf.
     property string query: ""
-
-    // Folders and private mode: display reads the visible list, never the raw
-    // one. `activeFolder` is "" for Todas.
+    // "" is the root (folders + titles with no folder); anything else is the
+    // open folder. Typing a query from inside a folder returns to the root,
+    // because search is library-wide.
     property string activeFolder: ""
-    readonly property var visibleList: Manga.visibleEntries(libraryView.activeFolder)
-    readonly property var shownList: LibraryFilter.filter(visibleList, query)
+
+    readonly property var _allVisible: Manga.visibleEntries("")
+    readonly property var _folders:
+        LibraryViewJs.visibleFolders(Organizer.folders("manga"), Privacy.locked)
+    readonly property var _split:
+        FolderCards.partition(_allVisible, LibraryViewJs.folderIdOf)
+    readonly property var _searchResults:
+        FolderCards.searchTitles(_allVisible, query, LibraryFilter.fold,
+            function(entry) { return entry.title || "" })
+    readonly property var _rootItems:
+        FolderCards.rootItems(_folders, _split.folderless, _split.byFolder,
+            function(entry) { return Manga.serverReady ? (entry.coverUrl || "") : "" })
+    readonly property var _folderEntries:
+        activeFolder === "" ? [] : (_split.byFolder[activeFolder] || [])
+    readonly property bool _searching: query.trim() !== ""
+    readonly property var _titleList:
+        _searching ? _searchResults
+            : (activeFolder === "" ? _split.folderless : _folderEntries)
+
+    // Folders first, then titles with no folder, then the dashed create card.
+    // A query or an open folder is a title-only view.
+    readonly property var model: {
+        if (_searching || activeFolder !== "") {
+            var titles = []
+            for (var i = 0; i < _titleList.length; i++)
+                titles.push({ kind: "title", entry: _titleList[i] })
+            return titles
+        }
+        var items = _rootItems.slice()
+        items.push({ kind: "create" })
+        return items
+    }
+
     readonly property string activeFolderName:
         activeFolder === "" ? "" : ((Organizer.folder("manga", activeFolder) || {}).name || "")
+    readonly property bool activeFolderHidden:
+        activeFolder !== "" && Organizer.isHidden("manga", activeFolder)
+    readonly property bool folderOpen: activeFolder !== "" && !_searching
 
+    readonly property string fontDisplay: Style.font.family
+    readonly property string fontBody: Style.font.family
+
+    // metaLine composes "chapter · status"; the wording lives in
+    // manga_card.js, so both views share one adapter instead of copying it.
+    readonly property var cardTranslator: MangaCard.translator(I18n.t)
+
+    // The layout the user picked (persisted in settings.json), shared with
+    // Browse through UiPrefs: switching it in one view switches it in both.
+    readonly property bool listMode: UiPrefs.viewModeFor("manga") === "list"
+
+    // Emitted when the user taps an entry — parent handles navigation
+    signal mangaSelected(string mangaId)
     // The panel answers by putting the search field away.
     signal secretEntered()
 
-    // Unlock hook (amendment 11): onQueryChanged, never onSearchEdited.
+    // The secret hook (amendment 11): a query never typed into the folder
+    // search, and the field collapses on a verified word.
     onQueryChanged: {
+        if (query.trim() !== "" && libraryView.activeFolder !== "")
+            libraryView.activeFolder = ""
         if (!Privacy.configured) return
         Privacy.consider(query, function(code) {
             if (code === 0) libraryView.secretEntered()
@@ -46,7 +94,7 @@ Item {
     function _newFolder() {
         _promptAction = "create"
         _promptFolder = ""
-        folderPrompt.openText(I18n.t("folder.new"), "")
+        folderPrompt.openText(I18n.t("folder.create"), "")
     }
 
     function _renameFolder(folderId) {
@@ -65,65 +113,146 @@ Item {
             folder.hidden ? I18n.t("folder.deleteHidden") : I18n.t("folder.deleteMessage"))
     }
 
+    function _acceptPrompt(value) {
+        if (libraryView._promptAction === "create") {
+            Organizer.addFolder("manga", value)
+        } else if (libraryView._promptAction === "rename") {
+            Organizer.renameFolder("manga", libraryView._promptFolder, value)
+        } else if (libraryView._promptAction === "delete") {
+            if (libraryView.activeFolder === libraryView._promptFolder)
+                libraryView.activeFolder = ""
+            Manga.deleteFolder(libraryView._promptFolder)
+        }
+        libraryView._promptAction = ""
+        libraryView._promptFolder = ""
+    }
+
     function _pruneFolder() {
         if (activeFolder !== "" && Organizer.folder("manga", activeFolder) === null)
             activeFolder = ""
     }
 
-    readonly property string fontDisplay: Style.font.family
-    readonly property string fontBody:    Style.font.family
+    function _toggleHidden() {
+        if (activeFolder === "") return
+        Organizer.setHidden("manga", activeFolder, !activeFolderHidden)
+    }
 
-    // metaLine composes "chapter · status"; the wording lives in
-    // manga_card.js, so both views share one adapter instead of copying it.
-    readonly property var cardTranslator: MangaCard.translator(I18n.t)
-
-    // One number for the grid and its skeleton: they must not disagree.
-    readonly property int columnCount: 3
-
-    // The layout the user picked (persisted in settings.json), shared with
-    // Browse through UiPrefs: switching it in one view switches it in both.
-    readonly property bool listMode: UiPrefs.viewModeFor("manga") === "list"
-
-    // Emitted when the user taps an entry — parent handles navigation
-    signal mangaSelected(string mangaId)
-
-    // One segment of the grid/list toggle: a square glyph chip that shows
-    // whether its layout is the one on screen. The hover tooltip carries the
-    // name, so the header stays compact.
-
-    // ── Background ────────────────────────────────────────────────────────────
     Rectangle { anchors.fill: parent; color: Colors.background }
 
     ColumnLayout {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        // Row 3 is gone (owner §32): the layout toggle lives in the tool bar
-        // the panel owns. This view starts at the shelf.
-
-        FolderRow {
+        // ── Open folder: back, name, count, and the folder's own actions ─────
+        RowLayout {
             Layout.fillWidth: true
-            kind: "manga"
-            activeFolder: libraryView.activeFolder
-            onFolderSelected: function(folderId) { libraryView.activeFolder = folderId }
-            onCreateRequested: libraryView._newFolder()
-            onRenameRequested: function(folderId) { libraryView._renameFolder(folderId) }
-            onHideRequested: function(folderId, hidden) { Organizer.setHidden("manga", folderId, hidden) }
-            onDeleteRequested: function(folderId) { libraryView._confirmDelete(folderId) }
-            onLockRequested: Privacy.lock()
-        }
+            Layout.preferredHeight: Style.space(40)
+            Layout.leftMargin: Gutter.left + Gutter.ink
+            Layout.rightMargin: Gutter.right + Gutter.ink
+            spacing: Style.spacing.sm
+            visible: libraryView.folderOpen
 
-        // ── Empty state ───────────────────────────────────────────────────────
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            visible: libraryView.visibleList.length === 0 && Manga.libraryLoaded
+            ClickableRect {
+                Layout.preferredWidth: Style.space(28)
+                Layout.preferredHeight: Style.space(28)
+                color: hovered ? Colors.surface_container_high : "transparent"
+                radius: Style.cornerRadius
+                StyledText {
+                    anchors.centerIn: parent
+                    text: "←"
+                    font.family: libraryView.fontBody
+                    font.pixelSize: Style.font.iconLarge
+                    color: Colors.on_surface_variant
+                }
+                onClicked: libraryView.activeFolder = ""
+            }
 
-            EmptyState {
-                title: I18n.t("empty.library")
-                subtitle: I18n.t("manga.library.hint")
-                displayFont: libraryView.fontDisplay
-                bodyFont: libraryView.fontBody
+            StyledText {
+                Layout.fillWidth: true
+                text: libraryView.activeFolderName
+                font.family: libraryView.fontBody
+                font.pixelSize: Style.font.body
+                font.bold: true
+                color: Colors.on_surface
+                elide: Text.ElideRight
+            }
+
+            StyledText {
+                text: I18n.tn("folder.count", libraryView._folderEntries.length)
+                font.family: libraryView.fontBody
+                font.pixelSize: Style.font.caption
+                color: Colors.on_surface_variant
+            }
+
+            Item { Layout.fillWidth: true }
+
+            // Hide/show keeps the private mode usable once the chip row is gone.
+            ClickableRect {
+                visible: Privacy.configured
+                Layout.preferredWidth: Style.space(28)
+                Layout.preferredHeight: Style.space(28)
+                color: hovered ? Colors.surface_container_high : "transparent"
+                radius: Style.cornerRadius
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    text: libraryView.activeFolderHidden ? "󰈈" : "󰈉"
+                    font.pixelSize: Style.font.bodySmall
+                    color: libraryView.activeFolderHidden ? Colors.primary : Colors.on_surface_variant
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: libraryView._toggleHidden()
+                    ToolTip.visible: containsMouse
+                    ToolTip.delay: 600
+                    ToolTip.text: libraryView.activeFolderHidden
+                        ? I18n.t("folder.show") : I18n.t("folder.hide")
+                }
+            }
+
+            ClickableRect {
+                Layout.preferredWidth: Style.space(28)
+                Layout.preferredHeight: Style.space(28)
+                color: hovered ? Colors.surface_container_high : "transparent"
+                radius: Style.cornerRadius
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    text: "󰏫"
+                    font.pixelSize: Style.font.bodySmall
+                    color: Colors.on_surface_variant
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: libraryView._renameFolder(libraryView.activeFolder)
+                    ToolTip.visible: containsMouse
+                    ToolTip.delay: 600
+                    ToolTip.text: I18n.t("folder.rename")
+                }
+            }
+
+            ClickableRect {
+                Layout.preferredWidth: Style.space(28)
+                Layout.preferredHeight: Style.space(28)
+                color: hovered ? Colors.surface_container_high : "transparent"
+                radius: Style.cornerRadius
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    text: "󰆴"
+                    font.pixelSize: Style.font.bodySmall
+                    color: Colors.error
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: libraryView._confirmDelete(libraryView.activeFolder)
+                    ToolTip.visible: containsMouse
+                    ToolTip.delay: 600
+                    ToolTip.text: I18n.t("folder.delete")
+                }
             }
         }
 
@@ -135,15 +264,12 @@ Item {
             Layout.rightMargin: Gutter.right
             visible: !Manga.libraryLoaded && !libraryView.listMode
             active: !Manga.libraryLoaded && !libraryView.listMode
-            // Same columns and the same cell box as the grid below, from the
-            // one source the six grids share.
             columns: CardMetrics.columns
             padding: Style.space(0)
             cellHeight: CardMetrics.cellHeight(width / CardMetrics.columns, Style.space(30))
             footerHeight: 30
         }
 
-        // The grid's ghost cards do not apply to a list of rows.
         SkeletonList {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -159,106 +285,141 @@ Item {
             id: libGrid
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: libraryView.visibleList.length > 0 && !libraryView.listMode
+            visible: Manga.libraryLoaded && !libraryView.listMode
             topMargin: Style.spacing.xl
-            // One gutter with the tool bar (owner §32.1).
             leftMargin: Gutter.left
             rightMargin: Gutter.right
             bottomMargin: Style.spacing.xl
-            // No floor: the columns share the width exactly, so the last card
-            // ends on the panel's right ink line (owner, 2026-11-02).
             cellWidth: (width - leftMargin - rightMargin) / CardMetrics.columns
             cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(30))
             clip: true
             boundsBehavior: Flickable.StopAtBounds
-            model: libraryView.shownList
-
+            model: libraryView.model
 
             delegate: Item {
                 width: libGrid.cellWidth
                 height: libGrid.cellHeight
 
-                readonly property var libEntry: modelData
+                readonly property var item: modelData
+                readonly property var entry: item.kind === "title" ? item.entry : null
+                readonly property var folderData: item.kind === "folder" ? item : null
 
                 CoverCard {
+                    visible: entry !== null
                     anchors.fill: parent
-                    // Covers go through the local backend; requesting them
-                    // before it is ready fails and Qt keeps that failure for
-                    // the session, so wait for the health check.
-                    source: Manga.serverReady ? (libEntry.coverUrl || "") : ""
-                    title: libEntry.title || ""
+                    source: entry && Manga.serverReady ? (entry.coverUrl || "") : ""
+                    title: entry ? (entry.title || "") : ""
                     bodyFont: libraryView.fontBody
                     footerHeight: 30
-                    // The work's own chapter and state, NOT this reader's
-                    // progress: the progress bar below keeps "Cap. N" for the
-                    // user. Today's entries store no work metadata, so the row
-                    // stays hidden rather than inventing it; an entry that
-                    // carries either field shows it here.
-                    metaChapter: MangaCard.metaLine(libEntry.chapter, "",
-                                                    libraryView.cardTranslator)
-                    metaStatus: I18n.tData(libEntry.status || "")
-                    metaTone: MangaCard.statusTone(libEntry.status || "")
+                    metaChapter: entry
+                        ? MangaCard.metaLine(entry.chapter, "", libraryView.cardTranslator) : ""
+                    metaStatus: entry ? I18n.tData(entry.status || "") : ""
+                    metaTone: entry ? MangaCard.statusTone(entry.status || "") : "muted"
 
                     CoverProgressBar {
                         height: 30
                         rowSpacing: Style.spacing.md
                         bodyFont: libraryView.fontBody
-                        started: libEntry.lastReadChapterNum
-                        label: libEntry.lastReadChapterNum
-                                ? I18n.t("ch", { 1: libEntry.lastReadChapterNum })
+                        started: entry ? entry.lastReadChapterNum : ""
+                        label: entry && entry.lastReadChapterNum
+                                ? I18n.t("ch", { 1: entry.lastReadChapterNum })
                                 : I18n.t("state.notStarted")
                     }
 
                     onClicked: {
-                        Manga.fetchMangaDetail(libEntry.id)
-                        libraryView.mangaSelected(libEntry.id)
+                        if (!entry) return
+                        Manga.fetchMangaDetail(entry.id)
+                        libraryView.mangaSelected(entry.id)
                     }
+                }
+
+                FolderCard {
+                    visible: folderData !== null
+                    anchors.fill: parent
+                    covers: folderData ? folderData.covers : []
+                    coversReady: Manga.serverReady
+                    name: folderData ? folderData.name : ""
+                    count: folderData ? folderData.count : 0
+                    hidden: folderData ? folderData.hidden : false
+                    bodyFont: libraryView.fontBody
+                    onClicked: {
+                        if (folderData) libraryView.activeFolder = folderData.id
+                    }
+                }
+
+                CreateFolderCard {
+                    visible: item.kind === "create"
+                    anchors.fill: parent
+                    bodyFont: libraryView.fontBody
+                    onClicked: libraryView._newFolder()
                 }
             }
         }
 
         // ── List ───────────────────────────────────────────────────────────────
-        // Same entries, same click path; the reader's progress that the grid
-        // pins to the card's footer becomes the row's trailing label.
         ListView {
             id: libRows
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: libraryView.visibleList.length > 0 && libraryView.listMode
+            visible: Manga.libraryLoaded && libraryView.listMode
             topMargin: Style.spacing.xl
             bottomMargin: Style.spacing.xl
-            // One gutter with the top zone, lane included (owner §32.1).
             leftMargin: Gutter.left
             rightMargin: Gutter.right
             clip: true
             boundsBehavior: Flickable.StopAtBounds
-            model: libraryView.shownList
+            model: libraryView.model
 
-
-            delegate: ListRow {
+            delegate: Item {
+                readonly property var item: modelData
+                readonly property var entry: item.kind === "title" ? item.entry : null
+                readonly property var folderData: item.kind === "folder" ? item : null
                 width: libRows.width - libRows.leftMargin - libRows.rightMargin
-                height: implicitHeight
-                inset: Gutter.ink
-                // The rows' box is already the gutter's; no inner padding.
+                height: Style.space(ListMetrics.ROW_HEIGHT_BASE)
 
-                readonly property var libEntry: modelData
+                ListRow {
+                    visible: entry !== null
+                    anchors.fill: parent
+                    inset: Gutter.ink
+                    source: entry && Manga.serverReady ? (entry.coverUrl || "") : ""
+                    title: entry ? (entry.title || "") : ""
+                    bodyFont: libraryView.fontBody
+                    meta: entry
+                        ? MangaCard.metaLine(entry.chapter, I18n.tData(entry.status || ""),
+                                             libraryView.cardTranslator) : ""
+                    progress: entry && entry.lastReadChapterNum
+                              ? I18n.t("ch", { 1: entry.lastReadChapterNum })
+                              : I18n.t("state.notStarted")
+                    progressActive: entry ? !!entry.lastReadChapterNum : false
 
-                // Same gate as the grid: the local backend must be up before
-                // any cover URL is requested.
-                source: Manga.serverReady ? (libEntry.coverUrl || "") : ""
-                title: libEntry.title || ""
-                bodyFont: libraryView.fontBody
-                meta: MangaCard.metaLine(libEntry.chapter,
-                                         I18n.tData(libEntry.status || ""),
-                                         libraryView.cardTranslator)
-                progress: libEntry.lastReadChapterNum
-                          ? I18n.t("ch", { 1: libEntry.lastReadChapterNum })
-                          : I18n.t("state.notStarted")
-                progressActive: !!libEntry.lastReadChapterNum
+                    onClicked: {
+                        if (!entry) return
+                        Manga.fetchMangaDetail(entry.id)
+                        libraryView.mangaSelected(entry.id)
+                    }
+                }
 
-                onClicked: {
-                    Manga.fetchMangaDetail(libEntry.id)
-                    libraryView.mangaSelected(libEntry.id)
+                FolderListRow {
+                    visible: folderData !== null
+                    anchors.fill: parent
+                    inset: Gutter.ink
+                    covers: folderData ? folderData.covers : []
+                    coversReady: Manga.serverReady
+                    name: folderData ? folderData.name : ""
+                    count: folderData ? folderData.count : 0
+                    hidden: folderData ? folderData.hidden : false
+                    bodyFont: libraryView.fontBody
+                    onClicked: {
+                        if (folderData) libraryView.activeFolder = folderData.id
+                    }
+                }
+
+                CreateFolderCard {
+                    visible: item.kind === "create"
+                    anchors.fill: parent
+                    row: true
+                    bodyFont: libraryView.fontBody
+                    onClicked: libraryView._newFolder()
                 }
             }
         }
@@ -267,16 +428,7 @@ Item {
     FolderPrompt {
         id: folderPrompt
         anchors.fill: parent
-        onAccepted: function(value) {
-            if (libraryView._promptAction === "create")
-                Organizer.addFolder("manga", value)
-            else if (libraryView._promptAction === "rename")
-                Organizer.renameFolder("manga", libraryView._promptFolder, value)
-            else if (libraryView._promptAction === "delete")
-                Manga.deleteFolder(libraryView._promptFolder)
-            libraryView._promptAction = ""
-            libraryView._promptFolder = ""
-        }
+        onAccepted: function(value) { libraryView._acceptPrompt(value) }
     }
 
     Connections {

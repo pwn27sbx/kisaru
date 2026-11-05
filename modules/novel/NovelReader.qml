@@ -151,6 +151,8 @@ Item {
                 root.settingsMode = !root.settingsMode
                 root.collapseSearch()
             }
+            lockVisible: Privacy.configured && !Privacy.locked
+            onLockClicked: Privacy.lock()
             onMinimizeClicked: root.minimize()
 
             // The provider picker stays in the header (owner, round 6: it is

@@ -28,7 +28,7 @@ Item {
         root.message = ""
         root.initialText = value || ""
         root.opened = true
-        Qt.callLater(root._focus)
+        Qt.callLater(function() { root._focus() })
     }
 
     function openConfirm(title, text) {
@@ -37,7 +37,7 @@ Item {
         root.message = text
         root.initialText = ""
         root.opened = true
-        Qt.callLater(root._focus)
+        Qt.callLater(function() { root._focus() })
     }
 
     function close() {

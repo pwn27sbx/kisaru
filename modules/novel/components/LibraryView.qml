@@ -7,44 +7,78 @@ import qs.services
 import qs.components
 import "../../../services/library_filter.js" as LibraryFilter
 import "../../../services/library_view.js" as LibraryViewJs
+import "../../../services/folder_cards.js" as FolderCards
 import "../../../services/list_metrics.js" as ListMetrics
-import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
     id: libraryView
 
-    // Owner §33.1: in Library the header's search filters the saved titles
-    // locally, by title, as the text arrives (no debounce, no network). Esc or
-    // clearing the field shows the whole shelf again.
+    // The header's local search. It crosses every visible title, whatever
+    // folder it lives in, so it starts from the whole visible shelf.
     property string query: ""
-
-    // Folders and private mode: display reads the visible list, never the raw
-    // one. `activeFolder` is "" for Todas.
     property string activeFolder: ""
-    readonly property var visibleList: Novel.visibleEntries(libraryView.activeFolder)
-    readonly property var shownList: LibraryFilter.filter(visibleList, query)
+
+    readonly property var _allVisible: Novel.visibleEntries("")
+    readonly property var _folders:
+        LibraryViewJs.visibleFolders(Organizer.folders("novel"), Privacy.locked)
+    readonly property var _split:
+        FolderCards.partition(_allVisible, LibraryViewJs.folderIdOf)
+    readonly property var _searchResults:
+        FolderCards.searchTitles(_allVisible, query, LibraryFilter.fold,
+            function(entry) { return entry.title || "" })
+    readonly property var _rootItems:
+        FolderCards.rootItems(_folders, _split.folderless, _split.byFolder,
+            function(entry) { return entry.coverUrl || "" })
+    readonly property var _folderEntries:
+        activeFolder === "" ? [] : (_split.byFolder[activeFolder] || [])
+    readonly property bool _searching: query.trim() !== ""
+    readonly property var _titleList:
+        _searching ? _searchResults
+            : (activeFolder === "" ? _split.folderless : _folderEntries)
+
+    readonly property var model: {
+        if (_searching || activeFolder !== "") {
+            var titles = []
+            for (var i = 0; i < _titleList.length; i++)
+                titles.push({ kind: "title", entry: _titleList[i] })
+            return titles
+        }
+        var items = _rootItems.slice()
+        items.push({ kind: "create" })
+        return items
+    }
+
     readonly property string activeFolderName:
         activeFolder === "" ? "" : ((Organizer.folder("novel", activeFolder) || {}).name || "")
+    readonly property bool activeFolderHidden:
+        activeFolder !== "" && Organizer.isHidden("novel", activeFolder)
+    readonly property bool folderOpen: activeFolder !== "" && !_searching
 
-    // The panel answers by putting the search field away.
+    readonly property string fontDisplay: Style.font.family
+    readonly property string fontBody:    Style.font.family
+
+    // Each panel remembers its own layout (owner, round 6).
+    readonly property bool listMode: UiPrefs.viewModeFor("novel") === "list"
+
+    signal novelSelected(string novelId)
     signal secretEntered()
 
-    // Unlock hook (amendment 11): onQueryChanged, never onSearchEdited.
     onQueryChanged: {
+        if (query.trim() !== "" && libraryView.activeFolder !== "")
+            libraryView.activeFolder = ""
         if (!Privacy.configured) return
         Privacy.consider(query, function(code) {
             if (code === 0) libraryView.secretEntered()
         })
     }
 
-    // Which prompt is open, and for which folder. One dialog, three actions.
     property string _promptAction: ""
     property string _promptFolder: ""
 
     function _newFolder() {
         _promptAction = "create"
         _promptFolder = ""
-        folderPrompt.openText(I18n.t("folder.new"), "")
+        folderPrompt.openText(I18n.t("folder.create"), "")
     }
 
     function _renameFolder(folderId) {
@@ -63,18 +97,29 @@ Item {
             folder.hidden ? I18n.t("folder.deleteHidden") : I18n.t("folder.deleteMessage"))
     }
 
+    function _acceptPrompt(value) {
+        if (libraryView._promptAction === "create") {
+            Organizer.addFolder("novel", value)
+        } else if (libraryView._promptAction === "rename") {
+            Organizer.renameFolder("novel", libraryView._promptFolder, value)
+        } else if (libraryView._promptAction === "delete") {
+            if (libraryView.activeFolder === libraryView._promptFolder)
+                libraryView.activeFolder = ""
+            Novel.deleteFolder(libraryView._promptFolder)
+        }
+        libraryView._promptAction = ""
+        libraryView._promptFolder = ""
+    }
+
     function _pruneFolder() {
         if (activeFolder !== "" && Organizer.folder("novel", activeFolder) === null)
             activeFolder = ""
     }
 
-    readonly property string fontDisplay: Style.font.family
-    readonly property string fontBody:    Style.font.family
-
-    // Each panel remembers its own layout (owner, round 6).
-    readonly property bool listMode: UiPrefs.viewModeFor("novel") === "list"
-
-    signal novelSelected(string novelId)
+    function _toggleHidden() {
+        if (activeFolder === "") return
+        Organizer.setHidden("novel", activeFolder, !activeFolderHidden)
+    }
 
     Rectangle { anchors.fill: parent; color: Colors.background }
 
@@ -82,34 +127,116 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
-        FolderRow {
+        RowLayout {
             Layout.fillWidth: true
-            kind: "novel"
-            activeFolder: libraryView.activeFolder
-            onFolderSelected: function(folderId) { libraryView.activeFolder = folderId }
-            onCreateRequested: libraryView._newFolder()
-            onRenameRequested: function(folderId) { libraryView._renameFolder(folderId) }
-            onHideRequested: function(folderId, hidden) { Organizer.setHidden("novel", folderId, hidden) }
-            onDeleteRequested: function(folderId) { libraryView._confirmDelete(folderId) }
-            onLockRequested: Privacy.lock()
-        }
+            Layout.preferredHeight: Style.space(40)
+            Layout.leftMargin: Gutter.left + Gutter.ink
+            Layout.rightMargin: Gutter.right + Gutter.ink
+            spacing: Style.spacing.sm
+            visible: libraryView.folderOpen
 
+            ClickableRect {
+                Layout.preferredWidth: Style.space(28)
+                Layout.preferredHeight: Style.space(28)
+                color: hovered ? Colors.surface_container_high : "transparent"
+                radius: Style.cornerRadius
+                StyledText {
+                    anchors.centerIn: parent
+                    text: "←"
+                    font.family: libraryView.fontBody
+                    font.pixelSize: Style.font.iconLarge
+                    color: Colors.on_surface_variant
+                }
+                onClicked: libraryView.activeFolder = ""
+            }
 
-        // Row 3 is gone (owner §32): the layout toggle lives in the tool bar the
-        // panel owns, next to the search. This view starts at the content.
+            StyledText {
+                Layout.fillWidth: true
+                text: libraryView.activeFolderName
+                font.family: libraryView.fontBody
+                font.pixelSize: Style.font.body
+                font.bold: true
+                color: Colors.on_surface
+                elide: Text.ElideRight
+            }
 
-        Item {
-            Layout.fillWidth: true; Layout.fillHeight: true
-            visible: libraryView.visibleList.length === 0 && Novel.libraryLoaded
+            StyledText {
+                text: I18n.tn("folder.count", libraryView._folderEntries.length)
+                font.family: libraryView.fontBody
+                font.pixelSize: Style.font.caption
+                color: Colors.on_surface_variant
+            }
 
-            EmptyState {
-                title: I18n.t("empty.library")
-                subtitle: I18n.t("novel.library.hint")
-                displayFont: libraryView.fontDisplay
-                bodyFont: libraryView.fontBody
+            Item { Layout.fillWidth: true }
+
+            ClickableRect {
+                visible: Privacy.configured
+                Layout.preferredWidth: Style.space(28)
+                Layout.preferredHeight: Style.space(28)
+                color: hovered ? Colors.surface_container_high : "transparent"
+                radius: Style.cornerRadius
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    text: libraryView.activeFolderHidden ? "󰈈" : "󰈉"
+                    font.pixelSize: Style.font.bodySmall
+                    color: libraryView.activeFolderHidden ? Colors.primary : Colors.on_surface_variant
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: libraryView._toggleHidden()
+                    ToolTip.visible: containsMouse
+                    ToolTip.delay: 600
+                    ToolTip.text: libraryView.activeFolderHidden
+                        ? I18n.t("folder.show") : I18n.t("folder.hide")
+                }
+            }
+
+            ClickableRect {
+                Layout.preferredWidth: Style.space(28)
+                Layout.preferredHeight: Style.space(28)
+                color: hovered ? Colors.surface_container_high : "transparent"
+                radius: Style.cornerRadius
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    text: "󰏫"
+                    font.pixelSize: Style.font.bodySmall
+                    color: Colors.on_surface_variant
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: libraryView._renameFolder(libraryView.activeFolder)
+                    ToolTip.visible: containsMouse
+                    ToolTip.delay: 600
+                    ToolTip.text: I18n.t("folder.rename")
+                }
+            }
+
+            ClickableRect {
+                Layout.preferredWidth: Style.space(28)
+                Layout.preferredHeight: Style.space(28)
+                color: hovered ? Colors.surface_container_high : "transparent"
+                radius: Style.cornerRadius
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    text: "󰆴"
+                    font.pixelSize: Style.font.bodySmall
+                    color: Colors.error
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: libraryView._confirmDelete(libraryView.activeFolder)
+                    ToolTip.visible: containsMouse
+                    ToolTip.delay: 600
+                    ToolTip.text: I18n.t("folder.delete")
+                }
             }
         }
-
 
         SkeletonGrid {
             Layout.fillWidth: true; Layout.fillHeight: true
@@ -136,27 +263,28 @@ Item {
         GridView {
             id: libGrid
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: !libraryView.listMode && libraryView.visibleList.length > 0
+            visible: Novel.libraryLoaded && !libraryView.listMode
             topMargin: Style.spacing.xl; leftMargin: Gutter.left
-            // The bar's lane goes on top of the grid's own inset (owner §30).
             rightMargin: Gutter.right
             bottomMargin: Style.spacing.xl
-            // No floor: the columns share the width exactly, so the last card
-            // ends on the panel's right ink line (owner, 2026-11-02).
             cellWidth: (width - leftMargin - rightMargin) / CardMetrics.columns
             cellHeight: CardMetrics.cellHeight(cellWidth, Style.space(30))
             clip: true; boundsBehavior: Flickable.StopAtBounds
-            model: libraryView.shownList
-
+            model: libraryView.model
 
             delegate: Item {
                 width: libGrid.cellWidth
                 height: libGrid.cellHeight
 
+                readonly property var item: modelData
+                readonly property var entry: item.kind === "title" ? item.entry : null
+                readonly property var folderData: item.kind === "folder" ? item : null
+
                 CoverCard {
+                    visible: entry !== null
                     anchors.fill: parent
-                    source: modelData.coverUrl || ""
-                    title: modelData.title || ""
+                    source: entry ? (entry.coverUrl || "") : ""
+                    title: entry ? (entry.title || "") : ""
                     bodyFont: libraryView.fontBody
                     footerHeight: 30
 
@@ -164,50 +292,99 @@ Item {
                         height: 30
                         rowSpacing: Style.spacing.md
                         bodyFont: libraryView.fontBody
-                        started: modelData.lastReadChapterNum
-                        label: modelData.lastReadChapterNum
-                                ? I18n.t("ch", { 1: modelData.lastReadChapterNum })
+                        started: entry ? entry.lastReadChapterNum : ""
+                        label: entry && entry.lastReadChapterNum
+                                ? I18n.t("ch", { 1: entry.lastReadChapterNum })
                                 : I18n.t("state.notStarted")
                     }
 
                     onClicked: {
-                        Novel.fetchNovelDetail(modelData.id)
-                        libraryView.novelSelected(modelData.id)
+                        if (!entry) return
+                        Novel.fetchNovelDetail(entry.id)
+                        libraryView.novelSelected(entry.id)
                     }
                 }
-            }
 
+                FolderCard {
+                    visible: folderData !== null
+                    anchors.fill: parent
+                    covers: folderData ? folderData.covers : []
+                    name: folderData ? folderData.name : ""
+                    count: folderData ? folderData.count : 0
+                    hidden: folderData ? folderData.hidden : false
+                    bodyFont: libraryView.fontBody
+                    onClicked: {
+                        if (folderData) libraryView.activeFolder = folderData.id
+                    }
+                }
+
+                CreateFolderCard {
+                    visible: item.kind === "create"
+                    anchors.fill: parent
+                    bodyFont: libraryView.fontBody
+                    onClicked: libraryView._newFolder()
+                }
+            }
         }
 
-        // ── List ─────────────────────────────────────────────────────────────
         ListView {
             id: libRows
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: libraryView.visibleList.length > 0 && libraryView.listMode
+            visible: Novel.libraryLoaded && libraryView.listMode
             topMargin: Style.spacing.xl
             bottomMargin: Style.spacing.xl
-            // One gutter with the tool bar (owner §32.1).
             leftMargin: Gutter.left
             rightMargin: Gutter.right
             clip: true; boundsBehavior: Flickable.StopAtBounds
-            model: libraryView.shownList
+            model: libraryView.model
 
-
-            delegate: ListRow {
-                // The list's margins are not part of a delegate's width.
+            delegate: Item {
+                readonly property var item: modelData
+                readonly property var entry: item.kind === "title" ? item.entry : null
+                readonly property var folderData: item.kind === "folder" ? item : null
                 width: libRows.width - libRows.leftMargin - libRows.rightMargin
-                height: implicitHeight
-                source: modelData.coverUrl || ""
-                title: modelData.title || ""
-                bodyFont: libraryView.fontBody
-                inset: Gutter.ink
-                meta: ""
-                progress: modelData.lastReadChapterNum ? I18n.t("ch", { 1: modelData.lastReadChapterNum }) : I18n.t("state.notStarted")
-                progressActive: !!modelData.lastReadChapterNum
+                height: Style.space(ListMetrics.ROW_HEIGHT_BASE)
 
-                onClicked: {
-                    Novel.fetchNovelDetail(modelData.id)
-                    libraryView.novelSelected(modelData.id)
+                ListRow {
+                    visible: entry !== null
+                    anchors.fill: parent
+                    source: entry ? (entry.coverUrl || "") : ""
+                    title: entry ? (entry.title || "") : ""
+                    bodyFont: libraryView.fontBody
+                    inset: Gutter.ink
+                    meta: ""
+                    progress: entry && entry.lastReadChapterNum
+                        ? I18n.t("ch", { 1: entry.lastReadChapterNum })
+                        : I18n.t("state.notStarted")
+                    progressActive: entry ? !!entry.lastReadChapterNum : false
+
+                    onClicked: {
+                        if (!entry) return
+                        Novel.fetchNovelDetail(entry.id)
+                        libraryView.novelSelected(entry.id)
+                    }
+                }
+
+                FolderListRow {
+                    visible: folderData !== null
+                    anchors.fill: parent
+                    covers: folderData ? folderData.covers : []
+                    name: folderData ? folderData.name : ""
+                    count: folderData ? folderData.count : 0
+                    hidden: folderData ? folderData.hidden : false
+                    bodyFont: libraryView.fontBody
+                    inset: Gutter.ink
+                    onClicked: {
+                        if (folderData) libraryView.activeFolder = folderData.id
+                    }
+                }
+
+                CreateFolderCard {
+                    visible: item.kind === "create"
+                    anchors.fill: parent
+                    row: true
+                    bodyFont: libraryView.fontBody
+                    onClicked: libraryView._newFolder()
                 }
             }
         }
@@ -216,16 +393,7 @@ Item {
     FolderPrompt {
         id: folderPrompt
         anchors.fill: parent
-        onAccepted: function(value) {
-            if (libraryView._promptAction === "create")
-                Organizer.addFolder("novel", value)
-            else if (libraryView._promptAction === "rename")
-                Organizer.renameFolder("novel", libraryView._promptFolder, value)
-            else if (libraryView._promptAction === "delete")
-                Novel.deleteFolder(libraryView._promptFolder)
-            libraryView._promptAction = ""
-            libraryView._promptFolder = ""
-        }
+        onAccepted: function(value) { libraryView._acceptPrompt(value) }
     }
 
     Connections {
