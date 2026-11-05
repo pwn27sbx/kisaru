@@ -172,8 +172,13 @@ la raíz y la misma línea muestra el nombre, el número de títulos, el interru
 títulos**.
 
 Con una palabra secreta configurada aparece un interruptor **Ocultar** en la ficha de
-cada título y dentro de cada carpeta. Al pulsarlo, el título o la carpeta desaparece de
-la Biblioteca y vuelve a la raíz. Escribir la palabra en el buscador de la Biblioteca
+cada título y dentro de cada carpeta. Dentro de una carpeta, al pulsarlo la carpeta
+desaparece de la Biblioteca y vuelve a la raíz. En la ficha de un título hace otra cosa:
+el título queda oculto y la ficha **sigue abierta** con el interruptor en **Oculta**, para
+poder guardarlo en una carpeta oculta ahí mismo — la lista de carpetas muestra también
+las ocultas, porque ese título ya lo está, y no pide la palabra. El título desaparece de
+la Biblioteca al salir de la ficha (volver, cerrar, minimizar, cambiar de panel o de
+pestaña), y ahí se bloquea. Escribir la palabra en el buscador de la Biblioteca
 los muestra otra vez; dentro del título o de la carpeta, apagar el interruptor
 **Ocultar** los deja visibles. Un título oculto dentro de una carpeta visible desaparece
 solo él, sin ocultar la carpeta.
@@ -189,7 +194,8 @@ bloqueado, un título o una carpeta ocultos **no existen** para la interfaz: no 
 en la cuadrícula, la lista, el estado vacío, los contadores, la línea de estado, la
 búsqueda ni los mosaicos de las carpetas. Se desbloquea escribiendo la palabra (sin
 mensaje) y se vuelve a bloquear al cerrar, minimizar o cambiar de panel, al pulsar
-**Ocultar**, al escribirla otra vez y al arrancar la app. `kisaru privado` también sirve
+**Ocultar** dentro de una carpeta, al salir de la ficha de un título oculto, al
+escribirla otra vez y al arrancar la app. `kisaru privado` también sirve
 para reemplazarla, tras confirmar.
 
 Esto oculta la interfaz, **no cifra nada**: los títulos siguen en texto plano en los

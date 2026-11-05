@@ -5,6 +5,7 @@ import qs.app
 import qs.Commons
 import qs.services
 import qs.components
+import "../../../services/detail_hide.js" as DetailHide
 import "../../../services/chapters.js" as Chapters
 import "../../../services/scroll_metrics.js" as ScrollMetrics
 
@@ -40,21 +41,46 @@ Item {
     readonly property var _rawEntry: Manga.currentManga ? Manga.getLibraryEntry(Manga.libraryEntryId()) : null
 
 
-    function _toggleHiddenTitle() {
-        if (!Privacy.configured || _rawEntry === null) return
-        var key = Manga.libraryEntryId()
-        if (Privacy.locked) {
-            if (_rawEntry.hidden !== true) Manga.setHidden(key, true)
-            detailView.hiddenRequested()
-            return
-        }
-        if (_rawEntry.hidden === true) {
-            Manga.setHidden(key, false)
-            return
-        }
-        Manga.setHidden(key, true)
+    // Hiding from the Detail keeps the Detail open (owner, 2026-11-05): the
+    // title is marked hidden and stays usable so it can be filed into a hidden
+    // folder right here. The lock waits for the leave, which is when the title
+    // must be gone from the Library. The decision itself lives in
+    // services/detail_hide.js so the three panels cannot drift apart.
+    property bool _hiddenInDetail: false
+
+    function _settleHiddenInDetail() {
+        if (!detailView._hiddenInDetail) return
+        detailView._hiddenInDetail = false
         Privacy.lock()
-        detailView.hiddenRequested()
+    }
+
+    // Leaving the Detail — back, tab change, close, minimize, panel switch —
+    // applies the deferred hide: the title is already marked hidden, so the
+    // lock is what removes it from the Library.
+    onVisibleChanged: if (!visible) detailView._settleHiddenInDetail()
+
+    function _toggleHiddenTitle() {
+        var entry = detailView._rawEntry
+        if (entry === null) return
+        var action = DetailHide.toggle({
+            configured: Privacy.configured,
+            locked: Privacy.locked,
+            hidden: entry.hidden === true
+        })
+        if (action === DetailHide.ACTION.IGNORE) return
+        var key = Manga.libraryEntryId()
+        if (action === DetailHide.ACTION.HIDE_LEAVE) Manga.setHidden(key, true)
+        if (action === DetailHide.ACTION.UNHIDE_STAY) {
+            detailView._hiddenInDetail = false
+            Manga.setHidden(key, false)
+        }
+        if (action === DetailHide.ACTION.HIDE_STAY) {
+            Manga.setHidden(key, true)
+            detailView._hiddenInDetail = true
+        }
+        if (action === DetailHide.ACTION.HIDE_LEAVE
+                || action === DetailHide.ACTION.LEAVE)
+            detailView.hiddenRequested()
     }
 
     // Human-readable list of the sources the ES chain tried (plan §F3).
@@ -741,9 +767,14 @@ Item {
     FolderPicker {
         id: folderPicker
         anchors.fill: parent
-        folders: Privacy.locked
-            ? Organizer.folders("manga").filter(function(folder) { return !folder.hidden })
-            : Organizer.folders("manga")
+        // A hidden title may be filed into a hidden folder at once, with no
+        // word; a visible one keeps the old rule. See services/detail_hide.js.
+        folders: DetailHide.pickerShowsHidden({
+                locked: Privacy.locked,
+                hidden: detailView._rawEntry !== null && detailView._rawEntry.hidden === true
+            })
+            ? Organizer.folders("manga")
+            : Organizer.folders("manga").filter(function(folder) { return !folder.hidden })
         current: detailView._folderValue
         bodyFont: detailView.fontBody
         onChosen: function(folderId) { Manga.setFolder(Manga.libraryEntryId(), folderId) }

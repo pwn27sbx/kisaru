@@ -332,4 +332,30 @@ search and it shows; simple.
   (typed `abc`, x visible) are what exposed the ReferenceError; the final
   measurements above come from an isolated `qs` render of the same component with
   the text pre-filled, not from a click-through in the panel.
+- **L31 (Detail stays when hiding).** Owner (2026-11-05): inside a manhwa, pressing
+  Ocultar must not throw him out — he hides the title and files it into a hidden folder
+  right there. The rule lives in `services/detail_hide.js`: `toggle()` answers
+  `hide-stay` / `unhide-stay` / `hide-leave` / `leave` / `ignore`, and
+  `pickerShowsHidden()` says a not-hidden title keeps the old rule (hidden folders gone
+  while locked) while an already hidden one gets them at once. The three DetailViews
+  keep `_hiddenInDetail` and one `_settleHiddenInDetail()` on `onVisibleChanged`: the
+  lock lands when the Detail is left, not on the press. Leaving by back, tab change,
+  close, minimize, panel switch or opening a chapter all end in that settle; the shell
+  and the header still lock first for their own paths, which only makes it a no-op.
+  Folder view hiding is untouched.
+- **Tests.** `tests/detail_hide.test.js` (RED first, module missing) pins every branch of
+  `toggle()` and `pickerShowsHidden()`, the Library outcome (hidden + unlocked visible,
+  hidden + locked gone) through `library_view.isVisible`, the three views' wiring
+  (`DetailHide.toggle`, `_hiddenInDetail`, no lock inside `HIDE_STAY`, settle + lock on
+  leave, `setFolder`), that `setFolder` carries no word gate, that progress keeps its
+  `Privacy.locked && isHiddenLibraryEntry` guard, and that the hide path writes no log
+  line. `node --test`: **256 pass, 0 fail**; i18n and style lints OK; qmllint clean.
+- **Live, in a scratch copy** (`/var/tmp`, never committed) with the theme's real QML and
+  a sandbox `XDG_DATA_HOME`: the owner's desktop made pointer work unreliable, so a
+  timer drove the real `DetailView` instead of clicks. Seen: after Ocultar the Detail
+  stays open with the switch on **Oculta**; the folder list offers **Sin carpeta,
+  Visible, Secreta** (the hidden one); choosing Secreta leaves `Carpeta: Secreta` with
+  the switch still on and writes `folder: "sec", hidden: true`; leaving the Detail drops
+  the panel to the Library with only **Visible · 0 títulos** and **Nueva carpeta** — the
+  title and the hidden folder are gone, so the lock applied.
 
