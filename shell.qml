@@ -74,6 +74,11 @@ ShellRoot {
             target: slot.item
             // Closed from the toggle or its own minimize button.
             function onVisibleChanged() {
+                // One hook for every lock trigger the shell can see: closing,
+                // minimizing and switching panels all end here. Spurious locks
+                // are harmless (amendment 13).
+                if (slot.item && !slot.item.visible)
+                    Privacy.lock()
                 var next = Panels.afterHide({
                     open: slot.open,
                     visible: slot.item ? slot.item.visible : false,

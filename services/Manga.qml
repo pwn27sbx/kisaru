@@ -5,6 +5,7 @@ import Quickshell.Io
 import "library.js" as Library
 import qs.services
 import "app_paths.js" as Paths
+import "library_view.js" as LibraryViewJs
 
 Singleton {
     id: root
@@ -159,6 +160,77 @@ Singleton {
         libraryWriter.setText(JSON.stringify(root.libraryList, null, 2))
     }
 
+    // ── Folders and private mode ─────────────────────────────────────────────
+    // Display reads the visible list from services/library_view.js; the raw
+    // list stays the write side, because filtering it would make addToLibrary
+    // duplicate an entry that is merely hidden.
+    readonly property var _folders: Organizer.folders("manga")
+
+    function _viewOptions(folderId) {
+        return {
+            loaded: Organizer.loaded,
+            locked: Privacy.locked,
+            folder: folderId || ""
+        }
+    }
+
+    function visibleEntries(folderId) {
+        return LibraryViewJs.visibleEntries(root.libraryList, root._folders,
+                                            root._viewOptions(folderId))
+    }
+
+    function visibleCount() {
+        return LibraryViewJs.visibleCount(root.libraryList, root._folders,
+                                          root._viewOptions())
+    }
+
+    function isVisibleEntry(entry) {
+        return LibraryViewJs.isVisible(entry, root._folders, root._viewOptions())
+    }
+
+    function visibleEntryId() {
+        var id = root.libraryEntryId()
+        if (id === "") return ""
+        var entry = root.getLibraryEntry(id)
+        return entry && root.isVisibleEntry(entry) ? id : ""
+    }
+
+    function visibleEntry() {
+        var id = root.visibleEntryId()
+        return id === "" ? null : root.getLibraryEntry(id)
+    }
+
+    // The raw entry exists and hides behind a locked hidden folder.
+    function isHiddenLibraryEntry(entryId) {
+        var entry = root.getLibraryEntry(entryId)
+        if (!entry) return false
+        if (entry.hidden === true) return true
+        return Organizer.isHidden("manga", entry.folder || "")
+    }
+
+    function setFolder(entryId, folderId) {
+        root.libraryList = root.libraryList.map(function(e) {
+            if (e.id !== entryId) return e
+            return Object.assign({}, e, { folder: folderId || "" })
+        })
+        _saveLibrary()
+    }
+
+    function setHidden(entryId, hidden) {
+        root.libraryList = root.libraryList.map(function(e) {
+            if (e.id !== entryId) return e
+            return Object.assign({}, e, { hidden: hidden === true })
+        })
+        _saveLibrary()
+    }
+
+    function deleteFolder(folderId) {
+        if (!Organizer.deleteFolder("manga", folderId)) return false
+        root.libraryList = LibraryViewJs.entriesWithoutFolder(root.libraryList, folderId)
+        _saveLibrary()
+        return true
+    }
+
     function addToLibrary(manga) {
         // manga must have: id, title, coverUrl
         if (isInLibrary(manga.id)) return
@@ -168,17 +240,18 @@ Singleton {
             coverUrl:            manga.coverUrl,
             lastReadChapterId:   "",
             lastReadChapterNum:  "",
+            hidden:              false,
             addedAt:             new Date().toISOString()
         }
         root.libraryList = [entry, ...root.libraryList]
         _saveLibrary()
-        console.log("[ServiceManga] Added to library:", manga.title)
+        console.log("[ServiceManga] Added to library")
     }
 
     function removeFromLibrary(mangaId) {
         root.libraryList = root.libraryList.filter(function(e) { return e.id !== mangaId })
         _saveLibrary()
-        console.log("[ServiceManga] Removed from library:", mangaId)
+        console.log("[ServiceManga] Removed from library")
     }
 
     function isInLibrary(mangaId) {
@@ -186,6 +259,9 @@ Singleton {
     }
 
     function updateLastRead(mangaId, chapterId, chapterNum) {
+        // A hidden title must not write progress while the mode is locked.
+        if (Privacy.locked && root.isHiddenLibraryEntry(mangaId))
+            return
         root.libraryList = root.libraryList.map(function(e) {
             if (e.id !== mangaId) return e
             return Object.assign({}, e, {
@@ -194,7 +270,7 @@ Singleton {
             })
         })
         _saveLibrary()
-        console.log("[ServiceManga] Last read updated —", mangaId, "ch.", chapterNum)
+        console.log("[ServiceManga] Last read updated")
     }
 
     function getLibraryEntry(mangaId) {
@@ -569,6 +645,17 @@ Singleton {
         chapterPages = []
         currentChapterId = ""
         pagesError = ""
+    }
+
+    // Locking while a hidden title is open: no title and no chapter data stay
+    // in memory, and no page image stays reachable.
+    function clearDetail() {
+        currentManga = null
+        detailError = ""
+        notice = ""
+        sourcesTried = []
+        detailTitle = ""
+        clearChapterPages()
     }
 
     function clearMangaList() {

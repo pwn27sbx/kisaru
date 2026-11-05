@@ -2,6 +2,7 @@ import QtQuick
 import qs.app
 import qs.Commons
 import qs.services
+import "../services/caret.js" as Caret
 
 // The always-visible search pill (owner, round 6: one look for all three panels).
 //
@@ -99,7 +100,9 @@ Rectangle {
             height: Math.round(input.font.pixelSize * 1.25)
 
             Rectangle {
-                x: -width - Style.space(2)
+                // Before the first character at the start; at the cursor once
+                // text exists, so the negative offset never lands on a letter.
+                x: Caret.barX(input.cursorPosition, width, Style.space(2))
                 width: Style.space(2)
                 height: parent.height
                 anchors.verticalCenter: parent.verticalCenter
@@ -125,8 +128,8 @@ Rectangle {
         visible: !root.hasText
     }
 
-    // The "/" key hint; it becomes the clear cell once there is text, so the
-    // mouse keeps the affordance without a second control in the row.
+    // The clear cell: a bare x with a comfortable hit area, no box or border,
+    // aligned to the field's right gutter and centred with the text.
     Item {
         id: keyArea
         anchors {
@@ -134,28 +137,28 @@ Rectangle {
             rightMargin: Style.spacing.sm
             verticalCenter: parent.verticalCenter
         }
-        width: Style.space(16)
-        height: Style.space(16)
-
-        // The "/" key hint is gone (owner, 2026-11-02: "ese icon se va"); the
-        // status bar already teaches the shortcut. This slot is the clear cell
-        // once there is text, so it keeps its place without the badge.
+        width: Style.space(28)
+        height: Style.space(28)
 
         ClickableRect {
+            id: clearCell
+
             anchors.fill: parent
             visible: root.hasText
             cursorShape: Qt.PointingHandCursor
-            color: Colors.surface_container_highest
-            border.width: Style.spacing.hairline
-            border.color: Colors.outline_variant
+            color: clearCell.hovered ? Colors.surface_container_high : "transparent"
+            radius: Style.cornerRadius
             onClicked: root.userClear()
 
             StyledText {
                 anchors.centerIn: parent
                 text: "✕"
-                color: Colors.muted
+                color: clearCell.hovered ? Colors.on_surface : Colors.card_secondary
                 font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
+                // One step above body: the mark reads at a glance without
+                // turning into a second icon next to the search glyph.
+                font.pixelSize: Style.font.title
+                Behavior on color { ColorAnimation { duration: Motion.fast } }
             }
         }
     }

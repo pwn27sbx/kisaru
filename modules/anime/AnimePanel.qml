@@ -105,6 +105,10 @@ Item {
         if (root.tabIndex === 0) browseView.resetList()
     }
 
+    function _sendBrowseQuery(text) {
+        Anime.searchAnime(text, true)
+    }
+
     // Header brand: the app glyph plus this panel's short name (decision 1).
     Component {
         id: brandComponent
@@ -134,7 +138,7 @@ Item {
             tabs: [I18n.t("tab.browse"), I18n.t("tab.library")]
             tabIndex: root.tabIndex
             // Browse carries no number; Library shows a badge, hidden at 0 (A-8).
-            tabCounts: [-1, Anime.libraryList.length]
+            tabCounts: [-1, Anime.visibleCount()]
             brand: brandComponent
             fontFamily: root.fontBody
             settingsMode: root.settingsMode
@@ -168,15 +172,23 @@ Item {
         Timer {
             id: searchDebounce
             interval: 350
-            onTriggered: {
-                // Library filters locally (owner §33.1): no network here.
-                if (root.tabIndex !== 0) return
-                if (header.searchText.trim().length > 0)
-                    Anime.searchAnime(header.searchText.trim(), true)
-                else
-                    browseView.resetList()
+        onTriggered: {
+            // Library filters locally (owner §33.1): no network here.
+            if (root.tabIndex !== 0) return
+            var text = header.searchText.trim()
+            if (text.length === 0) {
+                browseView.resetList()
+                return
             }
+            // A tag miss searches at once. On a hit the query is held
+            // while the helper decides; only "no match" sends it.
+            var started = Privacy.consider(text, function(code) {
+                if (code === 1) root._sendBrowseQuery(text)
+                else if (code === 0) root.collapseSearch()
+            })
+            if (started === "miss") root._sendBrowseQuery(text)
         }
+    }
 
         // ── Main content (Browse / Library stacks) ────────────────────────────
         StackLayout {
@@ -212,6 +224,13 @@ Item {
                         root.browseStack = 0
                         Anime.clearDetail()
                     }
+                    onHiddenRequested: {
+                        root.tabIndex = 1
+                        root.browseStack = 0
+                        root.libraryStack = 0
+                        Anime.clearDetail()
+                    }
+
                 }
             }
 
@@ -220,6 +239,7 @@ Item {
                 LibraryView {
                     id: libraryView
                     query: root.searchOpen && root.tabIndex === 1 ? header.searchText : ""
+                    onSecretEntered: root.collapseSearch()
                     anchors.fill: parent
                     visible: root.libraryStack === 0
                     opacity: visible ? 1 : 0
@@ -241,6 +261,13 @@ Item {
                         root.libraryStack = 0
                         Anime.clearDetail()
                     }
+                    onHiddenRequested: {
+                        root.tabIndex = 1
+                        root.browseStack = 0
+                        root.libraryStack = 0
+                        Anime.clearDetail()
+                    }
+
                 }
             }
 
@@ -276,7 +303,8 @@ Item {
                 settingsMode: root.settingsMode,
                 tabIndex: root.tabIndex,
                 browseCount: Anime.animeList.length,
-                libraryCount: Anime.libraryList.length,
+                libraryCount: Anime.visibleCount(),
+                folderName: libraryView.activeFolderName,
                 translate: I18n.tn
             })
             modeText: Anime.currentMode.toUpperCase()
@@ -286,5 +314,20 @@ Item {
 
     PanelDecor {
         title: I18n.t("panel.anime")
+    }
+
+    // One hook: when the mode locks, a hidden title leaves no reader behind.
+    Connections {
+        target: Privacy
+        function onLockedChanged() {
+            if (!Privacy.locked) return
+            root.collapseSearch()
+            if (Anime.currentAnime && Anime.isHiddenLibraryEntry(Anime.currentAnime.id)) {
+                root.tabIndex = 1
+                root.browseStack = 0
+                root.libraryStack = 0
+                Anime.clearDetail()
+            }
+        }
     }
 }

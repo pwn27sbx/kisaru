@@ -62,3 +62,16 @@ test("the inherited library path honours a non-default data home", () => {
 test("an unknown library is an error, not a silent empty path", () => {
     assert.throws(() => paths.libraryPath(HOME, "books", false), /unknown library/);
 });
+
+test("folders and the secret always live under the project's own data folder", () => {
+    assert.equal(paths.organizerPath(HOME + "/.local/share"),
+        HOME + "/.local/share/kisaru/organizer.json");
+    assert.equal(paths.privacyPath(HOME + "/.local/share"),
+        HOME + "/.local/share/kisaru/privacy.json");
+
+    // Never the inherited neutral folder: the folders are new data.
+    assert.doesNotMatch(paths.organizerPath("/mnt/other/data"), /quickshell/);
+    assert.doesNotMatch(paths.privacyPath("/mnt/other/data"), /quickshell/);
+    assert.equal(paths.organizerPath("/mnt/other/data"),
+        "/mnt/other/data/kisaru/organizer.json");
+});

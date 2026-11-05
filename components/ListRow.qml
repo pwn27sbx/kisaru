@@ -44,8 +44,7 @@ ClickableRect {
     // The datum is secondary, not faint: the muted role lifted toward the
     // foreground (A-10). One place, so the score's companions and the author
     // line cannot drift.
-    readonly property color datumColor:
-        Colors.mix(Colors.on_surface_variant, Colors.on_surface, 0.35)
+    readonly property color datumColor: Colors.card_secondary
 
     // Qt caches a FAILED image load per URL for the engine's lifetime (see
     // CoverCard): one request that lands while the local backend restarts
@@ -226,7 +225,7 @@ ClickableRect {
         font.family: root.bodyFont
         font.pixelSize: Style.font.caption
         font.letterSpacing: 0.4
-        color: root.progressActive ? Colors.primary : Colors.on_surface_variant
-        opacity: root.progressActive ? 0.9 : 0.5
+        color: root.progressActive ? Colors.primary : Colors.card_secondary
+        opacity: root.progressActive ? 0.9 : 1
     }
 }

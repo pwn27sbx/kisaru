@@ -288,8 +288,7 @@ ClickableRect {
                 font.family: root.bodyFont
                 font.pixelSize: Style.font.caption
                 font.letterSpacing: 0.3
-                color: Colors.on_surface_variant
-                opacity: 0.7
+                color: Colors.card_secondary
                 elide: Text.ElideRight
                 maximumLineCount: 1
             }
@@ -320,7 +319,7 @@ ClickableRect {
                     // proportional digits make the column jitter. Qt 6.12
                     // takes OpenType features directly.
                     font.features: { "tnum": 1 }
-                    color: Colors.on_surface_variant
+                    color: Colors.card_secondary
                     elide: Text.ElideRight
                     maximumLineCount: 1
                 }
@@ -340,7 +339,7 @@ ClickableRect {
                     // that is publishing says nothing the reader must act on.
                     color: root.metaTone === "done" ? Colors.primary
                         : root.metaTone === "warn" ? Colors.error
-                        : Colors.on_surface_variant
+                        : Colors.card_secondary
                     horizontalAlignment: Text.AlignRight
                     elide: Text.ElideRight
                     maximumLineCount: 1

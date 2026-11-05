@@ -49,8 +49,8 @@ Rectangle {
             font.family: root.bodyFont
             font.pixelSize: Style.font.caption
             font.letterSpacing: 0.4
-            color: root.started ? Colors.on_surface : Colors.on_surface_variant
-            opacity: root.started ? 0.85 : 0.45
+            color: root.started ? Colors.on_surface : Colors.card_secondary
+            opacity: root.started ? 0.85 : 1
         }
     }
 }

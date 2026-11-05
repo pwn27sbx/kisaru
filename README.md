@@ -162,6 +162,45 @@ Se cierra con la flecha de volver o `Esc`. Todo se guarda en
 Un solo escritor mantiene ese archivo (`services/UiPrefs.qml`): cambiar una clave nunca
 borra las demás.
 
+## Carpetas y modo privado
+
+La Biblioteca muestra las carpetas como tarjetas del mismo tamaño que un título, con un
+mosaico de sus portadas, y después los títulos que no tienen carpeta. La tarjeta con
+borde discontinuo **Nueva carpeta** crea una. Dentro de una carpeta, la flecha vuelve a
+la raíz y la misma línea muestra el nombre, el número de títulos, el interruptor
+**Ocultar/Oculta** y un menú de tres puntos con **Renombrar** y **Borrar**. Borrar una carpeta **nunca borra
+títulos**.
+
+Con una palabra secreta configurada aparece un interruptor **Ocultar** en la ficha de
+cada título y dentro de cada carpeta. Dentro de una carpeta, al pulsarlo la carpeta
+desaparece de la Biblioteca y vuelve a la raíz. En la ficha de un título hace otra cosa:
+el título queda oculto y la ficha **sigue abierta** con el interruptor en **Oculta**, para
+poder guardarlo en una carpeta oculta ahí mismo — la lista de carpetas muestra también
+las ocultas, porque ese título ya lo está, y no pide la palabra. El título desaparece de
+la Biblioteca al salir de la ficha (volver, cerrar, minimizar, cambiar de panel o de
+pestaña), y ahí se bloquea. Escribir la palabra en el buscador de la Biblioteca
+los muestra otra vez; dentro del título o de la carpeta, apagar el interruptor
+**Ocultar** los deja visibles. Un título oculto dentro de una carpeta visible desaparece
+solo él, sin ocultar la carpeta.
+
+```sh
+kisaru privado       # pide la palabra dos veces, sin eco y sin argumentos
+```
+
+La palabra no queda en el historial del shell ni en la interfaz. Se guarda como
+`privacy.json` (modo `0600`) con sal y una clave scrypt; la app solo guarda una etiqueta
+de un dígito para decidir si una búsqueda merece una comprobación. Mientras está
+bloqueado, un título o una carpeta ocultos **no existen** para la interfaz: no aparecen
+en la cuadrícula, la lista, el estado vacío, los contadores, la línea de estado, la
+búsqueda ni los mosaicos de las carpetas. Se desbloquea escribiendo la palabra (sin
+mensaje) y se vuelve a bloquear al cerrar, minimizar o cambiar de panel, al pulsar
+**Ocultar** dentro de una carpeta, al salir de la ficha de un título oculto, al
+escribirla otra vez y al arrancar la app. `kisaru privado` también sirve
+para reemplazarla, tras confirmar.
+
+Esto oculta la interfaz, **no cifra nada**: los títulos siguen en texto plano en los
+archivos de la biblioteca. No hay bloqueo por inactividad.
+
 ## Fuentes por panel
 
 - **Anime:** hianime primero; si el stream no trae pista de subtítulos en español, cae a
@@ -225,6 +264,8 @@ suites y subir `supported` a propósito) está documentado en el README del widg
 
 - Bibliotecas y progreso de lectura: `~/.local/share/kisaru/{anime,manga}_library.json`,
   `~/.local/share/kisaru/new_novel_library.json`
+- Carpetas: `~/.local/share/kisaru/organizer.json`
+- Palabra del modo privado: `~/.local/share/kisaru/privacy.json` (modo `0600`)
 - Descargas y cachés: `~/.local/share/kisaru/downloads`, `~/.cache/kisaru/`
 
 Las versiones anteriores vivían en `~/.local/share/quickshell*`; la regla de compatibilidad

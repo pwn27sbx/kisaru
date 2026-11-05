@@ -107,3 +107,13 @@ test("opacityFor: 1 / 0.15 / guarda de tipo", () => {
     assert.equal(p.opacityFor({ open: true, loaded: true, pointerInside: 0 }), 1);
     assert.equal(p.opacityFor({ open: true, loaded: true, pointerInside: "true" }), 1);
 });
+test("leaving the Library tab locks; staying or returning does not", () => {
+    // The Library is where the word is typed. A tab change away from it hides
+    // everything again; returning to it must not unlock, and moving inside the
+    // Library stack is not a tab change at all.
+    assert.equal(p.locksOnTabChange(1, 0), true);
+    assert.equal(p.locksOnTabChange(1, 2), true);
+    assert.equal(p.locksOnTabChange(1, 1), false);
+    assert.equal(p.locksOnTabChange(0, 1), false);
+    assert.equal(p.locksOnTabChange(0, 0), false);
+});

@@ -49,6 +49,11 @@ QtObject {
     readonly property color text: Commons.Color.foreground
     readonly property color on_surface_variant: Commons.Color.muted
     readonly property color muted: Commons.Color.muted
+    // Secondary text inside a card's info band (status, counts, datums). The
+    // theme's muted alone is ~1.3:1 on surface_container_high, and the old
+    // views then halved its opacity; mixing most of the way to the title's
+    // tone makes it >= 4.5:1 while staying visibly below the title.
+    readonly property color card_secondary: mix(Commons.Color.muted, Commons.Color.foreground, 0.9)
     readonly property color inverse_surface: Commons.Color.foreground
     readonly property color inverse_on_surface: Commons.Color.background
     readonly property color scrim: "#000000"

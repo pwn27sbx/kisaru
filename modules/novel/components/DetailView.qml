@@ -5,6 +5,7 @@ import qs.app
 import qs.Commons
 import qs.services
 import qs.components
+import "../../../services/detail_hide.js" as DetailHide
 
 Item {
     id: detailView
@@ -14,10 +15,69 @@ Item {
 
     signal backRequested()
     signal chapterSelected(string chapterId)
+    // Hiding from Detail returns to the Library and leaves no detail behind.
+    signal hiddenRequested()
 
     // ── Library state ─────────────────────────────────────────────────────────
+    // Display asks the visible accessor; writes keep the raw id. While locked,
+    // a hidden title reads as not saved and its save is simulated.
+    property bool _simulatedSaved: false
     readonly property bool _inLibrary:
-        Novel.currentNovel ? Novel.isInLibrary(Novel.currentNovel.id) : false
+        Novel.currentNovel ? (Novel.visibleEntryId() !== "" || _simulatedSaved) : false
+    readonly property string _folderName: {
+        if (_folderValue === "") return ""
+        var folder = Organizer.folder("novel", _folderValue)
+        return folder ? folder.name : ""
+    }
+    readonly property string _folderValue: {
+        var entry = Novel.visibleEntry()
+        return entry ? (entry.folder || "") : ""
+    }
+
+    readonly property var _rawEntry: Novel.currentNovel ? Novel.getLibraryEntry(Novel.currentNovel.id) : null
+
+
+    // Hiding from the Detail keeps the Detail open (owner, 2026-11-05): the
+    // title is marked hidden and stays usable so it can be filed into a hidden
+    // folder right here. The lock waits for the leave, which is when the title
+    // must be gone from the Library. The decision itself lives in
+    // services/detail_hide.js so the three panels cannot drift apart.
+    property bool _hiddenInDetail: false
+
+    function _settleHiddenInDetail() {
+        if (!detailView._hiddenInDetail) return
+        detailView._hiddenInDetail = false
+        Privacy.lock()
+    }
+
+    // Leaving the Detail — back, tab change, close, minimize, panel switch —
+    // applies the deferred hide: the title is already marked hidden, so the
+    // lock is what removes it from the Library.
+    onVisibleChanged: if (!visible) detailView._settleHiddenInDetail()
+
+    function _toggleHiddenTitle() {
+        var entry = detailView._rawEntry
+        if (entry === null) return
+        var action = DetailHide.toggle({
+            configured: Privacy.configured,
+            locked: Privacy.locked,
+            hidden: entry.hidden === true
+        })
+        if (action === DetailHide.ACTION.IGNORE) return
+        var key = Novel.currentNovel.id
+        if (action === DetailHide.ACTION.HIDE_LEAVE) Novel.setHidden(key, true)
+        if (action === DetailHide.ACTION.UNHIDE_STAY) {
+            detailView._hiddenInDetail = false
+            Novel.setHidden(key, false)
+        }
+        if (action === DetailHide.ACTION.HIDE_STAY) {
+            Novel.setHidden(key, true)
+            detailView._hiddenInDetail = true
+        }
+        if (action === DetailHide.ACTION.HIDE_LEAVE
+                || action === DetailHide.ACTION.LEAVE)
+            detailView.hiddenRequested()
+    }
 
     // ── Filter / sort state ───────────────────────────────────────────────────
     property bool   _sortAscending: false
@@ -26,6 +86,7 @@ Item {
     function reset() {
         _chapterFilter = ""
         _sortAscending = false
+        _simulatedSaved = false
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
@@ -62,7 +123,7 @@ Item {
     function continueReading() {
         if (!Novel.currentNovel) return
 
-        var entry = Novel.getLibraryEntry(Novel.currentNovel.id)
+        var entry = Novel.visibleEntry()
         var lastChapterId = entry ? entry.lastReadChapterId : null
         var targetChapter = null
 
@@ -89,7 +150,7 @@ Item {
     function readNext() {
         if (!Novel.currentNovel) return
 
-        var entry = Novel.getLibraryEntry(Novel.currentNovel.id)
+        var entry = Novel.visibleEntry()
         var lastChapterId = entry ? entry.lastReadChapterId : null
         var targetChapter = null
 
@@ -188,14 +249,23 @@ Item {
                     MouseArea {
                         anchors.fill: parent; hoverEnabled: true
                         onClicked: {
-                            if (detailView._inLibrary)
+                            if (detailView._simulatedSaved) {
+                                detailView._simulatedSaved = false
+                                return
+                            }
+                            if (detailView._inLibrary) {
                                 Novel.removeFromLibrary(Novel.currentNovel.id)
-                            else
-                                Novel.addToLibrary({
-                                    id:       Novel.currentNovel.id,
-                                    title:    Novel.currentNovel.title,
-                                    coverUrl: Novel.currentNovel.coverUrl
-                                })
+                                return
+                            }
+                            if (Privacy.locked && Novel.isHiddenLibraryEntry(Novel.currentNovel.id)) {
+                                detailView._simulatedSaved = true
+                                return
+                            }
+                            Novel.addToLibrary({
+                                id:       Novel.currentNovel.id,
+                                title:    Novel.currentNovel.title,
+                                coverUrl: Novel.currentNovel.coverUrl
+                            })
                         }
                     }
                 }
@@ -332,8 +402,44 @@ Item {
                 Item { Layout.fillWidth: true }
 
                 Rectangle {
-                    readonly property var _entry: Novel.currentNovel
-                        ? Novel.getLibraryEntry(Novel.currentNovel.id) : null
+                    id: folderButton
+                    visible: Novel.currentNovel !== null && Novel.visibleEntryId() !== ""
+                    width: folderLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
+                    height: Style.space(24)
+                    radius: Style.cornerRadius
+                    color: folderArea.containsMouse
+                        ? Colors.surface_container_high : Colors.surface_container
+                    border.color: Colors.outline_variant
+                    border.width: Style.spacing.hairline
+
+                    StyledText {
+                        id: folderLabel
+                        anchors.centerIn: parent
+                        text: I18n.t("folder.current", { 1: detailView._folderValue === ""
+                            ? I18n.t("folder.none") : detailView._folderName })
+                        font.family: detailView.fontBody
+                        font.pixelSize: Style.font.caption
+                        color: Colors.on_surface
+                    }
+                    MouseArea {
+                        id: folderArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: folderPicker.opened = true
+                    }
+                }
+
+                HideSwitch {
+                    visible: Privacy.configured && detailView._rawEntry !== null
+                    checked: !Privacy.locked && detailView._rawEntry !== null
+                        && detailView._rawEntry.hidden === true
+                    bodyFont: detailView.fontBody
+                    onClicked: detailView._toggleHiddenTitle()
+                }
+
+                Rectangle {
+                    readonly property var _entry: Novel.visibleEntry()
                     visible: _entry !== null && _entry !== undefined
                         && _entry.lastReadChapterNum !== "" && _entry.lastReadChapterNum !== undefined
                     height: 20; width: lastReadTxt.implicitWidth + 18; radius: Style.cornerRadius
@@ -343,7 +449,7 @@ Item {
                     Text {
                         id: lastReadTxt; anchors.centerIn: parent
                         text: {
-                            var e = Novel.currentNovel ? Novel.getLibraryEntry(Novel.currentNovel.id) : null
+                            var e = Novel.visibleEntry()
                             return e ? I18n.t("last.ch", { 1: e.lastReadChapterNum }) : ""
                         }
                         font.family: detailView.fontBody; font.pixelSize: 9 // style-ignore — bespoke size
@@ -580,8 +686,7 @@ Item {
                     id: rowAreaRect
                     width: chapterList.width; height: 62
 
-                    readonly property var _libEntry: Novel.currentNovel
-                        ? Novel.getLibraryEntry(Novel.currentNovel.id) : null
+                    readonly property var _libEntry: Novel.visibleEntry()
                     readonly property bool isLastRead:
                         _libEntry !== null && _libEntry !== undefined
                         && _libEntry.lastReadChapterId === modelData.id
@@ -646,6 +751,39 @@ Item {
                                 Novel.updateLastRead(Novel.currentNovel.id, modelData.id, modelData.chapter)
                         }
                 }
+            }
+        }
+    }
+
+    Connections {
+        target: Novel
+        function onCurrentNovelChanged() { detailView._simulatedSaved = false }
+    }
+
+    FolderPicker {
+        id: folderPicker
+        anchors.fill: parent
+        // A hidden title may be filed into a hidden folder at once, with no
+        // word; a visible one keeps the old rule. See services/detail_hide.js.
+        folders: DetailHide.pickerShowsHidden({
+                locked: Privacy.locked,
+                hidden: detailView._rawEntry !== null && detailView._rawEntry.hidden === true
+            })
+            ? Organizer.folders("novel")
+            : Organizer.folders("novel").filter(function(folder) { return !folder.hidden })
+        current: detailView._folderValue
+        bodyFont: detailView.fontBody
+        onChosen: function(folderId) { Novel.setFolder(Novel.currentNovel.id, folderId) }
+        onCreateRequested: folderPrompt.openText(I18n.t("folder.create"), "")
+    }
+
+    FolderPrompt {
+        id: folderPrompt
+        anchors.fill: parent
+        onAccepted: function(value) {
+            var folderId = Organizer.addFolder("novel", value)
+            if (folderId !== "") {
+                Novel.setFolder(Novel.currentNovel.id, folderId)
             }
         }
     }

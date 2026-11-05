@@ -6,6 +6,7 @@ import qs.Commons
 import qs.services
 import Quickshell.Io
 import qs.components
+import "../../../services/detail_hide.js" as DetailHide
 import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
@@ -15,9 +16,67 @@ Item {
     readonly property string fontBody:    Style.font.family
 
     signal backRequested()
+    // Hiding from Detail returns to the Library and leaves no detail behind.
+    signal hiddenRequested()
 
+    // Display asks the visible accessor; writes keep the raw id. While locked,
+    // a hidden title reads as not saved and its save is simulated.
+    property bool _simulatedSaved: false
     readonly property bool _inLibrary:
-        Anime.currentAnime ? Anime.isInLibrary(Anime.currentAnime.id) : false
+        Anime.currentAnime ? (Anime.visibleEntryId() !== "" || _simulatedSaved) : false
+    readonly property string _folderName: {
+        if (_folderValue === "") return ""
+        var folder = Organizer.folder("anime", _folderValue)
+        return folder ? folder.name : ""
+    }
+    readonly property string _folderValue: {
+        var entry = Anime.visibleEntry()
+        return entry ? (entry.folder || "") : ""
+    }
+    readonly property var _rawEntry:
+        Anime.currentAnime ? Anime.getLibraryEntry(Anime.currentAnime.id) : null
+
+    // Hiding from the Detail keeps the Detail open (owner, 2026-11-05): the
+    // title is marked hidden and stays usable so it can be filed into a hidden
+    // folder right here. The lock waits for the leave, which is when the title
+    // must be gone from the Library. The decision itself lives in
+    // services/detail_hide.js so the three panels cannot drift apart.
+    property bool _hiddenInDetail: false
+
+    function _settleHiddenInDetail() {
+        if (!detailView._hiddenInDetail) return
+        detailView._hiddenInDetail = false
+        Privacy.lock()
+    }
+
+    // Leaving the Detail — back, tab change, close, minimize, panel switch —
+    // applies the deferred hide: the title is already marked hidden, so the
+    // lock is what removes it from the Library.
+    onVisibleChanged: if (!visible) detailView._settleHiddenInDetail()
+
+    function _toggleHiddenTitle() {
+        var entry = detailView._rawEntry
+        if (entry === null) return
+        var action = DetailHide.toggle({
+            configured: Privacy.configured,
+            locked: Privacy.locked,
+            hidden: entry.hidden === true
+        })
+        if (action === DetailHide.ACTION.IGNORE) return
+        var key = Anime.currentAnime.id
+        if (action === DetailHide.ACTION.HIDE_LEAVE) Anime.setHidden(key, true)
+        if (action === DetailHide.ACTION.UNHIDE_STAY) {
+            detailView._hiddenInDetail = false
+            Anime.setHidden(key, false)
+        }
+        if (action === DetailHide.ACTION.HIDE_STAY) {
+            Anime.setHidden(key, true)
+            detailView._hiddenInDetail = true
+        }
+        if (action === DetailHide.ACTION.HIDE_LEAVE
+                || action === DetailHide.ACTION.LEAVE)
+            detailView.hiddenRequested()
+    }
 
     // ── MPV launcher ──────────────────────────────────────────────────────────
     Process {
@@ -135,10 +194,19 @@ Item {
                     MouseArea {
                         anchors.fill: parent; hoverEnabled: true
                         onClicked: {
-                            if (detailView._inLibrary)
+                            if (detailView._simulatedSaved) {
+                                detailView._simulatedSaved = false
+                                return
+                            }
+                            if (detailView._inLibrary) {
                                 Anime.removeFromLibrary(Anime.currentAnime.id)
-                            else
-                                Anime.addToLibrary(Anime.currentAnime)
+                                return
+                            }
+                            if (Privacy.locked && Anime.isHiddenLibraryEntry(Anime.currentAnime.id)) {
+                                detailView._simulatedSaved = true
+                                return
+                            }
+                            Anime.addToLibrary(Anime.currentAnime)
                         }
                     }
                 }
@@ -176,10 +244,46 @@ Item {
 
                 Item { Layout.fillWidth: true }
 
+                Rectangle {
+                    id: folderButton
+                    visible: Anime.currentAnime !== null && Anime.visibleEntryId() !== ""
+                    width: folderLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
+                    height: Style.space(22)
+                    radius: Style.cornerRadius
+                    color: folderArea.containsMouse
+                        ? Colors.surface_container_high : Colors.surface_container
+                    border.color: Colors.outline_variant
+                    border.width: Style.spacing.hairline
+
+                    StyledText {
+                        id: folderLabel
+                        anchors.centerIn: parent
+                        text: I18n.t("folder.current", { 1: detailView._folderValue === ""
+                            ? I18n.t("folder.none") : detailView._folderName })
+                        font.family: detailView.fontBody
+                        font.pixelSize: Style.font.caption
+                        color: Colors.on_surface
+                    }
+                    MouseArea {
+                        id: folderArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: folderPicker.opened = true
+                    }
+                }
+
+                HideSwitch {
+                    visible: Privacy.configured && detailView._rawEntry !== null
+                    checked: !Privacy.locked && detailView._rawEntry !== null
+                        && detailView._rawEntry.hidden === true
+                    bodyFont: detailView.fontBody
+                    onClicked: detailView._toggleHiddenTitle()
+                }
+
                 // Last-watched badge
                 Rectangle {
-                    readonly property var _entry: Anime.currentAnime
-                        ? Anime.getLibraryEntry(Anime.currentAnime.id) : null
+                    readonly property var _entry: Anime.visibleEntry()
                     visible: _entry !== null && _entry !== undefined
                         && _entry.lastWatchedEpNum !== ""
                         && _entry.lastWatchedEpNum !== undefined
@@ -190,8 +294,7 @@ Item {
                     Text {
                         id: lastWatchedText; anchors.centerIn: parent
                         text: {
-                            var e = Anime.currentAnime
-                                ? Anime.getLibraryEntry(Anime.currentAnime.id) : null
+                            var e = Anime.visibleEntry()
                             return e ? I18n.t("last.ep", { 1: e.lastWatchedEpNum }) : ""
                         }
                         font.family: detailView.fontBody
@@ -262,8 +365,7 @@ Item {
                     id: epRowAreaRect
                     width: epList.width; height: 52
 
-                    readonly property var _libEntry: Anime.currentAnime
-                        ? Anime.getLibraryEntry(Anime.currentAnime.id) : null
+                    readonly property var _libEntry: Anime.visibleEntry()
                     readonly property bool isLastWatched:
                         _libEntry !== null && _libEntry !== undefined
                         && _libEntry.lastWatchedEpNum === String(modelData.number)
@@ -362,6 +464,39 @@ Item {
                 : ""
             detailView._playWithMpv(lnk.url, lnk.referer, lnk.subtitle, title)
             Anime.clearStreamLinks()
+        }
+    }
+
+    Connections {
+        target: Anime
+        function onCurrentAnimeChanged() { detailView._simulatedSaved = false }
+    }
+
+    FolderPicker {
+        id: folderPicker
+        anchors.fill: parent
+        // A hidden title may be filed into a hidden folder at once, with no
+        // word; a visible one keeps the old rule. See services/detail_hide.js.
+        folders: DetailHide.pickerShowsHidden({
+                locked: Privacy.locked,
+                hidden: detailView._rawEntry !== null && detailView._rawEntry.hidden === true
+            })
+            ? Organizer.folders("anime")
+            : Organizer.folders("anime").filter(function(folder) { return !folder.hidden })
+        current: detailView._folderValue
+        bodyFont: detailView.fontBody
+        onChosen: function(folderId) { Anime.setFolder(Anime.currentAnime.id, folderId) }
+        onCreateRequested: folderPrompt.openText(I18n.t("folder.create"), "")
+    }
+
+    FolderPrompt {
+        id: folderPrompt
+        anchors.fill: parent
+        onAccepted: function(value) {
+            var folderId = Organizer.addFolder("anime", value)
+            if (folderId !== "") {
+                Anime.setFolder(Anime.currentAnime.id, folderId)
+            }
         }
     }
 }

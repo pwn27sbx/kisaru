@@ -156,6 +156,13 @@ function opacityForSlot(slot) {
     return opacityFor({ open: true, loaded: true, pointerInside: item.pointerInside });
 }
 
+// The Library is tab index 1 in every panel. A tab change away from it hides
+// everything again; returning does not unlock, and the Library's own stacks
+// (opening a title and going back) never change the tab, so they never lock.
+function locksOnTabChange(previous, next) {
+    return Number(previous) === 1 && Number(next) !== 1;
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         IDLE_OPACITY: IDLE_OPACITY,
@@ -168,6 +175,7 @@ if (typeof module !== "undefined" && module.exports) {
         othersToClose: othersToClose,
         closePatch: closePatch,
         opacityFor: opacityFor,
-        opacityForSlot: opacityForSlot
+        opacityForSlot: opacityForSlot,
+        locksOnTabChange: locksOnTabChange
     };
 }
