@@ -17,7 +17,6 @@ ClickableRect {
     property bool coversReady: true
     property string name: ""
     property int count: 0
-    property bool hidden: false
     property string bodyFont: ""
 
     readonly property int _infoPadding: Style.space(8)
@@ -59,31 +58,7 @@ ClickableRect {
             }
         }
 
-        // Hidden folders exist only while unlocked; the chip says so without
-        // giving the folder away after a lock (the card itself is gone then).
-        Rectangle {
-            visible: root.hidden
-            anchors {
-                top: parent.top
-                right: parent.right
-                topMargin: Style.space(6)
-                rightMargin: Style.space(6)
-            }
-            height: Style.space(16)
-            radius: Style.cornerRadius
-            width: hiddenLabel.implicitWidth + Style.space(12)
-            color: Colors.withAlpha(Colors.surface_container, 0.9)
-            border.width: Style.spacing.hairline
-            border.color: Colors.outline_variant
 
-            MaterialIcon {
-                id: hiddenLabel
-                anchors.centerIn: parent
-                text: "󰌾"
-                font.pixelSize: Style.font.caption
-                color: Colors.on_surface_variant
-            }
-        }
     }
 
     // Name and count, the title card's info block with a second line.

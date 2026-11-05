@@ -14,7 +14,6 @@ ClickableRect {
     property bool coversReady: true
     property string name: ""
     property int count: 0
-    property bool hidden: false
     property string bodyFont: ""
     property int inset: Style.spacing.xl
 
@@ -83,14 +82,6 @@ ClickableRect {
                 font.pixelSize: Math.round(Style.font.body * ListMetrics.DATUM_SCALE)
                 font.letterSpacing: 0.3
                 color: Colors.card_secondary
-            }
-
-            StyledText {
-                visible: root.hidden
-                text: "󰌾"
-                font.family: "Material Design Icons"
-                font.pixelSize: Math.round(Style.font.body * ListMetrics.DATUM_SCALE)
-                color: Colors.on_surface_variant
             }
         }
     }

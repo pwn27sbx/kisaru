@@ -209,8 +209,6 @@ Item {
                 root.settingsMode = !root.settingsMode
                 root.collapseSearch()
             }
-            lockVisible: Privacy.configured && !Privacy.locked
-            onLockClicked: Privacy.lock()
             onMinimizeClicked: root.minimize()
         }
 
@@ -248,6 +246,13 @@ Item {
                     Behavior on opacity { NumberAnimation { duration: Motion.slow; easing.type: Motion.easeOut } }
 
                     onBackRequested:   { root.browseStack = 0 }
+                    onHiddenRequested: {
+                        root.tabIndex = 1
+                        root.browseStack = 0
+                        root.libraryStack = 0
+                        Manga.clearDetail()
+                    }
+
                     onChapterSelected: { root.browseStack = 2 }
                     onSearchOtherSourcesRequested: root.searchOtherSources()
                 }
@@ -290,6 +295,13 @@ Item {
                     Behavior on opacity { NumberAnimation { duration: Motion.slow; easing.type: Motion.easeOut } }
 
                     onBackRequested:   { root.libraryStack = 0 }
+                    onHiddenRequested: {
+                        root.tabIndex = 1
+                        root.browseStack = 0
+                        root.libraryStack = 0
+                        Manga.clearDetail()
+                    }
+
                     onChapterSelected: { root.libraryStack = 2 }
                     onSearchOtherSourcesRequested: root.searchOtherSources()
                 }

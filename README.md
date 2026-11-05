@@ -164,13 +164,18 @@ borra las demás.
 
 ## Carpetas y modo privado
 
-La Biblioteca tiene una fila de carpetas bajo el header, en los tres paneles:
-**Todas**, cada carpeta y **+**. Crear, renombrar y borrar desde esa fila; borrar una
-carpeta **nunca borra títulos**, solo los devuelve a Todas. La carpeta de un título se
-elige en su ficha (**Detalle**), no en la tarjeta.
+La Biblioteca muestra las carpetas como tarjetas del mismo tamaño que un título, con un
+mosaico de sus portadas, y después los títulos que no tienen carpeta. La tarjeta con
+borde discontinuo **Nueva carpeta** crea una; dentro de una carpeta, la flecha vuelve a
+la raíz y **Renombrar** / **Borrar** viven ahí. Borrar una carpeta **nunca borra
+títulos**.
 
-Con una palabra secreta configurada aparece además el candado y la opción de **ocultar**
-una carpeta:
+Con una palabra secreta configurada aparece un interruptor **Ocultar** en la ficha de
+cada título y dentro de cada carpeta. Al pulsarlo, el título o la carpeta desaparece de
+la Biblioteca y vuelve a la raíz. Escribir la palabra en el buscador de la Biblioteca
+los muestra otra vez; dentro del título o de la carpeta, apagar el interruptor
+**Ocultar** los deja visibles. Un título oculto dentro de una carpeta visible desaparece
+solo él, sin ocultar la carpeta.
 
 ```sh
 kisaru privado       # pide la palabra dos veces, sin eco y sin argumentos
@@ -178,13 +183,13 @@ kisaru privado       # pide la palabra dos veces, sin eco y sin argumentos
 
 La palabra no queda en el historial del shell ni en la interfaz. Se guarda como
 `privacy.json` (modo `0600`) con sal y una clave scrypt; la app solo guarda una etiqueta
-de un dígito para decidir si una búsqueda merece una comprobación. Una carpeta oculta y
-sus títulos **no existen** mientras el modo está bloqueado: no aparecen en la
-cuadrícula, la lista, el estado vacío, los contadores, la línea de estado ni la búsqueda
-de la biblioteca. Se desbloquea escribiendo la palabra en el buscador (sin mensaje); se
-vuelve a bloquear al cerrar, minimizar o cambiar de panel, al escribirla otra vez, con
-el candado, y al arrancar la app. `kisaru privado` también sirve para reemplazarla, tras
-confirmar.
+de un dígito para decidir si una búsqueda merece una comprobación. Mientras está
+bloqueado, un título o una carpeta ocultos **no existen** para la interfaz: no aparecen
+en la cuadrícula, la lista, el estado vacío, los contadores, la línea de estado, la
+búsqueda ni los mosaicos de las carpetas. Se desbloquea escribiendo la palabra (sin
+mensaje) y se vuelve a bloquear al cerrar, minimizar o cambiar de panel, al pulsar
+**Ocultar**, al escribirla otra vez y al arrancar la app. `kisaru privado` también sirve
+para reemplazarla, tras confirmar.
 
 Esto oculta la interfaz, **no cifra nada**: los títulos siguen en texto plano en los
 archivos de la biblioteca. No hay bloqueo por inactividad.

@@ -134,3 +134,39 @@ test("partition keeps the library order inside each bucket", () => {
     assert.deepEqual(split.byFolder.f1.map((entry) => entry.id), ["b", "c", "d", "e", "f"]);
     assert.deepEqual(split.folderless.map((entry) => entry.id), ["a"]);
 });
+const WITH_HIDDEN = [ENTRIES[0],
+    { id: "h0", title: "Primera oculta", folder: "f1", cover: "h0.jpg", hidden: true },
+    ...ENTRIES.slice(1),
+    { id: "h", title: "Título oculto", folder: "f1", cover: "h.jpg", hidden: true },
+    { id: "h2", title: "Suelta oculta", cover: "h2.jpg", hidden: true }];
+
+test("hidden titles leave the collage, count and root while locked", () => {
+    const visible = view.visibleEntries(WITH_HIDDEN, FOLDERS, options({ locked: true }));
+    const split = cards.partition(visible, view.folderIdOf);
+    const items = cards.rootItems(view.visibleFolders(FOLDERS, true),
+        split.folderless, split.byFolder, coverOf);
+    const first = items.find((item) => item.kind === "folder" && item.id === "f1");
+    assert.equal(first.count, 5);
+    assert.deepEqual(first.covers, ["b.jpg", "d.jpg", "e.jpg", "f.jpg"]);
+    assert.ok(!items.some((item) => item.kind === "title" && item.entry.id === "h2"));
+});
+
+test("hidden titles return to the collage, count and root while unlocked", () => {
+    const visible = view.visibleEntries(WITH_HIDDEN, FOLDERS, options({ locked: false }));
+    const split = cards.partition(visible, view.folderIdOf);
+    const items = cards.rootItems(view.visibleFolders(FOLDERS, false),
+        split.folderless, split.byFolder, coverOf);
+    const first = items.find((item) => item.kind === "folder" && item.id === "f1");
+    assert.equal(first.count, 7);
+    // The hidden title now participates in the collage like any other.
+    assert.deepEqual(first.covers, ["h0.jpg", "b.jpg", "d.jpg", "e.jpg"]);
+    assert.ok(items.some((item) => item.kind === "title" && item.entry.id === "h2"));
+});
+
+test("search excludes a hidden title while locked and finds it unlocked", () => {
+    const lockedVisible = view.visibleEntries(WITH_HIDDEN, FOLDERS, options({ locked: true }));
+    assert.deepEqual(cards.searchTitles(lockedVisible, "oculto", filter.fold, titleOf), []);
+    const openVisible = view.visibleEntries(WITH_HIDDEN, FOLDERS, options({ locked: false }));
+    assert.deepEqual(cards.searchTitles(openVisible, "oculto", filter.fold, titleOf)
+        .map((entry) => entry.id), ["h"]);
+});

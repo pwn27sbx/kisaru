@@ -80,3 +80,12 @@ test("muted UI outside the card bands is not raised", () => {
     assert.ok(!header.includes("card_secondary"),
         "the header was raised with the card token");
 });
+test("the folder toolbar labels are readable, not hover-only", () => {
+    const action = read("components/FolderAction.qml");
+    assert.match(action, /text: root\.label/, "the action has no visible label");
+    assert.match(action, /color: Colors\.on_surface/, "the label does not use the title tone");
+    assert.match(action, /implicitWidth: row\.implicitWidth/,
+        "the label is not part of the control's width");
+    // The label is the title tone on the card surface: 6.63:1.
+    assert.ok(contrast.ratio(FOREGROUND, CONTAINER) >= 4.5);
+});

@@ -15,6 +15,8 @@ Item {
     readonly property string fontBody:    Style.font.family
 
     signal backRequested()
+    // Hiding from Detail returns to the Library and leaves no detail behind.
+    signal hiddenRequested()
 
     // Display asks the visible accessor; writes keep the raw id. While locked,
     // a hidden title reads as not saved and its save is simulated.
@@ -29,6 +31,25 @@ Item {
     readonly property string _folderValue: {
         var entry = Anime.visibleEntry()
         return entry ? (entry.folder || "") : ""
+    }
+    readonly property var _rawEntry:
+        Anime.currentAnime ? Anime.getLibraryEntry(Anime.currentAnime.id) : null
+
+    function _toggleHiddenTitle() {
+        if (!Privacy.configured || _rawEntry === null) return
+        var key = Anime.currentAnime.id
+        if (Privacy.locked) {
+            if (_rawEntry.hidden !== true) Anime.setHidden(key, true)
+            detailView.hiddenRequested()
+            return
+        }
+        if (_rawEntry.hidden === true) {
+            Anime.setHidden(key, false)
+            return
+        }
+        Anime.setHidden(key, true)
+        Privacy.lock()
+        detailView.hiddenRequested()
     }
 
     // ── MPV launcher ──────────────────────────────────────────────────────────
@@ -224,6 +245,15 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: folderPicker.opened = true
                     }
+                }
+
+                HideSwitch {
+                    visible: Privacy.configured && detailView._rawEntry !== null
+                    label: I18n.t("folder.hide")
+                    checked: !Privacy.locked && detailView._rawEntry !== null
+                        && detailView._rawEntry.hidden === true
+                    bodyFont: detailView.fontBody
+                    onClicked: detailView._toggleHiddenTitle()
                 }
 
                 // Last-watched badge

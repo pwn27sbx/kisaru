@@ -136,3 +136,27 @@ test("no folder and the unlocked state are never locked out", () => {
     assert.equal(view.lockedOut("", FOLDERS, { loaded: true, locked: true }), false);
     assert.equal(view.lockedOut("f2", FOLDERS, { loaded: true, locked: false }), false);
 });
+test("a hidden title disappears alone while locked", () => {
+    const entries = [
+        { id: "v", title: "Visible" },
+        { id: "h", title: "Oculto", hidden: true },
+        { id: "f", title: "En carpeta", folder: "f1" },
+        { id: "fh", title: "En carpeta oculto", folder: "f1", hidden: true }
+    ];
+    assert.deepEqual(ids(view.visibleEntries(entries, FOLDERS,
+        { loaded: true, locked: true })), ["v", "f"]);
+    assert.deepEqual(ids(view.visibleEntries(entries, FOLDERS,
+        { loaded: true, locked: false })), ["v", "h", "f", "fh"]);
+});
+
+test("a hidden title hides without taking its visible folder with it", () => {
+    const entries = [
+        { id: "a", title: "Dentro", folder: "f1" },
+        { id: "b", title: "Dentro oculto", folder: "f1", hidden: true }
+    ];
+    assert.deepEqual(ids(view.visibleEntries(entries, FOLDERS,
+        { loaded: true, locked: true, folder: "f1" })), ["a"]);
+    assert.equal(view.visibleCount(entries, FOLDERS,
+        { loaded: true, locked: true }), 1);
+    assert.ok(view.visibleFolders(FOLDERS, true).some((folder) => folder.id === "f1"));
+});

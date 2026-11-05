@@ -17,6 +17,8 @@ Item {
     signal backRequested()
     signal chapterSelected(string chapterId)
     signal searchOtherSourcesRequested()
+    // Hiding from Detail returns to the Library and leaves no detail behind.
+    signal hiddenRequested()
 
     // ── Library state ─────────────────────────────────────────────────────────
     // Display asks the visible accessor; the raw key stays for writes. While
@@ -33,6 +35,26 @@ Item {
     readonly property string _folderValue: {
         var entry = Manga.visibleEntry()
         return entry ? (entry.folder || "") : ""
+    }
+
+    readonly property var _rawEntry: Manga.currentManga ? Manga.getLibraryEntry(Manga.libraryEntryId()) : null
+
+
+    function _toggleHiddenTitle() {
+        if (!Privacy.configured || _rawEntry === null) return
+        var key = Manga.libraryEntryId()
+        if (Privacy.locked) {
+            if (_rawEntry.hidden !== true) Manga.setHidden(key, true)
+            detailView.hiddenRequested()
+            return
+        }
+        if (_rawEntry.hidden === true) {
+            Manga.setHidden(key, false)
+            return
+        }
+        Manga.setHidden(key, true)
+        Privacy.lock()
+        detailView.hiddenRequested()
     }
 
     // Human-readable list of the sources the ES chain tried (plan §F3).
@@ -430,6 +452,15 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: folderPicker.opened = true
                     }
+                }
+
+                HideSwitch {
+                    visible: Privacy.configured && detailView._rawEntry !== null
+                    label: I18n.t("folder.hide")
+                    checked: !Privacy.locked && detailView._rawEntry !== null
+                        && detailView._rawEntry.hidden === true
+                    bodyFont: detailView.fontBody
+                    onClicked: detailView._toggleHiddenTitle()
                 }
 
                 // Last-read badge — click it to jump to that chapter

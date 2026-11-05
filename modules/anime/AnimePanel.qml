@@ -161,8 +161,6 @@ Item {
                 root.settingsMode = !root.settingsMode
                 root.collapseSearch()
             }
-            lockVisible: Privacy.configured && !Privacy.locked
-            onLockClicked: Privacy.lock()
             onMinimizeClicked: root.minimize()
         }
 
@@ -226,6 +224,13 @@ Item {
                         root.browseStack = 0
                         Anime.clearDetail()
                     }
+                    onHiddenRequested: {
+                        root.tabIndex = 1
+                        root.browseStack = 0
+                        root.libraryStack = 0
+                        Anime.clearDetail()
+                    }
+
                 }
             }
 
@@ -256,6 +261,13 @@ Item {
                         root.libraryStack = 0
                         Anime.clearDetail()
                     }
+                    onHiddenRequested: {
+                        root.tabIndex = 1
+                        root.browseStack = 0
+                        root.libraryStack = 0
+                        Anime.clearDetail()
+                    }
+
                 }
             }
 

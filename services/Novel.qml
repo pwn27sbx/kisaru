@@ -268,13 +268,23 @@ Singleton {
 
     function isHiddenLibraryEntry(entryId) {
         var entry = root.getLibraryEntry(entryId)
-        return !!entry && Organizer.isHidden("novel", entry.folder || "")
+        if (!entry) return false
+        if (entry.hidden === true) return true
+        return Organizer.isHidden("novel", entry.folder || "")
     }
 
     function setFolder(entryId, folderId) {
         root.libraryList = root.libraryList.map(function(e) {
             if (e.id !== entryId) return e
             return Object.assign({}, e, { folder: folderId || "" })
+        })
+        _saveLibrary()
+    }
+
+    function setHidden(entryId, hidden) {
+        root.libraryList = root.libraryList.map(function(e) {
+            if (e.id !== entryId) return e
+            return Object.assign({}, e, { hidden: hidden === true })
         })
         _saveLibrary()
     }
@@ -294,6 +304,7 @@ Singleton {
             coverUrl:           novel.coverUrl,
             lastReadChapterId:  "",
             lastReadChapterNum: "",
+            hidden:             false,
             addedAt:            new Date().toISOString()
         }
         root.libraryList = [entry, ...root.libraryList]
@@ -313,8 +324,7 @@ Singleton {
 
     function updateLastRead(novelId, chapterId, chapterNum) {
         // A hidden title must not write progress while the mode is locked.
-        var current = getLibraryEntry(novelId)
-        if (current && Privacy.locked && Organizer.isHidden("novel", current.folder || ""))
+        if (Privacy.locked && root.isHiddenLibraryEntry(novelId))
             return
         root.libraryList = root.libraryList.map(function(e) {
             if (e.id !== novelId) return e

@@ -140,9 +140,23 @@ Item {
             activeFolder = ""
     }
 
-    function _toggleHidden() {
-        if (activeFolder === "" || Privacy.locked || !Privacy.configured) return
-        Organizer.setHidden("manga", activeFolder, !activeFolderHidden)
+    // Hide at once and return to the root; while unlocked, turning the switch
+    // off on a hidden folder un-hides it and keeps the folder open.
+    function _toggleHideFolder() {
+        if (!Privacy.configured || activeFolder === "") return
+        var hidden = Organizer.isHidden("manga", activeFolder)
+        if (Privacy.locked) {
+            if (!hidden) Organizer.setHidden("manga", activeFolder, true)
+            activeFolder = ""
+            return
+        }
+        if (hidden) {
+            Organizer.setHidden("manga", activeFolder, false)
+            return
+        }
+        Organizer.setHidden("manga", activeFolder, true)
+        Privacy.lock()
+        activeFolder = ""
     }
 
     Rectangle { anchors.fill: parent; color: Colors.background }
@@ -189,80 +203,56 @@ Item {
                 text: I18n.tn("folder.count", libraryView._folderEntries.length)
                 font.family: libraryView.fontBody
                 font.pixelSize: Style.font.caption
-                color: Colors.on_surface_variant
+                color: Colors.card_secondary
+            }
+
+            // The hidden state is named, not inferred from a dim glyph.
+            Rectangle {
+                visible: libraryView.activeFolderHidden
+                Layout.preferredHeight: Style.space(18)
+                Layout.preferredWidth: hiddenMark.implicitWidth + 2 * Style.spacing.controlPaddingX
+                radius: Style.cornerRadius
+                color: Colors.primary_container
+                border.color: Colors.primary
+                border.width: Style.spacing.hairline
+
+                StyledText {
+                    id: hiddenMark
+                    anchors.centerIn: parent
+                    text: I18n.t("folder.hiddenMark")
+                    font.family: libraryView.fontBody
+                    font.pixelSize: Style.font.caption
+                    font.bold: true
+                    color: Colors.primary
+                }
             }
 
             Item { Layout.fillWidth: true }
 
             // Hide/show keeps the private mode usable once the chip row is gone.
-            ClickableRect {
-                visible: Privacy.configured && !Privacy.locked
-                Layout.preferredWidth: Style.space(28)
-                Layout.preferredHeight: Style.space(28)
-                color: hovered ? Colors.surface_container_high : "transparent"
-                radius: Style.cornerRadius
-                MaterialIcon {
-                    anchors.centerIn: parent
-                    text: libraryView.activeFolderHidden ? "󰈈" : "󰈉"
-                    font.pixelSize: Style.font.bodySmall
-                    color: libraryView.activeFolderHidden ? Colors.primary : Colors.on_surface_variant
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: libraryView._toggleHidden()
-                    ToolTip.visible: containsMouse
-                    ToolTip.delay: 600
-                    ToolTip.text: libraryView.activeFolderHidden
-                        ? I18n.t("folder.show") : I18n.t("folder.hide")
-                }
+            HideSwitch {
+                visible: Privacy.configured
+                label: I18n.t("folder.hide")
+                checked: !Privacy.locked && libraryView.activeFolderHidden
+                bodyFont: libraryView.fontBody
+                onClicked: libraryView._toggleHideFolder()
             }
 
-            ClickableRect {
+            FolderAction {
                 visible: !activeFolderLockedOut
-                Layout.preferredWidth: Style.space(28)
-                Layout.preferredHeight: Style.space(28)
-                color: hovered ? Colors.surface_container_high : "transparent"
-                radius: Style.cornerRadius
-                MaterialIcon {
-                    anchors.centerIn: parent
-                    text: "󰏫"
-                    font.pixelSize: Style.font.bodySmall
-                    color: Colors.on_surface_variant
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: libraryView._renameFolder(libraryView.activeFolder)
-                    ToolTip.visible: containsMouse
-                    ToolTip.delay: 600
-                    ToolTip.text: I18n.t("folder.rename")
-                }
+                icon: "󰏫"
+                label: I18n.t("folder.renameShort")
+                bodyFont: libraryView.fontBody
+                onClicked: libraryView._renameFolder(libraryView.activeFolder)
             }
 
-            ClickableRect {
+            FolderAction {
                 visible: !activeFolderLockedOut
-                Layout.preferredWidth: Style.space(28)
-                Layout.preferredHeight: Style.space(28)
-                color: hovered ? Colors.surface_container_high : "transparent"
-                radius: Style.cornerRadius
-                MaterialIcon {
-                    anchors.centerIn: parent
-                    text: "󰆴"
-                    font.pixelSize: Style.font.bodySmall
-                    color: Colors.error
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: libraryView._confirmDelete(libraryView.activeFolder)
-                    ToolTip.visible: containsMouse
-                    ToolTip.delay: 600
-                    ToolTip.text: I18n.t("folder.delete")
-                }
+                icon: "󰆴"
+                label: I18n.t("folder.deleteShort")
+                iconTone: Colors.error
+                bodyFont: libraryView.fontBody
+                onClicked: libraryView._confirmDelete(libraryView.activeFolder)
             }
         }
 
@@ -350,7 +340,6 @@ Item {
                     coversReady: Manga.serverReady
                     name: folderData ? folderData.name : ""
                     count: folderData ? folderData.count : 0
-                    hidden: folderData ? folderData.hidden : false
                     bodyFont: libraryView.fontBody
                     onClicked: {
                         if (folderData) libraryView.activeFolder = folderData.id
@@ -417,7 +406,6 @@ Item {
                     coversReady: Manga.serverReady
                     name: folderData ? folderData.name : ""
                     count: folderData ? folderData.count : 0
-                    hidden: folderData ? folderData.hidden : false
                     bodyFont: libraryView.fontBody
                     onClicked: {
                         if (folderData) libraryView.activeFolder = folderData.id

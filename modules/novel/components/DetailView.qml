@@ -14,6 +14,8 @@ Item {
 
     signal backRequested()
     signal chapterSelected(string chapterId)
+    // Hiding from Detail returns to the Library and leaves no detail behind.
+    signal hiddenRequested()
 
     // ── Library state ─────────────────────────────────────────────────────────
     // Display asks the visible accessor; writes keep the raw id. While locked,
@@ -29,6 +31,26 @@ Item {
     readonly property string _folderValue: {
         var entry = Novel.visibleEntry()
         return entry ? (entry.folder || "") : ""
+    }
+
+    readonly property var _rawEntry: Novel.currentNovel ? Novel.getLibraryEntry(Novel.currentNovel.id) : null
+
+
+    function _toggleHiddenTitle() {
+        if (!Privacy.configured || _rawEntry === null) return
+        var key = Novel.currentNovel.id
+        if (Privacy.locked) {
+            if (_rawEntry.hidden !== true) Novel.setHidden(key, true)
+            detailView.hiddenRequested()
+            return
+        }
+        if (_rawEntry.hidden === true) {
+            Novel.setHidden(key, false)
+            return
+        }
+        Novel.setHidden(key, true)
+        Privacy.lock()
+        detailView.hiddenRequested()
     }
 
     // ── Filter / sort state ───────────────────────────────────────────────────
@@ -380,6 +402,15 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: folderPicker.opened = true
                     }
+                }
+
+                HideSwitch {
+                    visible: Privacy.configured && detailView._rawEntry !== null
+                    label: I18n.t("folder.hide")
+                    checked: !Privacy.locked && detailView._rawEntry !== null
+                        && detailView._rawEntry.hidden === true
+                    bodyFont: detailView.fontBody
+                    onClicked: detailView._toggleHiddenTitle()
                 }
 
                 Rectangle {

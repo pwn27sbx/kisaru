@@ -380,10 +380,10 @@ test("the fade is animated with a Motion token", () => {
     assert.match(shell, fade);
 });
 
-test("the folder cards, the create card and the header padlock are wired", () => {
+test("the folder cards, the hide switches and no padlock are wired", () => {
     // v2: no chip row. The root is a card grid (folders first, then folderless
-    // titles), the open folder carries back/rename/delete, and the padlock is
-    // chrome in the header.
+    // titles), the open folder carries back/rename/delete, and the hide switch
+    // is the one clear control (there is no padlock any more).
     for (const [file, kind] of [
         ["modules/manga/components/LibraryView.qml", "manga"],
         ["modules/anime/components/LibraryView.qml", "anime"],
@@ -418,12 +418,20 @@ test("the folder cards, the create card and the header padlock are wired", () =>
             `${file}: rename is gated by the lock, not by the folder`);
         assert.match(qml, /function _confirmDelete\(folderId\) \{\n\s*if \(activeFolderLockedOut\) return/,
             `${file}: delete is gated by the lock, not by the folder`);
-        assert.match(qml, /function _toggleHidden\(\) \{\n\s*if \(activeFolder === "" \|\| Privacy\.locked \|\| !Privacy\.configured\) return/,
-            `${file}: hide/show is not limited to unlocked with a secret`);
+        assert.match(qml, /function _toggleHideFolder\(\) \{\n\s*if \(!Privacy\.configured \|\| activeFolder === ""\) return/,
+            `${file}: the folder switch is not gated by a configured word`);
         assert.match(qml, /visible: !activeFolderLockedOut/,
             `${file}: the rename/delete controls are hidden for a visible locked folder`);
-        assert.match(qml, /visible: Privacy\.configured && !Privacy\.locked/,
-            `${file}: the hide/show control is shown while locked`);
+        // One clear labelled switch, plus the labelled rename/delete actions.
+        assert.match(qml, /HideSwitch\s*\{/, `${file}: no folder hide switch`);
+        assert.match(qml, /I18n\.t\("folder\.hide"\)/, `${file}: no hide label`);
+        assert.match(qml, /checked: !Privacy\.locked && libraryView\.activeFolderHidden/,
+            `${file}: the switch does not show the hidden state`);
+        assert.match(qml, /I18n\.t\("folder\.renameShort"\)/, `${file}: no rename label`);
+        assert.match(qml, /I18n\.t\("folder\.deleteShort"\)/, `${file}: no delete label`);
+        assert.match(qml, /I18n\.t\("folder\.hiddenMark"\)/, `${file}: no hidden mark`);
+        assert.equal((qml.match(/FolderAction\s*\{/g) || []).length, 2,
+            `${file}: the folder toolbar is not two labelled actions`);
         assert.match(qml, /if \(Privacy\.locked && libraryView\.activeFolderLockedOut\)\n\s*libraryView\.activeFolder = ""/,
             `${file}: a lock always sends the view back to the root`);
         assert.ok(!qml.includes('folderOpen: activeFolder !== "" && !_searching && !Privacy.locked'),
@@ -435,17 +443,15 @@ test("the folder cards, the create card and the header padlock are wired", () =>
     assert.match(read("components/FolderCard.qml"), /CoverMosaic\s*\{/);
     assert.match(read("components/FolderListRow.qml"), /CoverMosaic\s*\{/);
 
-    // The padlock is a header action, and the panels only enable it unlocked.
+    // The padlock is gone from the chrome and the panels.
     const header = read("components/PanelHeader.qml");
-    assert.match(header, /property bool lockVisible/);
-    assert.match(header, /signal lockClicked\(\)/);
-    assert.match(header, /I18n\.t\("privacy\.lock"\)/);
+    assert.ok(!header.includes("lockVisible"), "the padlock property is back");
+    assert.ok(!header.includes("lockClicked"), "the padlock signal is back");
+    assert.ok(!header.includes('privacy.lock'), "the padlock button is back");
     for (const file of PANELS) {
         const qml = read(file);
-        assert.match(qml, /lockVisible: Privacy\.configured && !Privacy\.locked/,
-            `${file}: the padlock is not gated`);
-        assert.match(qml, /onLockClicked: Privacy\.lock\(\)/,
-            `${file}: the padlock does nothing`);
+        assert.ok(!qml.includes("lockVisible"), `${file}: the padlock wiring is back`);
+        assert.ok(!qml.includes("onLockClicked"), `${file}: the padlock handler is back`);
     }
 
     // Detail's folder control is a real button that opens the folder list.
@@ -459,6 +465,10 @@ test("the folder cards, the create card and the header padlock are wired", () =>
         assert.match(qml, /onCreateRequested: folderPrompt\.openText/, `${file}: cannot create from Detail`);
         assert.match(qml, /I18n\.t\("folder\.current"/, `${file}: the button does not name the folder`);
         assert.ok(!qml.includes("_folderOptions"), `${file}: the old menu remains`);
+        assert.match(qml, /HideSwitch\s*\{/, `${file}: no title hide switch`);
+        assert.match(qml, /function _toggleHiddenTitle\(\)/, `${file}: no title hide handler`);
+        assert.match(qml, /signal hiddenRequested\(\)/, `${file}: hiding cannot leave the Detail`);
+        assert.match(qml, /I18n\.t\("folder\.hide"\)/, `${file}: the switch has no label`);
     }
 });
 
@@ -537,7 +547,7 @@ test("a hidden title leaves no trace in the detail views or the logs", () => {
                 `${file}: a log line names a title or id: ${line.trim()}`);
         }
         // The progress guard exists in the service too, not only in the view.
-        assert.match(qml, /Privacy\.locked && Organizer\.isHidden\(/,
+        assert.match(qml, /Privacy\.locked && root\.isHiddenLibraryEntry\(/,
             `${file}: progress is not protected while locked`);
     }
 

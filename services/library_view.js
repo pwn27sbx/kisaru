@@ -44,13 +44,16 @@ function isHiddenFolder(folders, id) {
 
 function isVisible(entry, folders, options) {
     var opts = options || {};
+    var locked = opts.locked !== false;
+    // A title hidden by itself leaves the visible shelf while locked, even
+    // when its folder is visible. Unlocked, it returns with everything else.
+    if (entry && entry.hidden === true && locked) return false;
     var id = folderIdOf(entry);
     if (id === NO_FOLDER) return true;
     // Before the folder list is known a pushed entry cannot be resolved.
     if (opts.loaded !== true) return false;
     var folder = findFolder(folders, id);
     if (!folder) return false;
-    var locked = opts.locked !== false;
     if (locked && folder.hidden === true) return false;
     return true;
 }

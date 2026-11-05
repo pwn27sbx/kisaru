@@ -59,9 +59,6 @@ Item {
 
     signal tabActivated(int index)
     signal settingsClicked()
-    // The private mode's padlock: the chrome owns it, so it locks from any tab.
-    property bool lockVisible: false
-    signal lockClicked()
     signal minimizeClicked()
     signal filterChosen(var value)
     signal searchClicked()
@@ -249,15 +246,6 @@ Item {
             dimmed: root.filterDimmed
             fontFamily: root.fontFamily
             onChosen: function(value) { root.filterChosen(value) }
-        }
-
-        PanelActionButton {
-            visible: root.lockVisible
-            iconText: "󰌾"
-            tooltipText: I18n.t("privacy.lock")
-            focusable: true
-            size: root.implicitHeight
-            onClicked: root.lockClicked()
         }
 
         PanelActionButton {

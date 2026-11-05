@@ -232,3 +232,35 @@ parts of S1-S4; everything else (private mode, locking, progress, logs, paths) s
   "hex in, ratio out" although two functions return hex; the active-label
   opacity weights (0.85/0.9) are unnamed; the CoverCard token test does not also
   pin the absence of an opacity.
+## v3: simplified hide flow (owner, 2026-11-05 evening)
+
+Overrides the lock/padlock interaction. The owner's words: enter the manga or folder,
+press an icon or switch to hide, it disappears from Library; type the secret word in the
+search and it shows; simple.
+
+- **S22 (title hidden field).** A title carries an optional `hidden` boolean. While
+  locked it leaves the visible shelf on its own, even inside a visible folder: grid,
+  list, empty state, counts, status, search and folder collages. Unlocked it returns with
+  the rest. Services expose `setHidden`; `isHiddenLibraryEntry` and the progress guard
+  cover the title flag as well as the folder flag.
+- **S23 (hide switch).** A clear labelled `Ocultar` switch (eye + text + track) sits in a
+  title's Detail and inside a folder, visible whenever a word is configured, including
+  while locked. Pressing it while locked hides the item at once and returns to the
+  Library; while unlocked it hides, locks and returns. Turning it off on a hidden item
+  while unlocked un-hides it and stays.
+- **S24 (show and lock triggers).** Typing the word in the Library search shows hidden
+  items. Lock triggers: pressing Ocultar, closing, minimizing or switching the panel,
+  typing the word again, process start.
+- **S25 (removed).** The padlock button and the hidden-item mini icon on cover cards are
+  gone. The labelled rename/delete actions stay.
+- **S26 (30-word measurement).** 30 random sandbox words of 8–16 characters (mixed case,
+  accents, trailing spaces), human 80 ms/char and fast 8 ms/char, each written as the
+  secret and typed on the real panel. Result: **30/30 human, 30/30 fast (100%)**, with
+  tag-hit prefixes present (some words had 1–3). The reported race is not reproducible;
+  no Privacy change was made.
+- **L24 (live).** The labelled Ocultar switch is visible and readable in the Detail. A
+  real click on it hid the title, returned to the root and the count fell 2→1; the
+  sandbox library entry then carried `hidden: true`. The owner's fullscreen terminal and
+  the virtual-pointer reset made the remaining show/folder clicks unreliable in this
+  session; the hidden-title visibility, folder hide and show rules are covered by the
+  pure tests (`library_view`, `folder_cards`) and the wiring tests.
