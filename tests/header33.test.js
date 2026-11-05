@@ -126,6 +126,21 @@ test("the open field has no \"/\" hint badge (owner, 2026-11-02)", () => {
     assert.ok(!/text:\s*"\/"/.test(field), "the / badge is still drawn inside the field");
     // The clear cell still exists for when there is text.
     assert.match(field, /userClear\(\)/, "the clear cell was removed with the badge");
+    // The clear x is a clean icon: no box, no border, readable tone, and a
+    // comfortable 28 px hit area on the field's right gutter.
+    const clear = field.slice(field.indexOf("id: keyArea"), field.indexOf("\n    }", field.indexOf("id: keyArea")) + 6);
+    assert.match(clear, /text: "✕"/);
+    assert.match(clear, /color: clearCell\.hovered \? Colors\.on_surface : Colors\.card_secondary/);
+    // The colour must resolve: an unqualified `hovered` inside the child text
+    // throws a ReferenceError and the glyph falls back to black.
+    assert.match(clear, /id: clearCell/);
+    assert.ok(!/color: hovered/.test(clear), "the clear binding reads a scope it cannot see");
+    assert.match(clear, /width: Style\.space\(28\)/);
+    assert.match(clear, /height: Style\.space\(28\)/);
+    assert.match(clear, /rightMargin: Style\.spacing\.sm/);
+    assert.match(clear, /font\.pixelSize: Style\.font\.title/);
+    assert.ok(!clear.includes("surface_container_highest"), "the clear x still has a box");
+    assert.ok(!clear.includes("border."), "the clear x still has a border");
 });
 
 test("the open field's text reads like the header's own", () => {

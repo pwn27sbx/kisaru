@@ -307,3 +307,29 @@ search and it shows; simple.
   virtual-pointer device resets outside the panel and the owner's fullscreen
   window intermittently sits above the layer; both behaviours are covered by the
   pure and wiring tests.
+- **L30 (clear button).** The clear cell is a bare x: no box, no border, transparent
+  until hover, `card_secondary` normally and `on_surface` on hover, 28 x 28 hit area
+  (`Style.space(28)`), `rightMargin: Style.spacing.sm`, glyph at `Style.font.title`.
+  Esc and `userClear()` untouched; the field is shared, so all three panels follow.
+- **Bug found by looking at the screenshot, not by the tests.** The first version
+  bound `color: hovered ? ... : ...` on the `StyledText` child. In QML that name is
+  not in the child's scope, so the binding threw `ReferenceError: hovered is not
+  defined` (logged at SearchField.qml:154) and the glyph silently fell back to
+  black — ~1.6:1 on the field. The hit area was still there and every string test
+  passed. Fix: `id: clearCell` and bind through it; `tests/header33.test.js` now
+  pins the id and rejects the unqualified read.
+- **Measured on a full-colour render of the same component** (field surface
+  `rgb(53,60,65)`, field box x=7..552, y=35..62): x ink 6 x 6 px, centre (535.5, 48.5)
+  = the field's vertical centre and the cell's own centre; text ink centres at 47.5,
+  so the x sits on the text's optical line. Right gutter: cell right edge ~549
+  against the field border at 552. Contrast **5.70:1** normally and **6.03:1** on
+  the hover fill `rgb(58,65,68)`; the fill is a 28 x 28 rounded rect, transparent
+  when not hovered.
+- **Live-check limit.** In the panel the field could be opened and typed into only
+  intermittently: `wtype` needs keyboard focus inside the layer surface, the
+  virtual pointer device warps the cursor when destroyed, and the owner's
+  fullscreen window sat above the layer. The panel screenshots that did land
+  (typed `abc`, x visible) are what exposed the ReferenceError; the final
+  measurements above come from an isolated `qs` render of the same component with
+  the text pre-filled, not from a click-through in the panel.
+
