@@ -62,15 +62,18 @@ class ImageRefererTest(unittest.TestCase):
         self.assertNotIn("Referer", headers)
 
     def test_mangafire_reader_hosts_get_the_referer(self):
-        # The host number varies (pw6, l1n, …), so the rule matches the suffix.
-        for url in ("https://pw6.mfcdn2.xyz/mf/x/h/p.jpg",
-                    "https://l1n.mfcdn2.xyz/mf/y/h/p.jpg"):
+        # The mfcdnN number rotates per chapter, so the rule matches the family.
+        for url in ("https://pw6.mfcdn1.xyz/mf/x/h/p.jpg",
+                    "https://pw6.mfcdn2.xyz/mf/x/h/p.jpg",
+                    "https://l1n.mfcdn12.xyz/mf/y/h/p.jpg"):
             self.assertEqual(manga_server.image_headers(url).get("Referer"),
                              "https://mangafire.to/", url)
 
-    def test_mangafire_covers_are_left_alone(self):
-        headers = manga_server.image_headers("https://static.mfcdn.nl/x.jpg")
-        self.assertNotIn("Referer", headers)
+    def test_mangafire_lookalikes_get_no_referer(self):
+        for url in ("https://evil-mfcdn1.xyz/x.jpg",
+                    "https://mfcdn1.xyz.evil.example/x.jpg",
+                    "https://static.mfcdn.nl/x.jpg"):
+            self.assertNotIn("Referer", manga_server.image_headers(url), url)
 
 
 @unittest.skipUnless(HAVE_SERVER, "manga_server requires curl_cffi or requests")

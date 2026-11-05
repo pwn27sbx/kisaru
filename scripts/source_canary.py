@@ -47,9 +47,21 @@ IMAGE_REFERERS = {
 REFERER_SUFFIXES = (".mangadex.network",)
 REFERER_DEFAULTS = {
     "mangadex.network": "https://mangadex.org/",
-    # mangafire.to's reader CDN (pwN.mfcdn2.xyz); its covers do not need one.
-    "mfcdn2.xyz": "https://mangafire.to/",
 }
+MANGAFIRE_REFERER = "https://mangafire.to/"
+
+
+def is_mangafire_cdn(host):
+    """True for mangafire's reader CDN hosts (pw6.mfcdn1.xyz, pw6.mfcdn2.xyz, …).
+
+    The `mfcdnN` number rotates per chapter; its covers (static.mfcdn.nl) need
+    no referer and must not match.
+    """
+    labels = (host or "").lower().split(".")
+    if len(labels) < 3 or labels[-1] != "xyz":
+        return False
+    family = labels[-2]
+    return family.startswith("mfcdn") and family[5:].isdigit()
 
 
 def referer_for(host):
@@ -57,6 +69,8 @@ def referer_for(host):
     host = (host or "").lower()
     if host in IMAGE_REFERERS:
         return IMAGE_REFERERS[host]
+    if is_mangafire_cdn(host):
+        return MANGAFIRE_REFERER
     for suffix, referer in REFERER_DEFAULTS.items():
         if host == suffix or host.endswith("." + suffix):
             return referer

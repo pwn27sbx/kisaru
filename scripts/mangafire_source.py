@@ -23,7 +23,7 @@ Endpoints (verified 2026-11):
     detail    GET /api/titles/<hid>                            -> data.{title,synopsisHtml,genres,…}
     chapters  GET /api/titles/<hid>/chapters?language=es-la&limit=200&order=desc&page=1&sort=number
     reader    GET /api/chapters/<id>                           -> data.pages[].url
-    image     https://pwN.mfcdn2.xyz/…  (403 Cloudflare without Referer https://mangafire.to/)
+    image     https://pwN.mfcdnN.xyz/…  (403 Cloudflare without Referer https://mangafire.to/)
 
 Language: the site separates `es-la` (LatAm, usually complete) from `es` (a
 handful of chapters), so a series is asked for `es-la` first and only falls back
@@ -36,7 +36,9 @@ Notes:
   * the API marks a request burst with a transient 403 (`Missing token.`) that
     the same URL survives a second later, so _request retries a 403 and never
     treats it as a dead source;
-  * chapter numbers are floats (271.5 exists), normalised like zonatmo.org.
+  * chapter numbers are floats (271.5 exists), normalised like zonatmo.org;
+  * a chapter list that hits CHAPTER_PAGES while the API still reports more
+    pages is returned with `truncated: true` and a warning, never as complete.
 
 The parsers are pure and fixture-tested; the tests never touch the network.
 """
@@ -49,6 +51,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import warnings
 from datetime import datetime, timezone
 from html import unescape as _html_unescape
 
@@ -119,6 +122,14 @@ _TYPE = {
     "other": "OTHER",
     "novel": "NOVEL",
 }
+
+# The UI asks for these two; anything else is a caller bug, not a silent
+# relevance search.
+_SORT_ORDERS = {
+    "popularity": "views_30d",
+    "popular": "views_30d",
+}
+_RELEVANCE_SORTS = ("", "best match", "relevance")
 
 # ── rate limit + TTL cache ─────────────────────────────────────────────────
 _lock = threading.Lock()
@@ -391,8 +402,15 @@ def search(query, mtype=None, offset=0, sort="Best Match"):
     wanted = _TYPE.get(str(mtype or "").strip().lower())
     if wanted:
         params.append(("types", wanted.lower()))
-    if str(sort).lower() in ("popularity", "popular"):
-        params.append(("order[views_30d]", "desc"))
+    wanted_sort = str(sort or "").strip().lower()
+    order = _SORT_ORDERS.get(wanted_sort)
+    if order:
+        params.append((f"order[{order}]", "desc"))
+    elif wanted_sort not in _RELEVANCE_SORTS:
+        warnings.warn(
+            f"mangafire: unsupported sort {sort!r}; answering by relevance",
+            stacklevel=2,
+        )
     key = "mf-search:" + canonical("", params)
     payload = _cached(key, TTL_SEARCH, lambda: _get_json("/titles", params))
     results = parse_items(payload)
@@ -440,10 +458,11 @@ def hot():
 
 
 def _chapter_list(hid):
-    """Every chapter in the preferred language, paging until the API is done."""
+    """Every chapter in the preferred language, and whether it was truncated."""
     for language in ("es-la", "es"):
         chapters = []
         seen = set()
+        truncated = False
         for page in range(1, CHAPTER_PAGES + 1):
             params = [
                 ("language", language),
@@ -461,14 +480,19 @@ def _chapter_list(hid):
                 chapters.append(chapter)
                 added += 1
             meta = (payload or {}).get("meta") or {}
-            if not added or not meta.get("hasNext"):
+            if not added:
+                break
+            if not meta.get("hasNext"):
+                break
+            if page == CHAPTER_PAGES:
+                truncated = True
                 break
         if chapters:
             # Each page is sorted on its own, so the union has to be sorted once
             # more: page 1 holds the newest chapters, page 2 the oldest.
             chapters.sort(key=lambda chapter: _sort_key(chapter["chapter"]))
-            return chapters
-    return []
+            return chapters, truncated
+    return [], False
 
 
 def info(hid):
@@ -477,8 +501,17 @@ def info(hid):
                    lambda: parse_title(_get_json(f"/titles/{series}", [])))
     if not data.get("id"):
         return data
-    chapters = _cached(f"mf-chapters:{series}", TTL_INFO, lambda: _chapter_list(series))
-    return {**data, "chapters": chapters}
+    chapters, truncated = _cached(f"mf-chapters:{series}", TTL_INFO,
+                                  lambda: _chapter_list(series))
+    data = {**data, "chapters": chapters}
+    if truncated:
+        warnings.warn(
+            f"mangafire: chapter list for {series!r} truncated at "
+            f"{CHAPTER_PAGES} pages; more chapters exist upstream",
+            stacklevel=2,
+        )
+        data["truncated"] = True
+    return data
 
 
 def pages(chapter_id):

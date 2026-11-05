@@ -104,6 +104,11 @@ class RefererTest(unittest.TestCase):
     def test_a_manhwaweb_image_needs_its_own_referer(self):
         self.assertEqual(source_canary.referer_for("img2mw.xyz"), "https://manhwaweb.com/")
 
+    def test_a_mangafire_cdn_image_needs_the_site_referer(self):
+        for host in ("pw6.mfcdn1.xyz", "pw6.mfcdn2.xyz", "l1n.mfcdn12.xyz"):
+            self.assertEqual(source_canary.referer_for(host), "https://mangafire.to/", host)
+        self.assertEqual(source_canary.referer_for("static.mfcdn.nl"), "")
+
     def test_a_plain_host_needs_none(self):
         self.assertEqual(source_canary.referer_for("cdn.zonatmo.to"), "")
 

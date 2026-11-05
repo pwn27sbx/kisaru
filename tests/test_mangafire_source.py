@@ -21,6 +21,7 @@ import sys
 import unittest
 import urllib.error
 import urllib.parse
+import warnings
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
@@ -200,6 +201,18 @@ class ApiTest(unittest.TestCase):
         mangafire_source.search("x", sort="Popularity")
         self.assertIn("order%5Bviews_30d%5D=desc", self.urls[0])
 
+    def test_popularity_is_not_warned_about(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            mangafire_source.search("x", sort="Popularity")
+
+    def test_unknown_sort_warns_and_falls_back_to_relevance(self):
+        # The app only sends "Best Match" and "Popularity"; anything else is a
+        # caller bug, so it must not be swallowed into a success-shaped answer.
+        with self.assertWarns(UserWarning):
+            mangafire_source.search("x", sort="Newest")
+        self.assertNotIn("order%5B", self.urls[0])
+
     def test_latest(self):
         result = mangafire_source.latest(2)
         self.assertTrue(result["results"])
@@ -267,6 +280,35 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(len(data["chapters"]), 5)
         self.assertTrue(any("language=es-la" in url for url in self.urls))
         self.assertTrue(any("language=es&" in url for url in self.urls))
+
+    def test_truncated_chapter_list_is_flagged(self):
+        # R3-chapter-cap: hitting CHAPTER_PAGES while the API still reports more
+        # pages must surface `truncated`, never pretend the list is complete.
+        original = mangafire_source._request
+        original_pages = mangafire_source.CHAPTER_PAGES
+        mangafire_source.CHAPTER_PAGES = 2
+
+        def endless(url):
+            self.urls.append(url)
+            if "/chapters" in url:
+                page = int(url.rsplit("page=", 1)[1].split("&")[0])
+                items = [
+                    {"id": page * 100 + index, "number": page * 100 + index,
+                     "name": "", "createdAt": 1700000000}
+                    for index in range(3)
+                ]
+                return json.dumps({"items": items, "meta": {"hasNext": True}})
+            return json.dumps(load_json("title.json"))
+
+        mangafire_source._request = endless
+        try:
+            with self.assertWarns(UserWarning):
+                data = mangafire_source.info("rl2vm")
+        finally:
+            mangafire_source._request = original
+            mangafire_source.CHAPTER_PAGES = original_pages
+        self.assertTrue(data.get("truncated"))
+        self.assertEqual(len(data["chapters"]), 6)
 
 
 class TransportTest(unittest.TestCase):

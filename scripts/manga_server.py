@@ -154,17 +154,27 @@ def fetch(url, extra_headers=None, timeout=30):
 # fallback and answers 200 WITHOUT a referer: it must stay out of this map.
 IMAGE_REFERER_SUFFIXES = (
     (".mangadex.network", "https://mangadex.org/"),
-    # mangafire.to's reader CDN (pwN.mfcdn2.xyz) answers 403 Cloudflare to a
-    # bare GET and 200 with the site as referer; the host number varies, so the
-    # rule matches the suffix. Its covers (static.mfcdn.nl) need no referer and
-    # must stay out of this map.
-    (".mfcdn2.xyz", "https://mangafire.to/"),
 )
 IMAGE_REFERERS = {
     "img1mw.xyz": "https://manhwaweb.com/",
     "img2mw.xyz": "https://manhwaweb.com/",
     "uploads.manhwaweb.com": "https://manhwaweb.com/",
 }
+MANGAFIRE_REFERER = "https://mangafire.to/"
+
+
+def is_mangafire_cdn(host):
+    """True for mangafire's reader CDN hosts (pw6.mfcdn1.xyz, pw6.mfcdn2.xyz, …).
+
+    The site rotates the number in the `mfcdnN` label per chapter, so a fixed
+    host or a single suffix misses half the catalogue; the covers
+    (static.mfcdn.nl) need no referer and must not match here.
+    """
+    labels = (host or "").lower().split(".")
+    if len(labels) < 3 or labels[-1] != "xyz":
+        return False
+    family = labels[-2]
+    return family.startswith("mfcdn") and family[5:].isdigit()
 
 
 def referer_for(host):
@@ -172,6 +182,8 @@ def referer_for(host):
     host = (host or "").lower()
     if host in IMAGE_REFERERS:
         return IMAGE_REFERERS[host]
+    if is_mangafire_cdn(host):
+        return MANGAFIRE_REFERER
     for suffix, referer in IMAGE_REFERER_SUFFIXES:
         if host.endswith(suffix):
             return referer
