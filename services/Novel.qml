@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import qs.services
 import "app_paths.js" as Paths
+import "library_view.js" as LibraryViewJs
 
 Singleton {
     id: root
@@ -228,6 +229,63 @@ Singleton {
         })
     }
 
+    // ── Folders and private mode ─────────────────────────────────────────────
+    readonly property var _folders: Organizer.folders("novel")
+
+    function _viewOptions(folderId) {
+        return {
+            loaded: Organizer.loaded,
+            locked: Privacy.locked,
+            folder: folderId || ""
+        }
+    }
+
+    function visibleEntries(folderId) {
+        return LibraryViewJs.visibleEntries(root.libraryList, root._folders,
+                                            root._viewOptions(folderId))
+    }
+
+    function visibleCount() {
+        return LibraryViewJs.visibleCount(root.libraryList, root._folders,
+                                          root._viewOptions())
+    }
+
+    function isVisibleEntry(entry) {
+        return LibraryViewJs.isVisible(entry, root._folders, root._viewOptions())
+    }
+
+    function visibleEntryId() {
+        if (!currentNovel) return ""
+        var id = currentNovel.id
+        var entry = root.getLibraryEntry(id)
+        return entry && root.isVisibleEntry(entry) ? id : ""
+    }
+
+    function visibleEntry() {
+        var id = root.visibleEntryId()
+        return id === "" ? null : root.getLibraryEntry(id)
+    }
+
+    function isHiddenLibraryEntry(entryId) {
+        var entry = root.getLibraryEntry(entryId)
+        return !!entry && Organizer.isHidden("novel", entry.folder || "")
+    }
+
+    function setFolder(entryId, folderId) {
+        root.libraryList = root.libraryList.map(function(e) {
+            if (e.id !== entryId) return e
+            return Object.assign({}, e, { folder: folderId || "" })
+        })
+        _saveLibrary()
+    }
+
+    function deleteFolder(folderId) {
+        if (!Organizer.deleteFolder("novel", folderId)) return false
+        root.libraryList = LibraryViewJs.entriesWithoutFolder(root.libraryList, folderId)
+        _saveLibrary()
+        return true
+    }
+
     function addToLibrary(novel) {
         if (isInLibrary(novel.id)) return
         var entry = {
@@ -240,13 +298,13 @@ Singleton {
         }
         root.libraryList = [entry, ...root.libraryList]
         _saveLibrary()
-        console.log("[ServiceNovel] Added to library:", novel.title)
+        console.log("[ServiceNovel] Added to library")
     }
 
     function removeFromLibrary(novelId) {
         root.libraryList = root.libraryList.filter(function(e) { return e.id !== novelId })
         _saveLibrary()
-        console.log("[ServiceNovel] Removed from library:", novelId)
+        console.log("[ServiceNovel] Removed from library")
     }
 
     function isInLibrary(novelId) {
@@ -254,6 +312,10 @@ Singleton {
     }
 
     function updateLastRead(novelId, chapterId, chapterNum) {
+        // A hidden title must not write progress while the mode is locked.
+        var current = getLibraryEntry(novelId)
+        if (current && Privacy.locked && Organizer.isHidden("novel", current.folder || ""))
+            return
         root.libraryList = root.libraryList.map(function(e) {
             if (e.id !== novelId) return e
             return Object.assign({}, e, {
@@ -262,7 +324,7 @@ Singleton {
             })
         })
         _saveLibrary()
-        console.log("[ServiceNovel] Last read updated —", novelId, "ch.", chapterNum)
+        console.log("[ServiceNovel] Last read updated")
     }
 
     function getLibraryEntry(novelId) {
@@ -528,5 +590,6 @@ Singleton {
     function clearDetail() {
         currentNovel = null
         detailError = ""
+        clearChapter()
     }
 }
