@@ -182,6 +182,7 @@ test("tSource() labels the known manga sources", () => {
     assert.equal(i18n.tSource("inmanga"), "InManga");
     assert.equal(i18n.tSource("zonatmo"), "ZonaTMO (.net)");
     assert.equal(i18n.tSource("zonatmo_org"), "ZonaTMO (.org)");
+    assert.equal(i18n.tSource("mangafire"), "MangaFire");
 });
 
 test("tSource() falls back to the raw id when unknown", () => {

@@ -1,9 +1,9 @@
-"""Manga source chain (Spanish): MangaDex -> InManga -> zonatmo -> zonatmo_org -> manhwaweb.
+"""Manga source chain (Spanish): MangaDex -> InManga -> zonatmo -> zonatmo_org -> manhwaweb -> mangafire.
 
 Every endpoint returns the same JSON contract as manga_server.py, with item ids
 prefixed by the source (``mangadex:<id>`` / ``inmanga:<id>`` / ``zonatmo:<id>`` /
-``zonatmo_org:<id>``) so info()/pages() can route back to the source that
-produced them.
+``zonatmo_org:<id>`` / ``manhwaweb:<id>`` / ``mangafire:<hid>``) so info()/pages()
+can route back to the source that produced them.
 
 Language fall-through: MangaDex (es-la / es) is tried first; when it has no
 chapters in the preferred language, InManga (Spanish-only) is tried by title,
@@ -19,8 +19,9 @@ short-caches a dead domain so a burst does not hammer it. ``SOURCE_MIRRORS``
 records the alternate domain per backend.
 
 Source selection: QS_MANGA_SOURCE = mangadex | inmanga | zonatmo | zonatmo_org |
-manhwaweb | weebcentral | auto. auto uses the content language (QS_CONTENT_LANG): Spanish ->
-the chain, otherwise WeebCentral (handled by manga_server.py).
+manhwaweb | mangafire | weebcentral | auto. auto uses the content language
+(QS_CONTENT_LANG): Spanish -> the chain, otherwise WeebCentral (handled by
+manga_server.py).
 """
 
 import os
@@ -32,6 +33,7 @@ import error_report
 
 import content_lang
 import inmanga_source
+import mangafire_source
 import manga_sources
 import search_merge
 import titles
@@ -64,8 +66,10 @@ _MODULES = {
     "zonatmo": zonatmo_source,
     "zonatmo_org": zonatmo_org_source,
     "manhwaweb": manhwaweb_source,
+    "mangafire": mangafire_source,
 }
-_FORCED = ("mangadex", "inmanga", "zonatmo", "zonatmo_org", "manhwaweb", "weebcentral", "mangaplus")
+_FORCED = ("mangadex", "inmanga", "zonatmo", "zonatmo_org", "manhwaweb", "mangafire",
+           "weebcentral", "mangaplus")
 
 # Alternate domain per zonatmo backend (for diagnostics / health reporting).
 SOURCE_MIRRORS = {
@@ -98,7 +102,7 @@ def active_chain(env=None, langs=None):
     for tag in preferred:
         base = str(tag).strip().lower().split("-", 1)[0].split("_", 1)[0]
         if base == "es":
-            return ["mangadex", "inmanga", "zonatmo", "zonatmo_org", "manhwaweb"]
+            return ["mangadex", "inmanga", "zonatmo", "zonatmo_org", "manhwaweb", "mangafire"]
     return ["weebcentral"]
 
 

@@ -61,6 +61,17 @@ class ImageRefererTest(unittest.TestCase):
         headers = manga_server.image_headers("https://uploads.mangadex.org/x.jpg")
         self.assertNotIn("Referer", headers)
 
+    def test_mangafire_reader_hosts_get_the_referer(self):
+        # The host number varies (pw6, l1n, …), so the rule matches the suffix.
+        for url in ("https://pw6.mfcdn2.xyz/mf/x/h/p.jpg",
+                    "https://l1n.mfcdn2.xyz/mf/y/h/p.jpg"):
+            self.assertEqual(manga_server.image_headers(url).get("Referer"),
+                             "https://mangafire.to/", url)
+
+    def test_mangafire_covers_are_left_alone(self):
+        headers = manga_server.image_headers("https://static.mfcdn.nl/x.jpg")
+        self.assertNotIn("Referer", headers)
+
 
 @unittest.skipUnless(HAVE_SERVER, "manga_server requires curl_cffi or requests")
 class ProxyImageTest(unittest.TestCase):

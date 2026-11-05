@@ -209,11 +209,14 @@ archivos de la biblioteca. No hay bloqueo por inactividad.
   (`ani-cli-mx --debug …`), que aporta sus propias fuentes en español (AnimeAV1 y compañía).
   `QS_ANIME_CLI` acepta la ruta del binario, o `off` para desactivar ese respaldo.
 - **Manga / manhwa:** cadena **MangaDex → InManga → zonatmo.net → zonatmo.org →
-  ManhwaWeb**, de modo que un título que falta en una fuente se busca en la siguiente. Las
-  dos de ZonaTMO son backends independientes (una API JSON y el sitio HTML) que se respaldan
-  entre sí; una fuente con el dominio caído se omite sin romper el panel.
+  ManhwaWeb → MangaFire**, de modo que un título que falta en una fuente se busca en la
+  siguiente. Las dos de ZonaTMO son backends independientes (una API JSON y el sitio HTML)
+  que se respaldan entre sí; una fuente con el dominio caído se omite sin romper el panel.
   **[ManhwaWeb](https://manhwaweb.com)** aporta su propio catálogo de manhwas en español
   (contenido +18), que no está en las demás fuentes; va al final porque es el último recurso.
+  **[MangaFire](https://mangafire.to)** es el último recurso: catálogo amplio y multi-idioma,
+  del que se leen los capítulos `es-la` (con `es` como respaldo cuando no hay `es-la`). Su
+  API exige una firma `vrf` que el backend calcula por sí mismo, así que no necesita navegador.
   **Una búsqueda pregunta a todas las fuentes a la vez** y une lo que devuelven: se quitan
   duplicados por título normalizado (las variantes deliberadas, como «sin censura», quedan
   como entradas aparte) y se ordena por lo que escribiste, ignorando acentos y mayúsculas
@@ -226,9 +229,9 @@ archivos de la biblioteca. No hay bloqueo por inactividad.
   deduplicado es por página, así que un título puede reaparecer más abajo). Explorar el
   catálogo y «Últimos» no cambian: siguen usando la primera fuente que responde.
   Se puede forzar una fuente con `QS_MANGA_SOURCE`: `mangadex`, `inmanga`,
-  `zonatmo` (zonatmo.net), `zonatmo_org` (zonatmo.org), `manhwaweb` y `weebcentral` (inglés,
-  sin capítulos en español) fijan esa fuente; `auto` (por defecto) elige por el idioma de
-  contenido: español → la cadena, cualquier otro → WeebCentral.
+  `zonatmo` (zonatmo.net), `zonatmo_org` (zonatmo.org), `manhwaweb`, `mangafire` y
+  `weebcentral` (inglés, sin capítulos en español) fijan esa fuente; `auto` (por defecto)
+  elige por el idioma de contenido: español → la cadena, cualquier otro → WeebCentral.
 - **Novelas:** [SkyNovels](https://skynovels.net) en español; si el idioma de contenido no
   es español, FreeWebNovel (inglés).
 
