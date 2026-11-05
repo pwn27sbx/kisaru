@@ -2,6 +2,7 @@ import QtQuick
 import qs.app
 import qs.Commons
 import qs.services
+import "../services/caret.js" as Caret
 
 // The always-visible search pill (owner, round 6: one look for all three panels).
 //
@@ -99,7 +100,9 @@ Rectangle {
             height: Math.round(input.font.pixelSize * 1.25)
 
             Rectangle {
-                x: -width - Style.space(2)
+                // Before the first character at the start; at the cursor once
+                // text exists, so the negative offset never lands on a letter.
+                x: Caret.barX(input.cursorPosition, width, Style.space(2))
                 width: Style.space(2)
                 height: parent.height
                 anchors.verticalCenter: parent.verticalCenter
