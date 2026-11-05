@@ -283,3 +283,14 @@ search and it shows; simple.
   title stays inside the Library stack without changing the tab, so it never locks. A
   hidden title open in Detail follows the existing lock behaviour and returns to the
   Library stack. Pinned in `tests/panels.test.js` and `tests/panel_wiring.test.js`.
+- **L28 (toolbar polish).** The folder toolbar is one line: back arrow, name, title count;
+  on the right the shared HideSwitch (`Ocultar` when shown, `Oculta` when hidden) and a
+  borderless three-dot menu. The separate hidden tag and the bordered switch box are
+  gone; Rename and Delete live in the menu (Delete keeps `Colors.error` and its
+  confirmation). The switch is one shared component, also used in a title's Detail. The
+  menu labels and action order come from `services/toolbar.js`, tested with the switch
+  state. Row alignment uses `Gutter.left + Gutter.ink` / `Gutter.right + Gutter.ink`;
+  measured on the real folder view: row box x=13..537 in the 550-wide panel (the grid
+  cards' box starts at x=12), name x≈41, count ends ≈397, switch ≈424..500, menu
+  ≈511..537, all vertically centred in the 40 px row; switch label `on_surface`
+  (6.63:1) and dots `card_secondary` (≥4.5:1).

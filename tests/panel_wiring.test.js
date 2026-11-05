@@ -422,16 +422,17 @@ test("the folder cards, the hide switches and no padlock are wired", () => {
             `${file}: the folder switch is not gated by a configured word`);
         assert.match(qml, /visible: !activeFolderLockedOut/,
             `${file}: the rename/delete controls are hidden for a visible locked folder`);
-        // One clear labelled switch, plus the labelled rename/delete actions.
+        // One shared borderless switch and the three-dot menu.
         assert.match(qml, /HideSwitch\s*\{/, `${file}: no folder hide switch`);
-        assert.match(qml, /I18n\.t\("folder\.hide"\)/, `${file}: no hide label`);
         assert.match(qml, /checked: !Privacy\.locked && libraryView\.activeFolderHidden/,
             `${file}: the switch does not show the hidden state`);
-        assert.match(qml, /I18n\.t\("folder\.renameShort"\)/, `${file}: no rename label`);
-        assert.match(qml, /I18n\.t\("folder\.deleteShort"\)/, `${file}: no delete label`);
-        assert.match(qml, /I18n\.t\("folder\.hiddenMark"\)/, `${file}: no hidden mark`);
-        assert.equal((qml.match(/FolderAction\s*\{/g) || []).length, 2,
-            `${file}: the folder toolbar is not two labelled actions`);
+        assert.ok(!/HideSwitch\s*\{[^}]*label:/.test(qml),
+            `${file}: the switch copies the label instead of sharing the state`);
+        assert.match(qml, /OverflowMenu\s*\{/, `${file}: no three-dot menu`);
+        assert.match(qml, /Toolbar\.menuActions\(\)/, `${file}: the menu actions are copied`);
+        assert.ok(!qml.includes("FolderAction"), `${file}: the loose action boxes are back`);
+        assert.ok(!qml.includes("folder.hiddenMark"), `${file}: the separate hidden tag is back`);
+        assert.ok(!qml.includes("folder.renameShort"), `${file}: the menu label is copied`);
         assert.match(qml, /if \(Privacy\.locked && libraryView\.activeFolderLockedOut\)\n\s*libraryView\.activeFolder = ""/,
             `${file}: a lock always sends the view back to the root`);
         assert.ok(!qml.includes('folderOpen: activeFolder !== "" && !_searching && !Privacy.locked'),
@@ -468,7 +469,8 @@ test("the folder cards, the hide switches and no padlock are wired", () => {
         assert.match(qml, /HideSwitch\s*\{/, `${file}: no title hide switch`);
         assert.match(qml, /function _toggleHiddenTitle\(\)/, `${file}: no title hide handler`);
         assert.match(qml, /signal hiddenRequested\(\)/, `${file}: hiding cannot leave the Detail`);
-        assert.match(qml, /I18n\.t\("folder\.hide"\)/, `${file}: the switch has no label`);
+        assert.ok(!/HideSwitch\s*\{[^}]*label:/.test(qml),
+            `${file}: the Detail passes a label instead of the shared state`);
     }
 });
 

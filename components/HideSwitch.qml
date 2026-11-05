@@ -3,23 +3,20 @@ import qs.app
 import qs.Commons
 import qs.services
 import qs.components
+import "../services/toolbar.js" as Toolbar
 
-// The one clear hide switch: a label, an eye and a track that shows the state.
-// It is always painted (never hover-only); the label reads at the title tone,
-// the icon at the readable secondary tone.
+// The one clear hide switch: eye, state word and track, with no box around it.
+// The same component is used inside a folder and in a title's Detail.
 ClickableRect {
     id: root
 
     property bool checked: false
-    property string label: ""
     property string bodyFont: Style.font.family
 
     implicitWidth: row.implicitWidth + 2 * Style.spacing.controlPaddingX
     implicitHeight: Style.space(26)
-    radius: Style.cornerRadius
-    color: hovered ? Colors.surface_container_high : Colors.surface_container
-    border.color: Colors.outline_variant
-    border.width: Style.spacing.hairline
+    color: "transparent"
+    cursorShape: Qt.PointingHandCursor
 
     Row {
         id: row
@@ -34,7 +31,7 @@ ClickableRect {
         }
         StyledText {
             anchors.verticalCenter: parent.verticalCenter
-            text: root.label
+            text: I18n.t(Toolbar.hideKey(root.checked))
             font.family: root.bodyFont
             font.pixelSize: Style.font.caption
             font.bold: true

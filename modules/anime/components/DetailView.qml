@@ -249,7 +249,6 @@ Item {
 
                 HideSwitch {
                     visible: Privacy.configured && detailView._rawEntry !== null
-                    label: I18n.t("folder.hide")
                     checked: !Privacy.locked && detailView._rawEntry !== null
                         && detailView._rawEntry.hidden === true
                     bodyFont: detailView.fontBody

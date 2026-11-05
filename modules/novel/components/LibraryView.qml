@@ -8,6 +8,7 @@ import qs.components
 import "../../../services/library_filter.js" as LibraryFilter
 import "../../../services/library_view.js" as LibraryViewJs
 import "../../../services/folder_cards.js" as FolderCards
+import "../../../services/toolbar.js" as Toolbar
 import "../../../services/list_metrics.js" as ListMetrics
 
 Item {
@@ -189,52 +190,26 @@ Item {
                 color: Colors.card_secondary
             }
 
-            // The hidden state is named, not inferred from a dim glyph.
-            Rectangle {
-                visible: libraryView.activeFolderHidden
-                Layout.preferredHeight: Style.space(18)
-                Layout.preferredWidth: hiddenMark.implicitWidth + 2 * Style.spacing.controlPaddingX
-                radius: Style.cornerRadius
-                color: Colors.primary_container
-                border.color: Colors.primary
-                border.width: Style.spacing.hairline
-
-                StyledText {
-                    id: hiddenMark
-                    anchors.centerIn: parent
-                    text: I18n.t("folder.hiddenMark")
-                    font.family: libraryView.fontBody
-                    font.pixelSize: Style.font.caption
-                    font.bold: true
-                    color: Colors.primary
-                }
-            }
 
             Item { Layout.fillWidth: true }
 
             HideSwitch {
                 visible: Privacy.configured
-                label: I18n.t("folder.hide")
                 checked: !Privacy.locked && libraryView.activeFolderHidden
                 bodyFont: libraryView.fontBody
                 onClicked: libraryView._toggleHideFolder()
             }
 
-            FolderAction {
+            OverflowMenu {
                 visible: !activeFolderLockedOut
-                icon: "󰏫"
-                label: I18n.t("folder.renameShort")
+                options: Toolbar.menuActions().map(function(action) {
+                    return { value: action.value, label: I18n.t(action.key), danger: action.danger }
+                })
                 bodyFont: libraryView.fontBody
-                onClicked: libraryView._renameFolder(libraryView.activeFolder)
-            }
-
-            FolderAction {
-                visible: !activeFolderLockedOut
-                icon: "󰆴"
-                label: I18n.t("folder.deleteShort")
-                iconTone: Colors.error
-                bodyFont: libraryView.fontBody
-                onClicked: libraryView._confirmDelete(libraryView.activeFolder)
+                onChosen: function(value) {
+                    if (value === "rename") libraryView._renameFolder(libraryView.activeFolder)
+                    else if (value === "delete") libraryView._confirmDelete(libraryView.activeFolder)
+                }
             }
         }
 

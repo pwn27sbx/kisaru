@@ -166,8 +166,9 @@ borra las demás.
 
 La Biblioteca muestra las carpetas como tarjetas del mismo tamaño que un título, con un
 mosaico de sus portadas, y después los títulos que no tienen carpeta. La tarjeta con
-borde discontinuo **Nueva carpeta** crea una; dentro de una carpeta, la flecha vuelve a
-la raíz y **Renombrar** / **Borrar** viven ahí. Borrar una carpeta **nunca borra
+borde discontinuo **Nueva carpeta** crea una. Dentro de una carpeta, la flecha vuelve a
+la raíz y la misma línea muestra el nombre, el número de títulos, el interruptor
+**Ocultar/Oculta** y un menú de tres puntos con **Renombrar** y **Borrar**. Borrar una carpeta **nunca borra
 títulos**.
 
 Con una palabra secreta configurada aparece un interruptor **Ocultar** en la ficha de
