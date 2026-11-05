@@ -34,16 +34,16 @@ Item {
         FolderCards.rootItems(_folders, _split.folderless, _split.byFolder,
             function(entry) { return Manga.serverReady ? (entry.coverUrl || "") : "" })
     readonly property var _folderEntries:
-        activeFolder === "" ? [] : (_split.byFolder[activeFolder] || [])
+        (!libraryView.folderOpen) ? [] : (_split.byFolder[activeFolder] || [])
     readonly property bool _searching: query.trim() !== ""
     readonly property var _titleList:
         _searching ? _searchResults
-            : (activeFolder === "" ? _split.folderless : _folderEntries)
+            : (libraryView.folderOpen ? _folderEntries : _split.folderless)
 
     // Folders first, then titles with no folder, then the dashed create card.
     // A query or an open folder is a title-only view.
     readonly property var model: {
-        if (_searching || activeFolder !== "") {
+        if (_searching || libraryView.folderOpen) {
             var titles = []
             for (var i = 0; i < _titleList.length; i++)
                 titles.push({ kind: "title", entry: _titleList[i] })
@@ -55,10 +55,10 @@ Item {
     }
 
     readonly property string activeFolderName:
-        activeFolder === "" ? "" : ((Organizer.folder("manga", activeFolder) || {}).name || "")
+        (activeFolder === "" || Privacy.locked) ? "" : ((Organizer.folder("manga", activeFolder) || {}).name || "")
     readonly property bool activeFolderHidden:
         activeFolder !== "" && Organizer.isHidden("manga", activeFolder)
-    readonly property bool folderOpen: activeFolder !== "" && !_searching
+    readonly property bool folderOpen: activeFolder !== "" && !_searching && !Privacy.locked
 
     readonly property string fontDisplay: Style.font.family
     readonly property string fontBody: Style.font.family
@@ -98,6 +98,7 @@ Item {
     }
 
     function _renameFolder(folderId) {
+        if (Privacy.locked) return
         var folder = Organizer.folder("manga", folderId)
         _promptAction = "rename"
         _promptFolder = folderId
@@ -105,6 +106,7 @@ Item {
     }
 
     function _confirmDelete(folderId) {
+        if (Privacy.locked) return
         var folder = Organizer.folder("manga", folderId)
         if (!folder) return
         _promptAction = "delete"
@@ -133,7 +135,7 @@ Item {
     }
 
     function _toggleHidden() {
-        if (activeFolder === "") return
+        if (activeFolder === "" || Privacy.locked) return
         Organizer.setHidden("manga", activeFolder, !activeFolderHidden)
     }
 
@@ -188,7 +190,7 @@ Item {
 
             // Hide/show keeps the private mode usable once the chip row is gone.
             ClickableRect {
-                visible: Privacy.configured
+                visible: Privacy.configured && !Privacy.locked
                 Layout.preferredWidth: Style.space(28)
                 Layout.preferredHeight: Style.space(28)
                 color: hovered ? Colors.surface_container_high : "transparent"
@@ -212,6 +214,7 @@ Item {
             }
 
             ClickableRect {
+                visible: !Privacy.locked
                 Layout.preferredWidth: Style.space(28)
                 Layout.preferredHeight: Style.space(28)
                 color: hovered ? Colors.surface_container_high : "transparent"
@@ -234,6 +237,7 @@ Item {
             }
 
             ClickableRect {
+                visible: !Privacy.locked
                 Layout.preferredWidth: Style.space(28)
                 Layout.preferredHeight: Style.space(28)
                 color: hovered ? Colors.surface_container_high : "transparent"

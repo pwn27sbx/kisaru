@@ -30,14 +30,14 @@ Item {
         FolderCards.rootItems(_folders, _split.folderless, _split.byFolder,
             function(entry) { return entry.thumbnail || "" })
     readonly property var _folderEntries:
-        activeFolder === "" ? [] : (_split.byFolder[activeFolder] || [])
+        (!libraryView.folderOpen) ? [] : (_split.byFolder[activeFolder] || [])
     readonly property bool _searching: query.trim() !== ""
     readonly property var _titleList:
         _searching ? _searchResults
-            : (activeFolder === "" ? _split.folderless : _folderEntries)
+            : (libraryView.folderOpen ? _folderEntries : _split.folderless)
 
     readonly property var model: {
-        if (_searching || activeFolder !== "") {
+        if (_searching || libraryView.folderOpen) {
             var titles = []
             for (var i = 0; i < _titleList.length; i++)
                 titles.push({ kind: "title", entry: _titleList[i] })
@@ -49,10 +49,10 @@ Item {
     }
 
     readonly property string activeFolderName:
-        activeFolder === "" ? "" : ((Organizer.folder("anime", activeFolder) || {}).name || "")
+        (activeFolder === "" || Privacy.locked) ? "" : ((Organizer.folder("anime", activeFolder) || {}).name || "")
     readonly property bool activeFolderHidden:
         activeFolder !== "" && Organizer.isHidden("anime", activeFolder)
-    readonly property bool folderOpen: activeFolder !== "" && !_searching
+    readonly property bool folderOpen: activeFolder !== "" && !_searching && !Privacy.locked
 
     readonly property string fontDisplay: Style.font.family
     readonly property string fontBody:    Style.font.family
@@ -82,6 +82,7 @@ Item {
     }
 
     function _renameFolder(folderId) {
+        if (Privacy.locked) return
         var folder = Organizer.folder("anime", folderId)
         _promptAction = "rename"
         _promptFolder = folderId
@@ -89,6 +90,7 @@ Item {
     }
 
     function _confirmDelete(folderId) {
+        if (Privacy.locked) return
         var folder = Organizer.folder("anime", folderId)
         if (!folder) return
         _promptAction = "delete"
@@ -117,7 +119,7 @@ Item {
     }
 
     function _toggleHidden() {
-        if (activeFolder === "") return
+        if (activeFolder === "" || Privacy.locked) return
         Organizer.setHidden("anime", activeFolder, !activeFolderHidden)
     }
 
@@ -185,7 +187,7 @@ Item {
             Item { Layout.fillWidth: true }
 
             ClickableRect {
-                visible: Privacy.configured
+                visible: Privacy.configured && !Privacy.locked
                 Layout.preferredWidth: Style.space(28)
                 Layout.preferredHeight: Style.space(28)
                 color: hovered ? Colors.surface_container_high : "transparent"
@@ -209,6 +211,7 @@ Item {
             }
 
             ClickableRect {
+                visible: !Privacy.locked
                 Layout.preferredWidth: Style.space(28)
                 Layout.preferredHeight: Style.space(28)
                 color: hovered ? Colors.surface_container_high : "transparent"
@@ -231,6 +234,7 @@ Item {
             }
 
             ClickableRect {
+                visible: !Privacy.locked
                 Layout.preferredWidth: Style.space(28)
                 Layout.preferredHeight: Style.space(28)
                 color: hovered ? Colors.surface_container_high : "transparent"

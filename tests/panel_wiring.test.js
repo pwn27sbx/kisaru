@@ -404,6 +404,13 @@ test("the folder cards, the create card and the header padlock are wired", () =>
         assert.match(qml, /Organizer\.setHidden\("(manga|anime|novel)"/,
             `${file}: the open folder cannot be hidden`);
         assert.match(qml, /folder\.count/, `${file}: the folder card has no count`);
+        // Locked: no folder view, no action, no folder name in the bar.
+        assert.match(qml, /folderOpen: activeFolder !== "" && !_searching && !Privacy\.locked/,
+            `${file}: the folder view survives a lock`);
+        assert.match(qml, /function _toggleHidden\(\) \{\n\s*if \(activeFolder === "" \|\| Privacy\.locked\) return/,
+            `${file}: a locked hide toggle can still run`);
+        assert.match(qml, /activeFolderName:\n\s*\(activeFolder === "" \|\| Privacy\.locked\)/,
+            `${file}: the status line names a folder while locked`);
     }
 
     const mosaic = read("components/CoverMosaic.qml");
