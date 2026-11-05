@@ -264,3 +264,15 @@ search and it shows; simple.
   the virtual-pointer reset made the remaining show/folder clicks unreliable in this
   session; the hidden-title visibility, folder hide and show rules are covered by the
   pure tests (`library_view`, `folder_cards`) and the wiring tests.
+- **L25 (review).** Risk, readability and reliability lenses; **approved**, acknowledgement
+  burned. The reliability lens opened one blocker (the hide/show click path is not
+  behaviour-tested); the refuter refuted it, so it is not open. Advisories left as later
+  work: the hide handlers and the folder header are copied in three views, `setHidden`
+  names both a title and a folder write, `HideSwitch` and `FolderAction` repeat the same
+  control chrome, `folder.hide` labels a title switch too, the service write has no
+  privacy gate of its own (the QML handlers gate), and `privacy.lock` is now an unused
+  i18n key.
+- **L26 (measurement).** 30 random sandbox words of 8–16 characters at human (80 ms) and
+  fast (8 ms) speed: **30/30 and 30/30, 100%**, with tag-hit prefixes present (some words
+  1–3). The reported unlock failure was wrong (the owner's later evidence showed the word
+  unlocks); no Privacy change was made.
