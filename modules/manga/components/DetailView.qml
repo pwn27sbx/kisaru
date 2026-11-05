@@ -19,8 +19,25 @@ Item {
     signal searchOtherSourcesRequested()
 
     // ── Library state ─────────────────────────────────────────────────────────
+    // Display asks the visible accessor; the raw key stays for writes. While
+    // locked, a hidden title reads as not saved and its save is simulated for
+    // this session only (owner decision, 2026-11-05).
+    property bool _simulatedSaved: false
     readonly property bool _inLibrary:
-        Manga.currentManga ? Manga.libraryEntryId() !== "" : false
+        Manga.currentManga ? (Manga.visibleEntryId() !== "" || _simulatedSaved) : false
+    readonly property var _folderOptions: {
+        var out = [{ label: I18n.t("folder.none"), value: "" }]
+        var list = Organizer.folders("manga")
+        for (var i = 0; i < list.length; i++) {
+            if (Privacy.locked && list[i].hidden) continue
+            out.push({ label: list[i].name, value: list[i].id })
+        }
+        return out
+    }
+    readonly property string _folderValue: {
+        var entry = Manga.visibleEntry()
+        return entry ? (entry.folder || "") : ""
+    }
 
     // Human-readable list of the sources the ES chain tried (plan §F3).
     readonly property string _sourcesLabel: {
@@ -36,6 +53,7 @@ Item {
         _chapterFilter  = ""
         _sortAscending  = false
         _pendingJumpNum = ""
+        _simulatedSaved = false
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
@@ -54,7 +72,7 @@ Item {
 
     function jumpToLastRead() {
         if (!Manga.currentManga) return
-        const entry = Manga.getLibraryEntry(Manga.libraryEntryId())
+        const entry = Manga.visibleEntry()
         if (!entry || !entry.lastReadChapterNum) return
         // An active filter could hide the very row we are looking for.
         detailView._chapterFilter = ""
@@ -183,14 +201,25 @@ Item {
                     MouseArea {
                         anchors.fill: parent; hoverEnabled: true
                         onClicked: {
-                            if (detailView._inLibrary)
+                            if (detailView._simulatedSaved) {
+                                detailView._simulatedSaved = false
+                                return
+                            }
+                            if (detailView._inLibrary) {
                                 Manga.removeFromLibrary(Manga.libraryEntryId())
-                            else
-                                Manga.addToLibrary({
-                                    id:       Manga.libraryWriteKey(),
-                                    title:    Manga.currentManga.title,
-                                    coverUrl: Manga.currentManga.coverUrl
-                                })
+                                return
+                            }
+                            // A hidden title opened from Browse while locked:
+                            // pretend for this session and write nothing.
+                            if (Privacy.locked && Manga.isHiddenLibraryEntry(Manga.libraryEntryId())) {
+                                detailView._simulatedSaved = true
+                                return
+                            }
+                            Manga.addToLibrary({
+                                id:       Manga.libraryWriteKey(),
+                                title:    Manga.currentManga.title,
+                                coverUrl: Manga.currentManga.coverUrl
+                            })
                         }
                     }
                 }
@@ -378,11 +407,22 @@ Item {
 
                 Item { Layout.fillWidth: true }
 
+                MenuSelect {
+                    visible: Manga.currentManga !== null && Manga.visibleEntryId() !== ""
+                    controlHeight: Style.space(24)
+                    options: detailView._folderOptions
+                    currentValue: detailView._folderValue
+                    fallbackLabel: I18n.t("folder.none")
+                    popupWidth: Style.space(170)
+                    alignRight: true
+                    fontFamily: detailView.fontBody
+                    onChosen: function(value) { Manga.setFolder(Manga.libraryEntryId(), value) }
+                }
+
                 // Last-read badge — click it to jump to that chapter
                 Rectangle {
                     id: lastReadBadge
-                    readonly property var _entry: Manga.currentManga
-                        ? Manga.getLibraryEntry(Manga.libraryEntryId()) : null
+                    readonly property var _entry: Manga.visibleEntry()
                     visible: _entry !== null && _entry !== undefined
                         && _entry.lastReadChapterNum !== ""
                         && _entry.lastReadChapterNum !== undefined
@@ -396,8 +436,7 @@ Item {
                     Text {
                         id: lastReadText; anchors.centerIn: parent
                         text: {
-                            var e = Manga.currentManga
-                                ? Manga.getLibraryEntry(Manga.libraryEntryId()) : null
+                            var e = Manga.visibleEntry()
                             return e ? I18n.t("last.ch", { 1: detailView.formatChapter(e.lastReadChapterNum) }) : ""
                         }
                         font.family: detailView.fontBody
@@ -568,8 +607,7 @@ Item {
                     id: chapterRowAreaRect
                     width: chapterList.width; height: 58
 
-                    readonly property var _libEntry: Manga.currentManga
-                        ? Manga.getLibraryEntry(Manga.libraryEntryId()) : null
+                    readonly property var _libEntry: Manga.visibleEntry()
                     readonly property bool isLastRead:
                         _libEntry !== null && _libEntry !== undefined
                         && (_libEntry.lastReadChapterId === modelData.id
@@ -650,5 +688,10 @@ Item {
                 }
             }
         }
+    }
+
+    Connections {
+        target: Manga
+        function onCurrentMangaChanged() { detailView._simulatedSaved = false }
     }
 }

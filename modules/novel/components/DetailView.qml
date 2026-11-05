@@ -16,8 +16,24 @@ Item {
     signal chapterSelected(string chapterId)
 
     // ── Library state ─────────────────────────────────────────────────────────
+    // Display asks the visible accessor; writes keep the raw id. While locked,
+    // a hidden title reads as not saved and its save is simulated.
+    property bool _simulatedSaved: false
     readonly property bool _inLibrary:
-        Novel.currentNovel ? Novel.isInLibrary(Novel.currentNovel.id) : false
+        Novel.currentNovel ? (Novel.visibleEntryId() !== "" || _simulatedSaved) : false
+    readonly property var _folderOptions: {
+        var out = [{ label: I18n.t("folder.none"), value: "" }]
+        var list = Organizer.folders("novel")
+        for (var i = 0; i < list.length; i++) {
+            if (Privacy.locked && list[i].hidden) continue
+            out.push({ label: list[i].name, value: list[i].id })
+        }
+        return out
+    }
+    readonly property string _folderValue: {
+        var entry = Novel.visibleEntry()
+        return entry ? (entry.folder || "") : ""
+    }
 
     // ── Filter / sort state ───────────────────────────────────────────────────
     property bool   _sortAscending: false
@@ -26,6 +42,7 @@ Item {
     function reset() {
         _chapterFilter = ""
         _sortAscending = false
+        _simulatedSaved = false
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
@@ -62,7 +79,7 @@ Item {
     function continueReading() {
         if (!Novel.currentNovel) return
 
-        var entry = Novel.getLibraryEntry(Novel.currentNovel.id)
+        var entry = Novel.visibleEntry()
         var lastChapterId = entry ? entry.lastReadChapterId : null
         var targetChapter = null
 
@@ -89,7 +106,7 @@ Item {
     function readNext() {
         if (!Novel.currentNovel) return
 
-        var entry = Novel.getLibraryEntry(Novel.currentNovel.id)
+        var entry = Novel.visibleEntry()
         var lastChapterId = entry ? entry.lastReadChapterId : null
         var targetChapter = null
 
@@ -188,14 +205,23 @@ Item {
                     MouseArea {
                         anchors.fill: parent; hoverEnabled: true
                         onClicked: {
-                            if (detailView._inLibrary)
+                            if (detailView._simulatedSaved) {
+                                detailView._simulatedSaved = false
+                                return
+                            }
+                            if (detailView._inLibrary) {
                                 Novel.removeFromLibrary(Novel.currentNovel.id)
-                            else
-                                Novel.addToLibrary({
-                                    id:       Novel.currentNovel.id,
-                                    title:    Novel.currentNovel.title,
-                                    coverUrl: Novel.currentNovel.coverUrl
-                                })
+                                return
+                            }
+                            if (Privacy.locked && Novel.isHiddenLibraryEntry(Novel.currentNovel.id)) {
+                                detailView._simulatedSaved = true
+                                return
+                            }
+                            Novel.addToLibrary({
+                                id:       Novel.currentNovel.id,
+                                title:    Novel.currentNovel.title,
+                                coverUrl: Novel.currentNovel.coverUrl
+                            })
                         }
                     }
                 }
@@ -331,9 +357,20 @@ Item {
 
                 Item { Layout.fillWidth: true }
 
+                MenuSelect {
+                    visible: Novel.currentNovel !== null && Novel.visibleEntryId() !== ""
+                    controlHeight: Style.space(24)
+                    options: detailView._folderOptions
+                    currentValue: detailView._folderValue
+                    fallbackLabel: I18n.t("folder.none")
+                    popupWidth: Style.space(170)
+                    alignRight: true
+                    fontFamily: detailView.fontBody
+                    onChosen: function(value) { Novel.setFolder(Novel.currentNovel.id, value) }
+                }
+
                 Rectangle {
-                    readonly property var _entry: Novel.currentNovel
-                        ? Novel.getLibraryEntry(Novel.currentNovel.id) : null
+                    readonly property var _entry: Novel.visibleEntry()
                     visible: _entry !== null && _entry !== undefined
                         && _entry.lastReadChapterNum !== "" && _entry.lastReadChapterNum !== undefined
                     height: 20; width: lastReadTxt.implicitWidth + 18; radius: Style.cornerRadius
@@ -343,7 +380,7 @@ Item {
                     Text {
                         id: lastReadTxt; anchors.centerIn: parent
                         text: {
-                            var e = Novel.currentNovel ? Novel.getLibraryEntry(Novel.currentNovel.id) : null
+                            var e = Novel.visibleEntry()
                             return e ? I18n.t("last.ch", { 1: e.lastReadChapterNum }) : ""
                         }
                         font.family: detailView.fontBody; font.pixelSize: 9 // style-ignore — bespoke size
@@ -580,8 +617,7 @@ Item {
                     id: rowAreaRect
                     width: chapterList.width; height: 62
 
-                    readonly property var _libEntry: Novel.currentNovel
-                        ? Novel.getLibraryEntry(Novel.currentNovel.id) : null
+                    readonly property var _libEntry: Novel.visibleEntry()
                     readonly property bool isLastRead:
                         _libEntry !== null && _libEntry !== undefined
                         && _libEntry.lastReadChapterId === modelData.id
@@ -648,5 +684,10 @@ Item {
                 }
             }
         }
+    }
+
+    Connections {
+        target: Novel
+        function onCurrentNovelChanged() { detailView._simulatedSaved = false }
     }
 }

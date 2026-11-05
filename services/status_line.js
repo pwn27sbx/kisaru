@@ -49,7 +49,11 @@ function format(count, tabIndex, translate) {
 // names live in one place instead of being copied per panel.
 function barText(state) {
     state = state || {};
-    return format(visibleCount(state), state.tabIndex, state.translate);
+    var text = format(visibleCount(state), state.tabIndex, state.translate);
+    // Library also names the folder on screen; Browse has no folders.
+    var folder = state.tabIndex === 1 && state.folderName ? String(state.folderName) : "";
+    if (folder === "") return text;
+    return text === "" ? folder : text + " · " + folder;
 }
 
 if (typeof module !== "undefined" && module.exports) {

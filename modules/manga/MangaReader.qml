@@ -99,6 +99,10 @@ Item {
         if (root.tabIndex === 0) browseView.resetList()
     }
 
+    function _sendBrowseQuery(text) {
+        Manga.searchManga(text, true)
+    }
+
     // "Search other sources" from the no-Spanish notice: go back to Browse and
     // re-run the search for the current title across every source (plan §F3).
     function searchOtherSources() {
@@ -140,10 +144,18 @@ Item {
         onTriggered: {
             // Library filters locally (owner §33.1): no network here.
             if (root.tabIndex !== 0) return
-            if (header.searchText.trim().length > 0)
-                Manga.searchManga(header.searchText.trim(), true)
-            else
+            var text = header.searchText.trim()
+            if (text.length === 0) {
                 browseView.resetList()
+                return
+            }
+            // A tag miss searches at once. On a hit the query is held while
+            // the helper decides; only "no match" sends it.
+            var started = Privacy.consider(text, function(code) {
+                if (code === 1) root._sendBrowseQuery(text)
+                else if (code === 0) root.collapseSearch()
+            })
+            if (started === "miss") root._sendBrowseQuery(text)
         }
     }
 
@@ -175,7 +187,7 @@ Item {
             brand: brandComponent
             // Browse carries no number (the bar counts it); Library shows a badge,
             // and hides it at 0 (owner, A-8).
-            tabCounts: [-1, Manga.libraryList.length]
+            tabCounts: [-1, Manga.visibleCount()]
             fontFamily: root.fontBody
             settingsMode: root.settingsMode
             filters: root.tabIndex === 0 && !root.settingsMode ? browseView.filterOptions : []
@@ -256,6 +268,7 @@ Item {
                 LibraryView {
                     id: libraryView
                     query: root.searchOpen && root.tabIndex === 1 ? header.searchText : ""
+                    onSecretEntered: root.collapseSearch()
                     anchors.fill: parent
                     visible: root.libraryStack === 0
                     opacity: visible ? 1 : 0
@@ -318,7 +331,8 @@ Item {
                 settingsMode: root.settingsMode,
                 tabIndex: root.tabIndex,
                 browseCount: Manga.mangaList.length,
-                libraryCount: Manga.libraryList.length,
+                libraryCount: Manga.visibleCount(),
+                folderName: libraryView.activeFolderName,
                 translate: I18n.tn
             })
             fontFamily: root.fontBody
@@ -327,5 +341,22 @@ Item {
 
     PanelDecor {
         title: I18n.t("panel.manga")
+    }
+
+    // One hook: when the mode locks, a hidden title leaves no reader behind.
+    Connections {
+        target: Privacy
+        function onLockedChanged() {
+            if (!Privacy.locked) return
+            root.collapseSearch()
+            if (Manga.isHiddenLibraryEntry(Manga.currentLibraryId)) {
+                root.tabIndex = 1
+                root.browseStack = 0
+                root.libraryStack = 0
+                browseDetail.reset()
+                libraryDetail.reset()
+                Manga.clearDetail()
+            }
+        }
     }
 }

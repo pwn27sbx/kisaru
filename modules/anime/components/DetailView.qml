@@ -16,8 +16,24 @@ Item {
 
     signal backRequested()
 
+    // Display asks the visible accessor; writes keep the raw id. While locked,
+    // a hidden title reads as not saved and its save is simulated.
+    property bool _simulatedSaved: false
     readonly property bool _inLibrary:
-        Anime.currentAnime ? Anime.isInLibrary(Anime.currentAnime.id) : false
+        Anime.currentAnime ? (Anime.visibleEntryId() !== "" || _simulatedSaved) : false
+    readonly property var _folderOptions: {
+        var out = [{ label: I18n.t("folder.none"), value: "" }]
+        var list = Organizer.folders("anime")
+        for (var i = 0; i < list.length; i++) {
+            if (Privacy.locked && list[i].hidden) continue
+            out.push({ label: list[i].name, value: list[i].id })
+        }
+        return out
+    }
+    readonly property string _folderValue: {
+        var entry = Anime.visibleEntry()
+        return entry ? (entry.folder || "") : ""
+    }
 
     // ── MPV launcher ──────────────────────────────────────────────────────────
     Process {
@@ -135,10 +151,19 @@ Item {
                     MouseArea {
                         anchors.fill: parent; hoverEnabled: true
                         onClicked: {
-                            if (detailView._inLibrary)
+                            if (detailView._simulatedSaved) {
+                                detailView._simulatedSaved = false
+                                return
+                            }
+                            if (detailView._inLibrary) {
                                 Anime.removeFromLibrary(Anime.currentAnime.id)
-                            else
-                                Anime.addToLibrary(Anime.currentAnime)
+                                return
+                            }
+                            if (Privacy.locked && Anime.isHiddenLibraryEntry(Anime.currentAnime.id)) {
+                                detailView._simulatedSaved = true
+                                return
+                            }
+                            Anime.addToLibrary(Anime.currentAnime)
                         }
                     }
                 }
@@ -176,10 +201,21 @@ Item {
 
                 Item { Layout.fillWidth: true }
 
+                MenuSelect {
+                    visible: Anime.currentAnime !== null && Anime.visibleEntryId() !== ""
+                    controlHeight: Style.space(22)
+                    options: detailView._folderOptions
+                    currentValue: detailView._folderValue
+                    fallbackLabel: I18n.t("folder.none")
+                    popupWidth: Style.space(170)
+                    alignRight: true
+                    fontFamily: detailView.fontBody
+                    onChosen: function(value) { Anime.setFolder(Anime.currentAnime.id, value) }
+                }
+
                 // Last-watched badge
                 Rectangle {
-                    readonly property var _entry: Anime.currentAnime
-                        ? Anime.getLibraryEntry(Anime.currentAnime.id) : null
+                    readonly property var _entry: Anime.visibleEntry()
                     visible: _entry !== null && _entry !== undefined
                         && _entry.lastWatchedEpNum !== ""
                         && _entry.lastWatchedEpNum !== undefined
@@ -190,8 +226,7 @@ Item {
                     Text {
                         id: lastWatchedText; anchors.centerIn: parent
                         text: {
-                            var e = Anime.currentAnime
-                                ? Anime.getLibraryEntry(Anime.currentAnime.id) : null
+                            var e = Anime.visibleEntry()
                             return e ? I18n.t("last.ep", { 1: e.lastWatchedEpNum }) : ""
                         }
                         font.family: detailView.fontBody
@@ -262,8 +297,7 @@ Item {
                     id: epRowAreaRect
                     width: epList.width; height: 52
 
-                    readonly property var _libEntry: Anime.currentAnime
-                        ? Anime.getLibraryEntry(Anime.currentAnime.id) : null
+                    readonly property var _libEntry: Anime.visibleEntry()
                     readonly property bool isLastWatched:
                         _libEntry !== null && _libEntry !== undefined
                         && _libEntry.lastWatchedEpNum === String(modelData.number)
@@ -363,5 +397,10 @@ Item {
             detailView._playWithMpv(lnk.url, lnk.referer, lnk.subtitle, title)
             Anime.clearStreamLinks()
         }
+    }
+
+    Connections {
+        target: Anime
+        function onCurrentAnimeChanged() { detailView._simulatedSaved = false }
     }
 }

@@ -132,8 +132,10 @@ test("Browse carries no number and Library shows its count as a badge", () => {
     for (const file of PANELS) {
         const panel = read(file);
         assert.match(panel, /tabCounts:\s*\[-1,/, `${file}: Browse still carries a number`);
-        assert.match(panel, /tabCounts:\s*\[-1,\s*\w+\.libraryList\.length\]/,
-            `${file}: Library does not count its list`);
+        // The badge counts the visible list (folders and private mode), not
+        // the raw one, and anime is no longer the exception.
+        assert.match(panel, /tabCounts:\s*\[-1,\s*\w+\.visibleCount\(\)\]/,
+            `${file}: Library does not count its visible list`);
     }
     // The badge, and the rule that hides it at zero, are in one place.
     const header = read("components/PanelHeader.qml");
@@ -375,4 +377,164 @@ test("the fade is animated with a Motion token", () => {
     const shell = read("shell.qml");
     const fade = /Behavior on opacity\s*\{\s*NumberAnimation\s*\{\s*duration:\s*Motion\.\w+\s*\}\s*\}/;
     assert.match(shell, fade);
+});
+
+test("the folder row and private mode are wired in all three panels", () => {
+    // One row per library, on the shared gutter, with the same actions. The
+    // panels answer the secret query by collapsing the search (amendment 11).
+    for (const [file, kind] of [
+        ["modules/manga/components/LibraryView.qml", "manga"],
+        ["modules/anime/components/LibraryView.qml", "anime"],
+        ["modules/novel/components/LibraryView.qml", "novel"],
+    ]) {
+        const qml = read(file);
+        assert.match(qml, /FolderRow\s*\{/, `${file}: no folder row`);
+        assert.match(qml, new RegExp(`kind: "${kind}"`), `${file}: wrong folder kind`);
+        assert.match(qml, /visibleList:/, `${file}: display still reads the raw list`);
+        assert.match(qml, /\.visibleEntries\(libraryView\.activeFolder\)/,
+            `${file}: does not ask the visible view`);
+        assert.match(qml, /onQueryChanged:/, `${file}: no unlock hook`);
+        assert.match(qml, /Privacy\.consider\(query/, `${file}: the query never reaches the helper`);
+        assert.match(qml, /signal secretEntered\(\)/, `${file}: no collapse signal`);
+        assert.match(qml, /FolderPrompt\s*\{/, `${file}: no folder dialog`);
+        assert.match(qml, /anchors\.fill: parent/, `${file}: the dialog is not an overlay`);
+        assert.match(qml, /onLockRequested: Privacy\.lock\(\)/, `${file}: no padlock action`);
+    }
+    const row = read("components/FolderRow.qml");
+    assert.match(row, /anchors\.leftMargin: Gutter\.left/);
+    assert.match(row, /anchors\.rightMargin: Gutter\.right/);
+    assert.match(row, /signal lockRequested\(\)/);
+    assert.match(row, /visible: Privacy\.configured && !Privacy\.locked/);
+});
+
+test("the row has no card context action, and the header keeps onSearchEdited", () => {
+    const card = read("components/CoverCard.qml");
+    for (const gone of ["rightClicked", "contextMenu", "onPressAndHold", "menuRequested"])
+        assert.ok(!card.includes(gone), `CoverCard grew a context action: ${gone}`);
+
+    // Amendment 11: the new hook is onQueryChanged; the debounce path is untouched.
+    for (const file of PANELS) {
+        assert.match(read(file), /onSearchEdited:\s*searchDebounce\.restart\(\)/);
+    }
+});
+
+test("the panels use the visible count and name the active folder", () => {
+    for (const [file, service] of [
+        ["modules/manga/MangaReader.qml", "Manga"],
+        ["modules/anime/AnimePanel.qml", "Anime"],
+        ["modules/novel/NovelReader.qml", "Novel"],
+    ]) {
+        const qml = read(file);
+        assert.match(qml, new RegExp(`libraryCount: ${service}\\.visibleCount\\(\\)`),
+            `${file}: the bar counts the raw list`);
+        assert.match(qml, /folderName: libraryView\.activeFolderName/,
+            `${file}: the bar does not name the folder`);
+        assert.match(qml, /onSecretEntered: root\.collapseSearch\(\)/,
+            `${file}: the panel ignores the unlock signal`);
+        // Browse holds the query while the helper decides.
+        assert.match(qml, /Privacy\.consider\(text, function\(code\)/,
+            `${file}: Browse sends the candidate without the tag check`);
+    }
+    for (const file of PANELS) {
+        assert.match(read(file), /if \(code === 1\) root\._sendBrowseQuery\(text\)/,
+            `${file}: a tag hit never sends its search`);
+    }
+});
+
+test("the shell locks when a panel hides, and there is no idle lock", () => {
+    const shell = read("shell.qml");
+    assert.match(shell, /if \(slot\.item && !slot\.item\.visible\)\s*\n\s*Privacy\.lock\(\)/,
+        "the close/minimize/switch hook is missing");
+    // Owner decision (2026-11-05): no IdleMonitor, no five-minute lock.
+    assert.ok(!shell.includes("IdleMonitor"), "the idle lock came back");
+    assert.ok(!/\b300\b/.test(shell), "an idle timeout is still wired");
+});
+
+test("a hidden title leaves no trace in the detail views or the logs", () => {
+    for (const [file, service] of [
+        ["modules/manga/components/DetailView.qml", "Manga"],
+        ["modules/novel/components/DetailView.qml", "Novel"],
+        ["modules/anime/components/DetailView.qml", "Anime"],
+    ]) {
+        const qml = read(file);
+        assert.match(qml, new RegExp(`${service}\\.visibleEntryId\\(\\)`),
+            `${file}: membership still reads the raw entry`);
+        assert.match(qml, /_simulatedSaved/, `${file}: the locked save is not simulated`);
+        assert.match(qml, new RegExp(`${service}\\.isHiddenLibraryEntry\\(`),
+            `${file}: the simulated branch cannot recognise a hidden title`);
+        assert.match(qml, new RegExp(`${service}\\.visibleEntry\\(\\)`),
+            `${file}: progress still reads the raw entry`);
+    }
+
+    // The library log lines name no title, id or chapter.
+    for (const [file, tag] of [
+        ["services/Manga.qml", "ServiceManga"],
+        ["services/Novel.qml", "ServiceNovel"],
+        ["services/Anime.qml", "ServiceAnime"],
+    ]) {
+        const qml = read(file);
+        for (const line of qml.split("\n")) {
+            if (!line.includes(`[${tag}]`)) continue;
+            if (!/console\.(log|warn|error)/.test(line)) continue;
+            // The plan leaves the NovelBin migration error untouched.
+            if (line.includes("Migrated novel not on FreeWebNovel")) continue;
+            assert.doesNotMatch(line, /title|name|id\b|chapter|episode|searchText|MangaId|NovelId|AnimeId/,
+                `${file}: a log line names a title or id: ${line.trim()}`);
+        }
+        // The progress guard exists in the service too, not only in the view.
+        assert.match(qml, /Privacy\.locked && Organizer\.isHidden\(/,
+            `${file}: progress is not protected while locked`);
+    }
+
+    // No panel ever logs the typed query.
+    for (const file of PANELS) {
+        for (const line of read(file).split("\n")) {
+            if (/console\./.test(line))
+                assert.doesNotMatch(line, /searchText|header\.text/, `${file}: logs the query`);
+        }
+    }
+});
+
+test("folders are written atomically and a broken file blocks saves", () => {
+    const org = read("services/Organizer.qml");
+    assert.match(org, /atomicWrites: true/);
+    assert.match(org, /Paths\.organizerPath\(root\._dataHome\)/);
+    assert.match(org, /if \(!root\.loaded \|\| root\.loadFailed\) return false/,
+        "a broken organizer does not block writes");
+    assert.match(org, /root\.loadFailed = true/, "a broken organizer is not flagged");
+    // The last good list survives: onLoaded only assigns after JSON.parse.
+    assert.match(org, /root\.data = parsed/);
+});
+
+test("the secret travels on stdin, never in argv, and has a watchdog", () => {
+    const priv = read("services/Privacy.qml");
+    assert.match(priv, /Paths\.privacyPath\(root\._dataHome\)/);
+    assert.match(priv, /watchChanges: true/);
+    assert.match(priv, /onFileChanged: privacyFile\.reload\(\)/);
+    assert.match(priv, /command: \[ReaderEnv\.python, "-I", root\.helper, "--check", root\.path\]/);
+    assert.match(priv, /checker\.write\(root\._word\)/);
+    assert.match(priv, /checker\.stdinEnabled = false/, "stdin is never closed (the helper waits)");
+    assert.match(priv, /interval: 2000/, "no watchdog");
+    // The candidate is not part of the command line.
+    assert.ok(!/command:\s*\[[^\]]*_word/.test(priv), "the word reached argv");
+});
+
+test("the visible library and the lock state are the only display path", () => {
+    for (const [file, service] of [
+        ["services/Manga.qml", "Manga"],
+        ["services/Novel.qml", "Novel"],
+        ["services/Anime.qml", "Anime"],
+    ]) {
+        const qml = read(file);
+        assert.match(qml, /function visibleEntries\(folderId\)/);
+        assert.match(qml, /function visibleEntryId\(\)/);
+        assert.match(qml, /function isHiddenLibraryEntry\(entryId\)/);
+        assert.match(qml, /function setFolder\(entryId, folderId\)/);
+        assert.match(qml, /function deleteFolder\(folderId\)/);
+    }
+    // The raw accessors are untouched for writes.
+    for (const file of ["services/Manga.qml", "services/Novel.qml", "services/Anime.qml"]) {
+        assert.match(read(file), /function isInLibrary\(/);
+        assert.match(read(file), /function getLibraryEntry\(/);
+    }
 });

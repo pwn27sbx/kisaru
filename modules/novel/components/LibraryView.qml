@@ -6,6 +6,7 @@ import qs.Commons
 import qs.services
 import qs.components
 import "../../../services/library_filter.js" as LibraryFilter
+import "../../../services/library_view.js" as LibraryViewJs
 import "../../../services/list_metrics.js" as ListMetrics
 import "../../../services/scroll_metrics.js" as ScrollMetrics
 
@@ -16,7 +17,56 @@ Item {
     // locally, by title, as the text arrives (no debounce, no network). Esc or
     // clearing the field shows the whole shelf again.
     property string query: ""
-    readonly property var shownList: LibraryFilter.filter(Novel.libraryList, query)
+
+    // Folders and private mode: display reads the visible list, never the raw
+    // one. `activeFolder` is "" for Todas.
+    property string activeFolder: ""
+    readonly property var visibleList: Novel.visibleEntries(libraryView.activeFolder)
+    readonly property var shownList: LibraryFilter.filter(visibleList, query)
+    readonly property string activeFolderName:
+        activeFolder === "" ? "" : ((Organizer.folder("novel", activeFolder) || {}).name || "")
+
+    // The panel answers by putting the search field away.
+    signal secretEntered()
+
+    // Unlock hook (amendment 11): onQueryChanged, never onSearchEdited.
+    onQueryChanged: {
+        if (!Privacy.configured) return
+        Privacy.consider(query, function(code) {
+            if (code === 0) libraryView.secretEntered()
+        })
+    }
+
+    // Which prompt is open, and for which folder. One dialog, three actions.
+    property string _promptAction: ""
+    property string _promptFolder: ""
+
+    function _newFolder() {
+        _promptAction = "create"
+        _promptFolder = ""
+        folderPrompt.openText(I18n.t("folder.new"), "")
+    }
+
+    function _renameFolder(folderId) {
+        var folder = Organizer.folder("novel", folderId)
+        _promptAction = "rename"
+        _promptFolder = folderId
+        folderPrompt.openText(I18n.t("folder.rename"), folder ? folder.name : "")
+    }
+
+    function _confirmDelete(folderId) {
+        var folder = Organizer.folder("novel", folderId)
+        if (!folder) return
+        _promptAction = "delete"
+        _promptFolder = folderId
+        folderPrompt.openConfirm(I18n.t("folder.delete"),
+            folder.hidden ? I18n.t("folder.deleteHidden") : I18n.t("folder.deleteMessage"))
+    }
+
+    function _pruneFolder() {
+        if (activeFolder !== "" && Organizer.folder("novel", activeFolder) === null)
+            activeFolder = ""
+    }
 
     readonly property string fontDisplay: Style.font.family
     readonly property string fontBody:    Style.font.family
@@ -32,12 +82,25 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
+        FolderRow {
+            Layout.fillWidth: true
+            kind: "novel"
+            activeFolder: libraryView.activeFolder
+            onFolderSelected: function(folderId) { libraryView.activeFolder = folderId }
+            onCreateRequested: libraryView._newFolder()
+            onRenameRequested: function(folderId) { libraryView._renameFolder(folderId) }
+            onHideRequested: function(folderId, hidden) { Organizer.setHidden("novel", folderId, hidden) }
+            onDeleteRequested: function(folderId) { libraryView._confirmDelete(folderId) }
+            onLockRequested: Privacy.lock()
+        }
+
+
         // Row 3 is gone (owner §32): the layout toggle lives in the tool bar the
         // panel owns, next to the search. This view starts at the content.
 
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: Novel.libraryList.length === 0 && Novel.libraryLoaded
+            visible: libraryView.visibleList.length === 0 && Novel.libraryLoaded
 
             EmptyState {
                 title: I18n.t("empty.library")
@@ -73,7 +136,7 @@ Item {
         GridView {
             id: libGrid
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: !libraryView.listMode && Novel.libraryList.length > 0
+            visible: !libraryView.listMode && libraryView.visibleList.length > 0
             topMargin: Style.spacing.xl; leftMargin: Gutter.left
             // The bar's lane goes on top of the grid's own inset (owner §30).
             rightMargin: Gutter.right
@@ -120,7 +183,7 @@ Item {
         ListView {
             id: libRows
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: Novel.libraryList.length > 0 && libraryView.listMode
+            visible: libraryView.visibleList.length > 0 && libraryView.listMode
             topMargin: Style.spacing.xl
             bottomMargin: Style.spacing.xl
             // One gutter with the tool bar (owner §32.1).
@@ -148,5 +211,32 @@ Item {
                 }
             }
         }
+    }
+
+    FolderPrompt {
+        id: folderPrompt
+        anchors.fill: parent
+        onAccepted: function(value) {
+            if (libraryView._promptAction === "create")
+                Organizer.addFolder("novel", value)
+            else if (libraryView._promptAction === "rename")
+                Organizer.renameFolder("novel", libraryView._promptFolder, value)
+            else if (libraryView._promptAction === "delete")
+                Novel.deleteFolder(libraryView._promptFolder)
+            libraryView._promptAction = ""
+            libraryView._promptFolder = ""
+        }
+    }
+
+    Connections {
+        target: Privacy
+        function onLockedChanged() {
+            if (Privacy.locked) libraryView.activeFolder = ""
+        }
+    }
+
+    Connections {
+        target: Organizer
+        function onDataChanged() { libraryView._pruneFolder() }
     }
 }

@@ -70,6 +70,15 @@ test("barText() is the one expression the three panels call", () => {
     assert.equal(line.barText({ tabIndex: 0, browseCount: 0, translate }), "0 loaded");
 });
 
+test("the Library status line names the active folder", () => {
+    const state = { tabIndex: 1, libraryCount: 2, folderName: "Universidad", translate };
+    assert.equal(line.barText(state), "2 in library · Universidad");
+    // Todas has no name to add, and Browse never carries a folder.
+    assert.equal(line.barText({ ...state, folderName: "" }), "2 in library");
+    assert.equal(line.barText({ tabIndex: 0, browseCount: 32, folderName: "Universidad", translate }),
+        "32 loaded");
+});
+
 test("the Browse wording is the one the results row used", () => {
     // Same key and the same singular/plural pair, so the move cannot change
     // what the reader sees; es and en are both exercised.
