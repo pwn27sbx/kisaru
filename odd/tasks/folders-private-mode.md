@@ -294,3 +294,16 @@ search and it shows; simple.
   cards' box starts at x=12), name x≈41, count ends ≈397, switch ≈424..500, menu
   ≈511..537, all vertically centred in the 40 px row; switch label `on_surface`
   (6.63:1) and dots `card_secondary` (≥4.5:1).
+- **L29 (tab lock + toolbar review).** Risk, readability and reliability lenses;
+  **approved**, acknowledgement burned. Both reliability blockers (no click-level
+  tab-lock/menu tests) were refuted. Advisories left as later work:
+  `locksOnTabChange` fails open on a non-numeric previous tab, the menu action
+  dispatch is repeated in the three views, the Library tab index is a literal 1,
+  the overflow menu does not dismiss on an outside click, and the new toolbar
+  assertions overlap between test files. Live: the one-line folder toolbar was
+  inspected in the sandbox (back, name, count, state switch, three dots; no box,
+  no hidden tag); the row box measured x=13..537 in the 550 panel against cards at
+  x=12. The switch/menu real clicks could not be completed reliably because the
+  virtual-pointer device resets outside the panel and the owner's fullscreen
+  window intermittently sits above the layer; both behaviours are covered by the
+  pure and wiring tests.
