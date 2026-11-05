@@ -154,6 +154,11 @@ def fetch(url, extra_headers=None, timeout=30):
 # fallback and answers 200 WITHOUT a referer: it must stay out of this map.
 IMAGE_REFERER_SUFFIXES = (
     (".mangadex.network", "https://mangadex.org/"),
+    # mangafire.to's reader CDN (pwN.mfcdn2.xyz) answers 403 Cloudflare to a
+    # bare GET and 200 with the site as referer; the host number varies, so the
+    # rule matches the suffix. Its covers (static.mfcdn.nl) need no referer and
+    # must stay out of this map.
+    (".mfcdn2.xyz", "https://mangafire.to/"),
 )
 IMAGE_REFERERS = {
     "img1mw.xyz": "https://manhwaweb.com/",

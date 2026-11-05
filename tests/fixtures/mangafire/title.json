@@ -1,0 +1,126 @@
+{
+ "data": {
+  "id": 26256,
+  "hid": "rl2vm",
+  "slug": "jujutsu-kaisen",
+  "title": "Jujutsu Kaisen",
+  "type": "manga",
+  "status": "",
+  "contentRating": "suggestive",
+  "poster": {
+   "small": "https://static.mfcdn.nl/2f64/i/3/30/40825b829a241fd494d765e2baa4f227@100.jpg",
+   "medium": "https://static.mfcdn.nl/2f64/i/3/30/40825b829a241fd494d765e2baa4f227@280.jpg",
+   "large": "https://static.mfcdn.nl/2f64/i/3/30/40825b829a241fd494d765e2baa4f227.jpg"
+  },
+  "latestChapter": 271.5,
+  "year": 2018,
+  "rank": 26,
+  "chapterUpdatedAt": "5mos ago",
+  "url": "/title/rl2vm-jujutsu-kaisen",
+  "synopsisHtml": "From Viz:  <br>\n<br>\nAlthough Yuji Itadori looks like your average teenager, his immense physical strength is something to behold! Every sports club wants him to join, but Itadori would rather hang out with the school outcasts in the Occult Research Club. One day, the club manages to get their hands on a sealed cursed object. Little do they know the terror they’ll unleash when they break the seal.<br>\n<br>\nNote: Nominated for the fifth Next Manga Award in the Print category in 2018, the 65th Shogakukan Manga Award in the Shonen category in 2019 and the 25th annual Tezuka Osamu Cultural Prize in 2021.  <br>\nWon the third annual Tsutaya Comic Award in 2019 and the Mando Kobayashi Manga Grand Prix in 2020.<br>\n<br>\n<b>Official Japanese:</b>  <br>\n<a href=\"https://zebrack-comic.shueisha.co.jp/title/3361/volume_list\" target=\"_blank\" rel=\"noopener noreferrer\">Zebrack</a>, <a href=\"https://www.shueisha.co.jp/books/search/search.html?seriesid=37298\" target=\"_blank\" rel=\"noopener noreferrer\">Shueisha</a><br>\n<br>\n<b>Official Translations:</b>  <br>\nRead for FREE on Manga Plus (<a href=\"https://mangaplus.shueisha.co.jp/titles/100034\" target=\"_blank\" rel=\"noopener noreferrer\">English</a>, <br>\n<a href=\"https://mangaplus.shueisha.co.jp/titles/700004\" target=\"_blank\" rel=\"noopener noreferrer\">French</a>, <a href=\"https://mangaplus.shueisha.co.jp/titles/400002\" target=\"_blank\" rel=\"noopener noreferrer\">Indonesian</a>, <a href=\"https://mangaplus.shueisha.co.jp/titles/100150\" target=\"_blank\" rel=\"noopener noreferrer\">Portugese</a>, <a href=\"https://mangaplus.shueisha.co.jp/titles/600001\" target=\"_blank\" rel=\"noopener noreferrer\">Russian</a>, <a href=\"https://mangaplus.shueisha.co.jp/titles/200018\" target=\"_blank\" rel=\"noopener noreferrer\">Spanish</a>, <a href=\"https://mangaplus.shueisha.co.jp/titles/300007\" target=\"_blank\" rel=\"noopener noreferrer\">Thai</a>)    <br>\n<br>\nChinese (<a href=\"https://manga.bilibili.com/detail/mc26505\" target=\"_blank\" rel=\"noopener noreferrer\">Bilibili</a>, <a href=\"https://www.tongli.com.tw/BooksList.aspx?Page=2&B=JC1116\" target=\"_blank\" rel=\"noopener noreferrer\">Tongli</a>), <a href=\"https://www.viz.com/manga-books/manga/jujutsu-kaisen/all\" target=\"_blank\" rel=\"noopener noreferrer\">English</a>, Korean (<a href=\"https://page.kakao.com/content/53478091\" target=\"_blank\" rel=\"noopener noreferrer\">Kakao Page</a>, <a href=\"https://www.mcomics.co.kr/cartoon/7868?from=cartoon\" target=\"_blank\" rel=\"noopener noreferrer\">Mcomics</a>, <a href=\"https://www.mrblue.com/comic/dcwcm_0934\" target=\"_blank\" rel=\"noopener noreferrer\">MrBlue</a>, <a href=\"https://series.naver.com/comic/detail.series?productNo=4358797\" target=\"_blank\" rel=\"noopener noreferrer\">Naver Series</a>, <a href=\"https://ridibooks.com/books/1019023956\" target=\"_blank\" rel=\"noopener noreferrer\">Ridi</a>)",
+  "altTitles": [
+   "Chú Thuật Hồi Chiến",
+   "JJK",
+   "Jujutsu Kaisen - Batalha de feiticeiros",
+   "Jujutsu kaisen - Sorcery Fight",
+   "Jujutsu Kaisen: Guerra de hechiceros",
+   "Jujutsu Kaisen: la guerra màgica",
+   "Revolving Battles Of Sorcery",
+   "Sorcery Fight",
+   "Жүжүцү Кайсэн",
+   "Магическая битва",
+   "Магична битка",
+   "Магічна битва",
+   "Сиқырлы шайқас",
+   "Џуџуцу каисен",
+   "Մոգական ճակատամարտ",
+   "ג'וג'וטסו קאייזן",
+   "جوجوتسو كايسين",
+   "जादुई लडाई",
+   "জুজুৎসু কাইসেন",
+   "มหาเวทย์ผนึกมาร",
+   "ჯუჯუცუ კაისენი",
+   "じゅじゅつかいせん",
+   "呪術廻戦",
+   "咒术回战",
+   "咒術迴戰",
+   "주술회전"
+  ],
+  "rating": 9.1,
+  "ratingCount": 401,
+  "follows": 67689,
+  "languages": [
+   "en",
+   "es",
+   "es-la",
+   "fr",
+   "ja",
+   "pt",
+   "pt-br"
+  ],
+  "hasVolumes": true,
+  "links": {
+   "mal": "https://myanimelist.net/manga/113138/",
+   "al": "https://anilist.co/manga/101517/",
+   "mu": "https://mangaupdates.com/series/axmopy6/",
+   "md": "https://mangadex.org/title/c52b2ce3-7f95-469c-96b0-479524fb7a1a/",
+   "mb": "https://mangabaka.org/6199/"
+  },
+  "malId": "113138",
+  "anilistId": "101517",
+  "genres": [
+   {
+    "id": 1,
+    "title": "Action"
+   },
+   {
+    "id": 5,
+    "title": "Comedy"
+   },
+   {
+    "id": 6,
+    "title": "Drama"
+   },
+   {
+    "id": 22,
+    "title": "Mystery"
+   },
+   {
+    "id": 530,
+    "title": "Horror"
+   },
+   {
+    "id": 268931,
+    "title": "Mature"
+   }
+  ],
+  "themes": [
+   {
+    "id": 268959,
+    "title": "School Life"
+   },
+   {
+    "id": 268961,
+    "title": "Supernatural"
+   }
+  ],
+  "demographics": [
+   {
+    "id": 268918,
+    "title": "Shounen"
+   }
+  ],
+  "authors": [
+   {
+    "id": 298736,
+    "title": "Akutami Gege"
+   }
+  ],
+  "artists": [
+   {
+    "id": 301582,
+    "title": "Akutami Gege"
+   }
+  ]
+ }
+}

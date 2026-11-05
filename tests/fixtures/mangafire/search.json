@@ -1,0 +1,68 @@
+{
+ "items": [
+  {
+   "id": 26256,
+   "hid": "rl2vm",
+   "slug": "jujutsu-kaisen",
+   "title": "Jujutsu Kaisen",
+   "type": "manga",
+   "status": "",
+   "poster": {
+    "small": "https://static.mfcdn.nl/2f64/i/3/30/40825b829a241fd494d765e2baa4f227@100.jpg",
+    "medium": "https://static.mfcdn.nl/2f64/i/3/30/40825b829a241fd494d765e2baa4f227@280.jpg",
+    "large": "https://static.mfcdn.nl/2f64/i/3/30/40825b829a241fd494d765e2baa4f227.jpg"
+   },
+   "latestChapter": 271.5,
+   "year": 2018,
+   "rank": 26,
+   "chapterUpdatedAt": "5mos ago",
+   "url": "/title/rl2vm-jujutsu-kaisen"
+  },
+  {
+   "id": 24317,
+   "hid": "3rn99",
+   "slug": "jujutsu-kaisen-00",
+   "title": "Jujutsu Kaisen 0",
+   "type": "manga",
+   "status": "finished",
+   "poster": {
+    "small": "https://static.mfcdn.nl/72fd/i/2/2d/2d3b663e6543a4422c0f3798d70224c4@100.jpg",
+    "medium": "https://static.mfcdn.nl/72fd/i/2/2d/2d3b663e6543a4422c0f3798d70224c4@280.jpg",
+    "large": "https://static.mfcdn.nl/72fd/i/2/2d/2d3b663e6543a4422c0f3798d70224c4.jpg"
+   },
+   "latestChapter": 4,
+   "year": 2017,
+   "rank": 9051,
+   "chapterUpdatedAt": "2yrs ago",
+   "url": "/title/3rn99-jujutsu-kaisen-00"
+  },
+  {
+   "id": 59508,
+   "hid": "ro44q",
+   "slug": "jujutsu-kaisen-modulo2",
+   "title": "Jujutsu Kaisen Modulo",
+   "type": "manga",
+   "status": "",
+   "poster": {
+    "small": "https://static.mfcdn.nl/19f9/i/3/ec/e25f9e8b97bc96e2e67a7df335f11c8d@100.jpg",
+    "medium": "https://static.mfcdn.nl/19f9/i/3/ec/e25f9e8b97bc96e2e67a7df335f11c8d@280.jpg",
+    "large": "https://static.mfcdn.nl/19f9/i/3/ec/e25f9e8b97bc96e2e67a7df335f11c8d.jpg"
+   },
+   "latestChapter": 25,
+   "year": 2025,
+   "rank": 1051,
+   "chapterUpdatedAt": "7mos ago",
+   "url": "/title/ro44q-jujutsu-kaisen-modulo2"
+  }
+ ],
+ "meta": {
+  "total": 29,
+  "perPage": 3,
+  "page": 1,
+  "lastPage": 10,
+  "from": 1,
+  "to": 3,
+  "hasNext": true,
+  "hasPrev": false
+ }
+}

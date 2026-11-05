@@ -1,0 +1,150 @@
+{
+ "data": {
+  "id": 3727642,
+  "number": 271,
+  "name": "A partir de ahora",
+  "language": "es",
+  "type": "unofficial",
+  "latest": 271.5,
+  "title": {
+   "id": 26256,
+   "hid": "rl2vm",
+   "slug": "jujutsu-kaisen",
+   "name": "Jujutsu Kaisen",
+   "url": "/title/rl2vm-jujutsu-kaisen",
+   "type": "manga",
+   "languages": [
+    "en",
+    "es",
+    "es-la",
+    "fr",
+    "ja",
+    "pt",
+    "pt-br"
+   ],
+   "hasVolumes": true,
+   "malId": "113138",
+   "anilistId": "101517",
+   "mangabakaId": "6199"
+  },
+  "pages": [
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7beb2541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1098,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7beb1541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1098,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7beb0541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1052,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7beb7541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7beb6541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7beb5541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7beb4541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bebb541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7beba541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bfb3541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bfb2541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bfb1541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bfb0541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bfb7541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bfb6541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bfb5541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bfb4541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bfbb541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bfba541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bcb3541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bcb2541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   },
+   {
+    "url": "https://pw6.mfcdn2.xyz/mf/12a3db61fa0e4f41a6ca79408ca7ec009331ad4259a7bcb1541e2dfab23ccb812a5cd519486725eaff/h/p.jpg",
+    "width": 1136,
+    "height": 1600
+   }
+  ],
+  "prev": {
+   "id": 3717950,
+   "number": 270,
+   "language": "es",
+   "url": "/title/rl2vm-jujutsu-kaisen/chapter/3717950"
+  },
+  "next": null
+ }
+}

@@ -45,7 +45,11 @@ IMAGE_REFERERS = {
 # MangaDex's at-home nodes answer 404 without the site Referer, and the node
 # host is per-user (cmdxd98sb0x3yprd.mangadex.network), so match by suffix.
 REFERER_SUFFIXES = (".mangadex.network",)
-REFERER_DEFAULTS = {"mangadex.network": "https://mangadex.org/"}
+REFERER_DEFAULTS = {
+    "mangadex.network": "https://mangadex.org/",
+    # mangafire.to's reader CDN (pwN.mfcdn2.xyz); its covers do not need one.
+    "mfcdn2.xyz": "https://mangafire.to/",
+}
 
 
 def referer_for(host):
@@ -58,7 +62,7 @@ def referer_for(host):
             return referer
     return ""
 
-SOURCES = ("mangadex", "inmanga", "zonatmo", "zonatmo_org", "manhwaweb")
+SOURCES = ("mangadex", "inmanga", "zonatmo", "zonatmo_org", "manhwaweb", "mangafire")
 
 # One fixed query per source: "solo leveling" does not exist on MangaDex with a
 # Spanish translation, nor on InManga, so a single global query would report
@@ -69,6 +73,7 @@ PROBE_QUERY = {
     "zonatmo": QUERY,
     "zonatmo_org": QUERY,
     "manhwaweb": QUERY,
+    "mangafire": "jujutsu kaisen",
 }
 
 
@@ -339,6 +344,7 @@ def report(code, lines, elapsed, webhook="", checkin_url="", post=post_json):
 def load_modules():
     """The real source modules, imported only when the canary actually runs."""
     import inmanga_source
+    import mangafire_source
     import manga_sources
     import manhwaweb_source
     import zonatmo_org_source
@@ -350,6 +356,7 @@ def load_modules():
         "zonatmo": zonatmo_source,
         "zonatmo_org": zonatmo_org_source,
         "manhwaweb": manhwaweb_source,
+        "mangafire": mangafire_source,
     }
 
 

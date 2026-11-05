@@ -1,0 +1,54 @@
+{
+ "items": [
+  {
+   "id": 3744182,
+   "number": 271,
+   "name": "La continuación del sueño",
+   "language": "es-la",
+   "type": "unofficial",
+   "createdAt": 1728193260
+  },
+  {
+   "id": 3715577,
+   "number": 270,
+   "name": "Fin del sueño",
+   "language": "es-la",
+   "type": "unofficial",
+   "createdAt": 1726864250
+  },
+  {
+   "id": 3707102,
+   "number": 269,
+   "name": "Reflexión",
+   "language": "es-la",
+   "type": "unofficial",
+   "createdAt": 1726288318
+  },
+  {
+   "id": 3684392,
+   "number": 268,
+   "name": "Conclusión",
+   "language": "es-la",
+   "type": "unofficial",
+   "createdAt": 1725502888
+  },
+  {
+   "id": 3684390,
+   "number": 267,
+   "name": "",
+   "language": "es-la",
+   "type": "unofficial",
+   "createdAt": 1725502869
+  }
+ ],
+ "meta": {
+  "total": 278,
+  "perPage": 5,
+  "page": 1,
+  "lastPage": 56,
+  "from": 1,
+  "to": 5,
+  "hasNext": true,
+  "hasPrev": false
+ }
+}

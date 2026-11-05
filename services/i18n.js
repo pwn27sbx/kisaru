@@ -293,6 +293,7 @@ var sources = {
     "zonatmo": "ZonaTMO (.net)",
     "zonatmo_org": "ZonaTMO (.org)",
     "manhwaweb": "ManhwaWeb",
+    "mangafire": "MangaFire",
     "weebcentral": "WeebCentral"
 };
 
