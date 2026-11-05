@@ -46,6 +46,16 @@ function legacyLibraryPath(dataHome, panel) {
     return libraryPath(dataHome, panel, true);
 }
 
+// The folder list and the secret. Both are new data, so both live under the
+// project's own folder and never under the inherited neutral one.
+function organizerPath(dataHome) {
+    return dataHome + "/" + DATA_DIR + "/organizer.json";
+}
+
+function privacyPath(dataHome) {
+    return dataHome + "/" + DATA_DIR + "/privacy.json";
+}
+
 if (typeof module !== "undefined" && module.exports)
     module.exports = {
         CONFIG_DIR: CONFIG_DIR,
@@ -55,5 +65,7 @@ if (typeof module !== "undefined" && module.exports)
         LIBRARY_FILES: LIBRARY_FILES,
         resolvePath: resolvePath,
         libraryPath: libraryPath,
-        legacyLibraryPath: legacyLibraryPath
+        legacyLibraryPath: legacyLibraryPath,
+        organizerPath: organizerPath,
+        privacyPath: privacyPath
     };

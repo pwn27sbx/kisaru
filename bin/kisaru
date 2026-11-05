@@ -31,6 +31,7 @@ case ${1-start} in
     novel) ensure_instance; exec qs -p "$cfg" ipc call novelReader toggle ;;
     stop)  exec qs -p "$cfg" kill ;;
     log)   exec qs -p "$cfg" log ;;
+    privado) exec python3 "$cfg/scripts/privado.py" ;;
     -h|--help|help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//' ;;
     *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 1 ;;
 esac

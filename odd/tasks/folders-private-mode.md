@@ -1,0 +1,97 @@
+# kisaru — folders and private mode
+
+Feature: `folders-private-mode`. Branch: `feat/folders-private-mode` (from `i18n-es`).
+Test runner: `node --test` (plus `python3` for the CLI). Scope: manga, novels and anime.
+Source plan: `~/Documents/MisokuVault/QS NovelMangaReader/2026-11-05-carpetas-modo-privado/README.md`
+(the owner decisions at its end override the sections above).
+
+## Specs
+
+- **S1 (folders model).** A library entry may carry an optional `folder` id. Old entries without it
+  mean "no folder" and stay valid. Folders live in `organizer.json` next to the libraries, per kind:
+  `{ manga: { folders: [{id, name, hidden}] }, novel: {...}, anime: {...} }`. Writes are atomic; a
+  broken file is not overwritten: keep the last good folders, set a load-failed flag and block saves.
+- **S2 (folder CRUD).** Create, rename and delete folders. Deleting a folder moves its titles to no
+  folder and never deletes a title. Deleting a hidden folder asks for confirmation and the message
+  states that its titles become visible.
+- **S3 (visible view, fail closed).** `services/library_view.js` returns the visible entries, the
+  visible count and the visible folders from entries, folders, the active folder and the lock state.
+  While locked, or before organizer data loads, an entry whose `folder` is unknown or unresolved is
+  hidden. Hidden folders and their titles exist only while unlocked. Counts always mean all visible
+  titles; the status line also names the active folder.
+- **S4 (folder row).** The Library tab shows a row under the header with `Todas`, each folder and
+  `+`. It starts on the shared gutter (`Gutter.left` / `Gutter.right`). While unlocked a folder can
+  be renamed, hidden or deleted and a padlock button locks at once and returns to `Todas`, with no
+  message. Without a configured secret no hidden option and no padlock are shown; folder controls
+  are never visible while locked.
+- **S5 (assign a title).** A folder is assigned to a title from `DetailView` only; no card carries a
+  context action.
+- **S6 (secret file and CLI).** The secret lives in `$DATA/kisaru/privacy.json`, mode 0600, never in
+  `organizer.json`. Record:
+  `{"v":1,"salt":"<32 hex>","tag":"<1 hex>","n":131072,"r":8,"p":1,"dk":"<64 hex>"}`. `word` is
+  `fold()` plus trim, UTF-8 (lowercase, NFD, strip U+0300-036F, trim). `dk = scrypt(word, salt,
+  n, r, p, maxmem=2**28, dklen=32)`. `tag` is the first hex digit of MD5 over `salt + word`.
+  `kisaru privado` prompts with no echo and no argument; it refuses words under 8 characters and
+  replaces an existing word only after a confirmation. `scripts/privado.py --check <path>` reads at
+  most 1024 bytes of stdin, prints nothing, exits 0 on match, 1 on no match, 2 on any error, and is
+  stdlib only. `privado` stays out of `kisaru --help`.
+- **S7 (unlock).** In Library, the whole trimmed, folded query equals the secret word: the field
+  clears, no message, no giveaway animation. Browse in all three panels pre-checks the tag: a tag
+  miss sends the search as usual, a hit holds it; exit 1 sends it, while a match, exit 2 or a timeout
+  sends nothing and treats it as no query, so the word never reaches a source. The word never enters
+  argv, a URL, HTTP or a log. A missing or broken file means no secret is configured and the mode
+  stays locked. A generation counter discards stale results and a 2 s watchdog kills the check.
+- **S8 (lock triggers).** Locking happens on closing, minimizing or switching the panel, on process
+  start, when the word is typed again, and with the padlock button. There is no idle lock. One hook
+  in `shell.qml` plus one singleton; no per-panel lock calls.
+- **S9 (locked leaves no trace).** While locked a hidden title leaves no trace in grid, list, empty
+  state, tab counts, status line, library search, `isInLibrary` display or last-read progress in
+  Detail. Browse and catalogue search stay public: a hidden title opened from there shows as not
+  saved.
+- **S10 (progress).** `updateLastRead` / `updateLastWatched` are a no-op for a hidden entry while
+  locked. Saving a hidden title from Browse while locked simulates the save: it shows as saved for
+  that session, writes no data, and shows as not saved again after a reload. Progress on hidden
+  titles keeps saving while unlocked. Saving it again must neither duplicate nor erase its progress
+  or folder.
+- **S11 (no trace in logs).** The library logs at `Manga.qml` 175/181/197, `Novel.qml` 243/249/265
+  and the anime equivalents no longer print a title, id or chapter number.
+- **S12 (paths).** `organizerPath(dataHome)` and `privacyPath(dataHome)` live in `app_paths.js`,
+  always under `DATA_DIR`, never the legacy folder.
+- **S13 (UI rules and docs).** UI strings go through `I18n.t` with es and en tables; sizes and
+  durations use `Style.*`; controls use `Style.cornerRadius`; the row uses `Gutter.left/right`;
+  files import `qs.services`. README documents folders and private mode.
+- **S14 (verification).** RED first through the public functions. `node --test` stays green,
+  including the existing library, search, i18n, lint and `tabCounts` tests, with anime no longer
+  raw. Live check: restart kisaru, confirm the process start time is newer than the commit, check
+  the hidden list, counts and status line in both view modes, measure the new row's alignment in
+  pixels and run with old library files. Never touch the owner's real library data; use a sandbox
+  and a test word only there, and never print, log or commit a secret word.
+
+## Tasks
+
+| ID | Spec | Route | Status | Evidence |
+|----|------|-------|--------|----------|
+| T1 | S1,S3,S12 | inline | done | `library_view.js`, `lock_state.js`, `privacy.js`, path tests |
+| T2 | S6 | inline | done | `scripts/privado.py`, CLI + fold parity tests |
+| T3 | S1,S2 | inline | done | `Organizer.qml`, CRUD wiring |
+| T4 | S6,S7,S8 | inline | done | `Privacy.qml`, `shell.qml` hook |
+| T5 | S3,S4,S9 | inline | done | three `LibraryView.qml`, `FolderRow.qml`, `FolderPrompt.qml` |
+| T6 | S5,S9,S10 | inline | done | three `DetailView.qml`, service accessors |
+| T7 | S9,S11 | inline | done | services: visibility, progress guard, log scrub |
+| T8 | S7,S8 | inline | done | panels: debounce, secret hook, lock reset, counts/status |
+| T9 | S13 | inline | done | i18n tables, README |
+| T10 | S14 | inline | done | `node --test` + live check |
+
+## Log
+
+- **L1 (owner request, verbatim).** "hacer para kisaru un modo de privacidad de mangas (ocultarlo)
+  idea que en algun espacio si se dibuja algo con el puntero se desbloquee o una zona especifica
+  secreta donde escribir un texto que no se vea lo active y carpetas para orgnizar las lecturas" /
+  "me basta con ocultarla de la interfaz". Agreed: folders first, secret word typed in the existing
+  search field; hiding is interface-level only, no encryption.
+- **L2 (decision).** Folders are available without a secret; hidden folders, hidden controls and the
+  padlock exist only when a secret is configured, and only while unlocked. One padlock locks all
+  three kinds.
+- **L3 (decision).** The visible list is computed once per panel by `library_view.js`; services expose
+  `visibleEntries`, `visibleCount`, `visibleEntryId` and `visibleEntry`, while the raw
+  `isInLibrary` / `getLibraryEntry` / `libraryEntryId` stay untouched for writes.
