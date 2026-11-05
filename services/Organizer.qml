@@ -46,11 +46,17 @@ Singleton {
             }
             root.loaded = true
         }
-        onLoadFailed: {
-            // Missing file: a fresh install with no folders, not a broken one.
-            root.data = ({})
+        onLoadFailed: function(error) {
             root.loaded = true
-            root.loadFailed = false
+            // Only a file that is really absent means "fresh install". An
+            // existing file we cannot read is broken: keep the last good
+            // folders and refuse to overwrite it.
+            if (error === FileViewError.FileNotFound) {
+                root.data = ({})
+                root.loadFailed = false
+                return
+            }
+            root.loadFailed = true
         }
     }
 

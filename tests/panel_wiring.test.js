@@ -502,6 +502,12 @@ test("folders are written atomically and a broken file blocks saves", () => {
     assert.match(org, /if \(!root\.loaded \|\| root\.loadFailed\) return false/,
         "a broken organizer does not block writes");
     assert.match(org, /root\.loadFailed = true/, "a broken organizer is not flagged");
+    // A missing file and an unreadable file are different things: only the
+    // first is a fresh install; the second must keep the last good list and
+    // keep the save lock.
+    assert.match(org, /error === FileViewError\.FileNotFound/,
+        "an unreadable organizer is treated as missing");
+    assert.match(org, /onLoadFailed: function\(error\)/, "the load error is discarded");
     // The last good list survives: onLoaded only assigns after JSON.parse.
     assert.match(org, /root\.data = parsed/);
 });

@@ -118,3 +118,8 @@ Source plan: `~/Documents/MisokuVault/QS NovelMangaReader/2026-11-05-carpetas-mo
   commit `9407cca` at 2026-11-04 19:54:49 -05:00, process start 19:54:55 -05:00 (newer by 6 s). The real
   library file still has its 2026-11-02 mtime; no secret exists yet (`privacy.json` and `organizer.json`
   absent), so the real app starts with folders but no private mode, as it should. No QML errors.
+- **L9 (review, refuted blocker fixed).** The four lenses were admitted and the refuter confirmed one
+  real defect: `Organizer.onLoadFailed` treated an unreadable existing file as a missing one, so the
+  next folder write could replace it. The handler now distinguishes `FileViewError.FileNotFound`
+  (fresh install) from every other error (keep the last good folders, raise `loadFailed`, block saves).
+  The wiring test pins both branches.
