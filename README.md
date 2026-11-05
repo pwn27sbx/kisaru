@@ -214,6 +214,17 @@ archivos de la biblioteca. No hay bloqueo por inactividad.
   entre sí; una fuente con el dominio caído se omite sin romper el panel.
   **[ManhwaWeb](https://manhwaweb.com)** aporta su propio catálogo de manhwas en español
   (contenido +18), que no está en las demás fuentes; va al final porque es el último recurso.
+  **Una búsqueda pregunta a todas las fuentes a la vez** y une lo que devuelven: se quitan
+  duplicados por título normalizado (las variantes deliberadas, como «sin censura», quedan
+  como entradas aparte) y se ordena por lo que escribiste, ignorando acentos y mayúsculas
+  —primero el título exacto, después el mismo título sin calificativos de edición—. Cada
+  fuente tiene un límite de 6 s (`QS_MANGA_SEARCH_TIMEOUT`): una fuente lenta o caída se
+  omite y no frena la búsqueda. Los ids conservan el prefijo de su fuente, así que el
+  detalle y los capítulos se resuelven contra la fuente correcta. Al paginar se pide el
+  mismo `offset` a cada fuente, la página siguiente empieza donde acaba la ventana más
+  grande que devolvió alguna y `hasMore` es verdadero si a alguna le quedan resultados (el
+  deduplicado es por página, así que un título puede reaparecer más abajo). Explorar el
+  catálogo y «Últimos» no cambian: siguen usando la primera fuente que responde.
   Se puede forzar una fuente con `QS_MANGA_SOURCE`: `mangadex`, `inmanga`,
   `zonatmo` (zonatmo.net), `zonatmo_org` (zonatmo.org), `manhwaweb` y `weebcentral` (inglés,
   sin capítulos en español) fijan esa fuente; `auto` (por defecto) elige por el idioma de
