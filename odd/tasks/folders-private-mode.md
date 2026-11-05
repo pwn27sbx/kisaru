@@ -179,3 +179,27 @@ parts of S1-S4; everything else (private mode, locking, progress, logs, paths) s
   DetailView copies have drifted (a shared component would be better), an empty folder shows a blank
   area, `folder.new` and `folder.create` duplicate the same label, and a few picker metrics are
   literals.
+- **L16 (regression found live: visible folders could not open while locked).** `c0b6561` put the
+  lock in front of every folder (`folderOpen`, `activeFolderName`, rename/delete and the lock
+  reset), so with the default locked state no folder opened, and with no secret configured the
+  mode stays locked for good. `fc83ffa` gates only a hidden or unresolved folder while locked:
+  `services/library_view.js::lockedOut` returns true for a hidden folder, an unknown id, or any
+  folder before the organizer loads while locked; a visible folder opens with no secret and while
+  locked. A lock keeps a visible folder open and sends a hidden one back to the root. Hide/show
+  remains limited to unlocked with a secret. RED tests cover visible-locked, hidden-locked,
+  unresolved fail-closed and unlocked; the wiring test pins `lockedOut`, the `activeFolderLockedOut`
+  gate, the guards and the reset, and no longer pins the old all-folder gate.
+- **L17 (other lock sites).** Re-read every `Privacy.locked` site added by `c0b6561`: the hidden
+  folder list and collage, progress guard, simulated save, Detail picker filter, panel title reset
+  and padlock visibility are all hidden-only or unlocked-only and were not wrongly gating a visible
+  folder.
+- **L18 (live check).** Sandbox with `organizer.json`, two library entries and **no
+  `privacy.json`**; the app starts locked. Clicking the visible folder opened it: back arrow,
+  “Visible”, “2 títulos”, rename/delete present, no padlock and no hide control. Nothing was
+  typed; no secret exists. Real library untouched.
+- **L19 (review).** The fix was reviewed with risk, reliability and readability lenses; approved
+  with advisories only, acknowledgement burned. Advisories left as later work: `_renameFolder`
+  and `_confirmDelete` guard on the open folder rather than the `folderId` argument (same at every
+  call site today), the lock policy is expressed in the helper plus per-view properties plus the
+  hide/show guard, the test message for hide/show is inverted, and the two
+  `visible: !activeFolderLockedOut` controls are pinned by one match.
