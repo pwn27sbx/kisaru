@@ -123,3 +123,50 @@ Source plan: `~/Documents/MisokuVault/QS NovelMangaReader/2026-11-05-carpetas-mo
   next folder write could replace it. The handler now distinguishes `FileViewError.FileNotFound`
   (fresh install) from every other error (keep the last good folders, raise `loadFailed`, block saves).
   The wiring test pins both branches.
+## v2: folders as cards (owner feedback, 2026-11-05)
+
+The owner rejected the chip row and the folder picker. This section overrides the folder-row
+parts of S1-S4; everything else (private mode, locking, progress, logs, paths) stands.
+
+- **S15 (root).** The Library root is the title grid: folders first, then the titles with no
+  folder, then a dashed `Nueva carpeta` card. A folder is a card of exactly a title card's size,
+  with a 2x2 mosaic of up to four inner covers (one fills, two split, three use a large left
+  cover and two stacked, none shows a folder glyph), its name and its title count below.
+- **S16 (folder view).** Opening a folder shows its titles with a back arrow; rename, hide/show
+  and delete live inside. Delete keeps the old rules. The hide/show control is kept inside
+  because the chip row that used to own it is gone.
+- **S17 (list mode).** A folder is a row with a mini collage, the same height as a title row.
+- **S18 (search).** A non-empty query returns matching visible titles across every folder, and
+  leaves the open folder (the result is library-wide, never folder-scoped).
+- **S19 (padlock).** The padlock is a header action, shown only while unlocked.
+- **S20 (Detail).** The folder control is a button styled like the other Detail buttons, labelled
+  `Carpeta: …`; it opens the real folder list plus `Nueva carpeta`, which creates and assigns in
+  place.
+- **S21 (collage safety).** Hidden folders and their collages exist only while unlocked; the
+  collage is built from the visible list, so a hidden title's cover is never painted while locked.
+
+## v2 log
+
+- **L10 (owner feedback, verbatim).** "mejor como una carpeta como si fuese un manga de ese tamaño
+  pero que use de portada un collage de las portadas que tiene dentro". Approved redesign in all
+  three panels: no chip row, folder cards, folder view with back/rename/delete, dashed create
+  card, header padlock, list mini collage, global search, hidden safety, Detail button with a real
+  folder list.
+- **L11 (RED first).** `tests/folder_cards.test.js` pins 0/1/2/3/4+ covers, empty covers skipped,
+  root order (folders in organizer order, then folderless titles), hidden folder and covers gone
+  while locked, and search across folders with accent folding.
+- **L12 (deviation).** The owner named rename and delete inside the folder; hide/show is also
+  inside, otherwise the private mode would lose its only way to mark a folder hidden. Search from
+  inside a folder returns to the root before showing library-wide results.
+- **L13 (live check, sandbox).** `XDG_DATA_HOME`/`XDG_CONFIG_HOME` under `/var/tmp/kisaru-live`,
+  six folders with generated local covers (5, hidden 1, 2, 3, 0 and 1 titles), one folderless
+  title, old-format entries and a test word; the real library was never read for writing.
+  Grid: root order, counts, hidden folder absent, dashed create card, folder view with back and
+  actions. List: folder rows with mini collages, title row and create row. Pixel measurements:
+  folder card **169x341** vs title card **169x341** (same 178 px cell, 5 px card margin, left box
+  at x=12); list thumbnails all **62 px tall** with the same **73 px row pitch** (the theme's
+  scaled 48x68 / 80). The keyboard was being stolen by the live desktop, so the typed search and
+  unlock were not repeated live; both are covered by the RED tests and the earlier live pass.
+- **L14 (false alarm).** Two screenshots showed skeleton rows or a missing panel right after a
+  file save: Quickshell's hot reload recreated the view while the library was re-reading. With a
+  clean start the same clicks render the folder view; no QML error was logged.
