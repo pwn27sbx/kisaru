@@ -203,3 +203,32 @@ parts of S1-S4; everything else (private mode, locking, progress, logs, paths) s
   call site today), the lock policy is expressed in the helper plus per-view properties plus the
   hide/show guard, the test message for hide/show is inverted, and the two
   `visible: !activeFolderLockedOut` controls are pinned by one match.
+- **L20 (caret).** The caret bar was always at `-width - gap`, which is right only
+  at position 0; with text it landed on the last letter. `services/caret.js::barX`
+  keeps the negative offset at position 0 and returns 0 otherwise; the delegate
+  stays zero-width and the empty-field margin is untouched. Live on the panel:
+  at Home the bar is x=1382–1383 with the first glyph at 1387–1389 (3 px gap);
+  in the middle it is 1406–1407 between `c` (ends 1404) and `d` (starts 1408),
+  1 px each side; at the end 1426–1427 after `f` (ends 1424), 1 px. The text
+  origin is x=1387 in all three, unchanged.
+- **L21 (privacy.json created late).** Sandbox starts with no `privacy.json`
+  (the log shows the read failure). Creating it with `scripts/privado.py` while
+  the app runs and typing the word in the Library search unlocks without a
+  restart: the padlock appears, the badge goes 2→3 and the hidden folder
+  appears. Replacing the word through the CLI locks the app (badge 2, folder
+  gone), and the new word unlocks it again. **No fix was needed:** the FileView
+  watch sees the file created or replaced after startup.
+- **L22 (card status contrast).** The unstarted status was `on_surface_variant`
+  (theme muted, ~1.3:1) plus `opacity: 0.45` in the grid strip and `0.5` in the
+  list row. One shared token, `Colors.card_secondary` = mix(muted, on_surface,
+  0.9), now feeds the progress strips, list datum/progress, folder counts and
+  CoverCard's author/meta lines; muted chrome and inactive tabs keep the theme
+  role. Live measurements: grid status **4.76:1** on the light cover and
+  **4.89:1** on the dark one (band #3a4144), title **6.63:1** on both, folder
+  count **5.57:1**; list trailing status **5.84:1**. The title stays strongest.
+- **L23 (review).** Readability and reliability lenses; approved with advisories
+  only, acknowledgement burned. Advisories: the 0.9 blend is repeated in the
+  palette, the contrast helper and a test regex; the contrast module header says
+  "hex in, ratio out" although two functions return hex; the active-label
+  opacity weights (0.85/0.9) are unnamed; the CoverCard token test does not also
+  pin the absence of an opacity.
