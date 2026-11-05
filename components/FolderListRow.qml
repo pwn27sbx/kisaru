@@ -82,7 +82,7 @@ ClickableRect {
                 font.family: root.bodyFont
                 font.pixelSize: Math.round(Style.font.body * ListMetrics.DATUM_SCALE)
                 font.letterSpacing: 0.3
-                color: Colors.mix(Colors.on_surface_variant, Colors.on_surface, 0.35)
+                color: Colors.card_secondary
             }
 
             StyledText {

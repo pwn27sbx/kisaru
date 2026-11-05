@@ -126,7 +126,7 @@ ClickableRect {
                 font.family: root.bodyFont
                 font.pixelSize: Style.font.caption
                 font.letterSpacing: 0.3
-                color: Colors.on_surface_variant
+                color: Colors.card_secondary
                 elide: Text.ElideRight
                 maximumLineCount: 1
             }

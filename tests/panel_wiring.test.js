@@ -253,7 +253,8 @@ test("the list row is the owner's sketch: tall cover, big title, small datum", (
     assert.match(row, /wrapMode: Text\.Wrap/, "two lines do not wrap");
     // The datum under it is small, and brighter than the muted role.
     assert.match(row, /Style\.font\.body \* ListMetrics\.DATUM_SCALE/, "the datum does not read the shared scale");
-    assert.match(row, /Colors\.mix\(Colors\.on_surface_variant, Colors\.on_surface/, "the datum is still faint");
+    assert.match(row, /datumColor: Colors\.card_secondary/,
+        "the datum does not use the shared readable token");
     assert.match(row, /Colors\.outline_variant/, "no separator between rows");
 });
 
