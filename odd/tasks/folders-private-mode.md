@@ -114,5 +114,7 @@ Source plan: `~/Documents/MisokuVault/QS NovelMangaReader/2026-11-05-carpetas-mo
   cards and the header brand's ink start at x=12: exactly `Gutter.ink` (5 px). The row now uses
   `Gutter.left + Gutter.ink` / `Gutter.right + Gutter.ink`; re-measured at x=12 for the chip row, the
   first card and the brand, in both view modes.
-- **L8 (final process).** The owner's app is restarted from the real tree after the last commit; its
-  start time is checked against `git log -1` as the plan requires.
+- **L8 (final process).** The owner's app is restarted from the real tree after the last commit:
+  commit `9407cca` at 2026-11-04 19:54:49 -05:00, process start 19:54:55 -05:00 (newer by 6 s). The real
+  library file still has its 2026-11-02 mtime; no secret exists yet (`privacy.json` and `organizer.json`
+  absent), so the real app starts with folders but no private mode, as it should. No QML errors.
