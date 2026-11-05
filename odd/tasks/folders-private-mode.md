@@ -358,4 +358,16 @@ search and it shows; simple.
   the switch still on and writes `folder: "sec", hidden: true`; leaving the Detail drops
   the panel to the Library with only **Visible · 0 títulos** and **Nueva carpeta** — the
   title and the hidden folder are gone, so the lock applied.
+- **L32 (review of the detail-stay hide).** Lenses risk, readability, reliability over
+  `7d274fc` (clear button) and `ec8687a` (detail stay); **approved**, acknowledgement
+  burned. The two reliability blockers were refuted. Advisories left as later work or as
+  the owner's call: the picker now lists hidden folder names for an already hidden title
+  even in a locked session (the rule the owner asked for, and the reason the refuter
+  rejected the bypass claim — worth a decision if it should be narrowed to unlocked
+  only), the action-to-effect dispatch is repeated in the three DetailViews while the
+  decision itself is shared, `ACTION.LEAVE` reads as the generic leave while it means
+  "already hidden, locked", and the wiring assertions depend on source-shape windows.
+  The deferred-lock window has no hole found: back, tab change, close, minimize, panel
+  switch and opening a chapter all reset the stack, which flips the Detail's `visible`
+  and runs the settle (the shell and the header lock first on their own paths).
 
