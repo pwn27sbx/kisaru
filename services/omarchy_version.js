@@ -2,8 +2,9 @@
 //
 // The app is written against one Omarchy major.minor line: its QML imports
 // `qs.Commons` and `qs.Ui` from `/usr/share/omarchy/shell`, and those modules
-// move between minors (4.0 → 4.5 changed the bar and component APIs). A patch
-// release is expected to keep working, so only major.minor is compared.
+// move between minors (4.0 → 4.5 changed the bar and component APIs; the app
+// is written against 4.5). A patch release is expected to keep working, so
+// only major.minor is compared.
 //
 // `omarchy version` prints the pacman pkgver on a release install and
 // "dev[ (hash)]" when OMARCHY_PATH points at a checkout, so a dev build is
@@ -14,7 +15,7 @@
 // while `node --test` reads the guarded `module.exports` at the bottom (the
 // same shape as services/anime_links.js).
 
-// "4.0.6-1" -> "4.0"; "dev (a1b2c3d)" -> "dev"; anything else -> "".
+// "4.5.0-3" -> "4.5"; "dev (a1b2c3d)" -> "dev"; anything else -> "".
 function parseVersion(raw) {
     var text = String(raw === undefined || raw === null ? "" : raw).trim()
     if (text.length === 0) return ""

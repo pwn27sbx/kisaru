@@ -12,7 +12,7 @@ import "omarchy_version.js" as Core
 // the line the app is written against. It never blocks: the panels still
 // open, and the message names what may have moved.
 //
-// `omarchy version` prints "4.0.6-1" on a release install and "dev (hash)"
+// `omarchy version` prints "4.5.0-3" on a release install and "dev (hash)"
 // for a checkout. The parsing and the message live in
 // services/omarchy_version.js (tests/omarchy_version.test.js).
 //
@@ -21,7 +21,7 @@ import "omarchy_version.js" as Core
 Singleton {
     id: root
 
-    readonly property string supported: "4.0"
+    readonly property string supported: "4.5"
 
     // "4.0" / "4.5" / "dev" / "" (command missing or failed).
     property string running: ""

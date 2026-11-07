@@ -59,7 +59,7 @@ menos una vez con la ruta nueva.
 
 ## Requisitos
 
-- **Omarchy 4.0** con su shell de Quickshell. Es una dependencia dura: el repo enlaza
+- **Omarchy 4.5** con su shell de Quickshell. Es una dependencia dura: el repo enlaza
   `Commons/` y `Ui/` a `/usr/share/omarchy/shell/{Commons,Ui}`, así que no funciona sin
   Omarchy instalado. La app avisa en el log si la versión de Omarchy cambia de línea (ver
   *Omarchy* abajo).
@@ -257,7 +257,7 @@ añadirlo a la barra.
 
 ## Omarchy
 
-La app se escribe contra **una línea de Omarchy: `4.0`**. Al arrancar ejecuta
+La app se escribe contra **una línea de Omarchy: `4.5`**. Al arrancar ejecuta
 `omarchy version` y, si el mayor/menor no coincide (o es un checkout `dev`), escribe **un**
 aviso en el log; **no bloquea**: los paneles siguen abriendo.
 

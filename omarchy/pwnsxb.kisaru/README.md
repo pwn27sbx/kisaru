@@ -14,9 +14,9 @@ reader panel of the `kisaru` Quickshell app.
 The panels import `qs.Commons` and `qs.Ui` from `/usr/share/omarchy/shell` (the
 `Commons`/`Ui` symlinks at the repo root point there), so an Omarchy upgrade
 that moves those layers changes the app's ground. The app is written against
-**one major.minor line: `4.0`** (`services/OmarchyVersion.qml`).
+**one major.minor line: `4.5`** (`services/OmarchyVersion.qml`).
 
-At startup it runs `omarchy version` and, when the running line is not `4.0`,
+At startup it runs `omarchy version` and, when the running line is not `4.5`,
 logs one warning — it never blocks and the panels still open:
 
 ```bash
