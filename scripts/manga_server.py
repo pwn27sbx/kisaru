@@ -186,6 +186,48 @@ def is_mangafire_cdn(host):
     return family.startswith("mfcdn") and family[5:].isdigit()
 
 
+# Every host `/image` may fetch (audit 2026-11-06, finding 18). The proxy is one
+# endpoint shared by all the sources, so this is the union, not a per-source
+# list: a new source's CDN has to be added here or its covers never load.
+# Built from the source constants, the referer table and the recorded fixtures.
+IMAGE_HOSTS = frozenset({
+    # ManhwaWeb
+    "img1mw.xyz", "img2mw.xyz", "uploads.manhwaweb.com",
+    # ManhwaWeb's page images on Toptoon
+    "smurfs.toptoon.com",
+    # MangaDex; pages come from the at-home nodes, matched by suffix below
+    "uploads.mangadex.org",
+    # MangaFire's covers; the reader hosts are matched by is_mangafire_cdn()
+    "static.mfcdn.nl",
+    # ZonaTMO
+    "cdn.zonatmo.to", "storage.zonatmo.org", "storage2.zonatmo.org", "zonatmo.org",
+    # InManga
+    "cdn1.intomanga.com", "assets.intomanga.com",
+    # WeebCentral's covers and the anime cover host
+    "temp.compsci88.com", "cdn.jkdesa.com",
+})
+# MangaDex serves every page from a per-user at-home node
+# (<hash>.mangadex.network), so the family has to match by suffix.
+IMAGE_HOST_SUFFIXES = (".mangadex.network",)
+
+
+def image_host_allowed(url):
+    """True when `url` points at one of the sources' own image CDNs.
+
+    Host-level only: `img1mw.xyz.evil.example` is somebody else's host, and the
+    proxy still refuses loopback and private addresses (proxy_target_allowed).
+    """
+    host = (urlparse(str(url or "")).hostname or "").lower().rstrip(".")
+    if not host:
+        return False
+    if host in IMAGE_HOSTS:
+        return True
+    if any(host.endswith(suffix) for suffix in IMAGE_HOST_SUFFIXES):
+        return True
+    return is_mangafire_cdn(host)
+
+
+
 def referer_for(host):
     """The Referer an image host insists on, or "" when it needs none."""
     host = (host or "").lower()
@@ -1182,6 +1224,11 @@ def _proxy_fetch(url, timeout=30):
     """
     for _ in range(4):
         if not proxy_target_allowed(url):
+            raise ProxyBlocked(url)
+        if not image_host_allowed(url):
+            host = urlparse(url).hostname or ""
+            print("[manga-server] image host not in the allowlist, refused: %s"
+                  % host, flush=True)
             raise ProxyBlocked(url)
         if uses_mangadex_image_policy(url):
             r = _plain_get(url, mangadex_image_headers(url), timeout, follow=False)

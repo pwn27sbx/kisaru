@@ -11,6 +11,9 @@ import tempfile
 import unittest
 from urllib.parse import quote
 
+import contextlib
+import io
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 try:
@@ -448,6 +451,74 @@ class DownloadImageGuardTest(unittest.TestCase):
         self.assertEqual(manga_server._dl_jobs["ch1"]["status"], "done")
         self.assertEqual(sorted(os.listdir(self._chapter_dir())), ["001.jpg", "meta.json"])
         self.assertFalse(os.path.exists(os.path.join(self.tmp, "s1", "cover.jpg")))
+
+
+@unittest.skipUnless(HAVE_SERVER, "manga_server needs curl_cffi/requests")
+class ImageHostAllowlistTest(unittest.TestCase):
+    """The shared image proxy fetches only the sources' own CDNs (finding 18).
+
+    `/image` is one proxy for every source, so the allowlist is the union of
+    their image hosts, matched exactly; MangaDex's at-home nodes and MangaFire's
+    rotating reader hosts are families, not fixed names.
+    """
+
+    def test_every_source_image_host_is_allowed(self):
+        for url in (
+                "https://img1mw.xyz/manhwas/x/chapter_1/001.jpg",
+                "https://img2mw.xyz/x.jpg",
+                "https://uploads.manhwaweb.com/x.jpg",
+                "https://smurfs.toptoon.com/assets/upfile/contents/1/ep_thumb2/x.jpg",
+                "https://assets.intomanga.com/x.jpg",
+                "https://cdn1.intomanga.com/i/m/uuid/c/ch/o/1.jpg",
+                "https://static.mfcdn.nl/mf/x/h/p.jpg",
+                "https://cdn.jkdesa.com/assets/images/animes/image/x.jpg",
+                "https://temp.compsci88.com/cover/small/x.jpg",
+                "https://uploads.mangadex.org/covers/x.jpg",
+                "https://storage.zonatmo.org/chapters/1/2.webp",
+                "https://cdn.zonatmo.to/manga/x/1.jpg"):
+            self.assertTrue(manga_server.image_host_allowed(url), url)
+
+    def test_the_mangadex_and_mangafire_families_rotate(self):
+        for url in ("https://cmdxd98sb0x3yprd.mangadex.network/data/x.jpg",
+                    "https://a1b2.mangadex.network/x.jpg",
+                    "https://pw6.mfcdn1.xyz/mf/x/h/p.jpg",
+                    "https://pw6.mfcdn2.xyz/mf/x/h/p.jpg",
+                    "https://l1n.mfcdn12.xyz/mf/y/h/p.jpg"):
+            self.assertTrue(manga_server.image_host_allowed(url), url)
+
+    def test_foreign_and_lookalike_hosts_are_refused(self):
+        for url in ("https://evil.example/x.jpg",
+                    "https://img1mw.xyz.evil.example/x.jpg",
+                    "https://notmangadex.network.evil.example/x.jpg",
+                    "https://evil-mfcdn1.xyz/x.jpg",
+                    "https://mfcdn1.xyz.evil.example/x.jpg",
+                    "http://127.0.0.1/x.jpg",
+                    ""):
+            self.assertFalse(manga_server.image_host_allowed(url), url)
+
+    def test_a_redirect_to_a_refused_host_is_blocked_and_logged(self):
+        class Redirect:
+            status_code = 302
+            headers = {"Location": "https://evil.example/x.jpg"}
+
+            def raise_for_status(self):
+                pass
+
+        original_get = manga_server._get
+        original_policy = manga_server.proxy_target_allowed
+        manga_server._get = lambda *a, **k: Redirect()
+        # The first hop is a known CDN and the second is public; only the
+        # allowlist can refuse it, which is what this test is about.
+        manga_server.proxy_target_allowed = lambda url: True
+        output = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(output):
+                with self.assertRaises(manga_server.ProxyBlocked):
+                    manga_server._proxy_fetch("https://img1mw.xyz/x.jpg")
+        finally:
+            manga_server._get = original_get
+            manga_server.proxy_target_allowed = original_policy
+        self.assertIn("evil.example", output.getvalue())
 
 
 if __name__ == "__main__":

@@ -148,11 +148,17 @@ class _Response:
 class MangaProxyGuardTest(unittest.TestCase):
     def setUp(self):
         self.original_policy = manga_server.proxy_target_allowed
+        self.original_hosts = manga_server.image_host_allowed
         self.original_get = manga_server._get
         self.original_plain = manga_server._plain_get
+        # These tests are about the loopback/private guard; the image-host
+        # allowlist has its own tests (test_manga_proxy.ImageHostAllowlistTest),
+        # so its predicate is satisfied here.
+        manga_server.image_host_allowed = lambda url: True
 
     def tearDown(self):
         manga_server.proxy_target_allowed = self.original_policy
+        manga_server.image_host_allowed = self.original_hosts
         manga_server._get = self.original_get
         manga_server._plain_get = self.original_plain
 
