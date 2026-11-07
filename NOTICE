@@ -25,7 +25,9 @@ published by dhrruvsharma at
     https://github.com/dhrruvsharma/qs-novelmangareader
 
 Original work: Copyright (C) dhrruvsharma and contributors, licensed under
-GPL-3.0. Its copyright notices are retained in the source files.
+GPL-3.0. Neither the original tree at c3ebeca nor this repository carries
+copyright headers in its source files; the copyright line above and the
+LICENSE file are the attribution.
 
 Modification date: the work was forked on 2026-10-07 at upstream commit
 c3ebeca ("fix: Fixing commands not working with users not having local bin in

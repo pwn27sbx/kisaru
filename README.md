@@ -24,9 +24,9 @@ kisaru nace como fork de
 entonces el proyecto siguió por su cuenta: interfaz en español, adopción de Omarchy, fuentes de
 contenido en español, ajustes y una capa de componentes compartidos.
 
-La licencia sigue siendo **GPL-3.0**: el `LICENSE` original queda intacto, los avisos de
-copyright del código original se conservan, y `NOTICE` recoge el aviso de modificaciones que
-pide la GPL-3.0 §5a junto con el rango de commits del fork. Los errores del código original se
+La licencia sigue siendo **GPL-3.0**: el `LICENSE` original queda intacto, ningún archivo lleva
+cabecera de copyright, y `NOTICE` recoge el aviso de modificaciones que pide la GPL-3.0 §5a
+junto con el rango de commits del fork. Los errores del código original se
 reportan al upstream, no aquí.
 
 ## Los nombres
