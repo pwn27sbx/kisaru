@@ -820,6 +820,13 @@ _img_sem         = threading.Semaphore(10)
 # CDN starts refusing (a browser check, an outage) the art already seen keeps
 # rendering instead of turning the grid into placeholders.
 IMG_DISK_MAX_BYTES = 8 * 1024 * 1024   # one image bigger than this is not a cover
+# The folder, not one file. Pages land here too (the "covers" name is
+# historical), so browsing keeps growing it: hold it inside a byte budget by
+# removing the oldest file first (audit 2026-11-06, finding 5).
+IMG_DISK_MAX_TOTAL_BYTES = 256 * 1024 * 1024
+_IMG_DISK_PRUNE_EVERY = 32      # one directory scan every N writes, not per write
+_img_disk_writes = 0
+_img_disk_lock = threading.Lock()
 
 
 def img_cache_dir():
@@ -835,6 +842,50 @@ def img_disk_path(url, directory=None):
     return os.path.join(directory or img_cache_dir(), digest + ".img")
 
 
+def prune_img_disk_cache(directory=None, max_bytes=None, keep=None):
+    """Delete the oldest cached images until the folder fits its byte budget.
+
+    `keep` is the file just written: it is never a candidate even when it is
+    the oldest. Returns how many files were removed; a missing folder is not
+    an error.
+    """
+    directory = directory or img_cache_dir()
+    budget = IMG_DISK_MAX_TOTAL_BYTES if max_bytes is None else max_bytes
+    entries = []
+    try:
+        with os.scandir(directory) as items:
+            for item in items:
+                if not item.name.endswith(".img"):
+                    continue
+                try:
+                    info = item.stat()
+                except OSError:
+                    continue
+                if not item.is_file():
+                    continue
+                entries.append((info.st_mtime, info.st_size, item.path))
+    except OSError:
+        return 0
+
+    total = sum(size for _, size, _ in entries)
+    if total <= budget:
+        return 0
+
+    removed = 0
+    for _, size, path in sorted(entries, key=lambda entry: (entry[0], entry[2])):
+        if total <= budget:
+            break
+        if path == keep:
+            continue
+        try:
+            os.remove(path)
+        except OSError:
+            continue
+        total -= size
+        removed += 1
+    return removed
+
+
 def img_disk_get(url, directory=None):
     """(bytes, ctype) for a cover already on disk, or None."""
     path = img_disk_path(url, directory)
@@ -848,7 +899,8 @@ def img_disk_get(url, directory=None):
 
 
 def img_disk_put(url, body, directory=None):
-    """Store a cover on disk. Failures are silent: a full disk is not an error."""
+    """Store an image on disk. Failures are silent: a full disk is not an error."""
+    global _img_disk_writes
     if not body or len(body) > IMG_DISK_MAX_BYTES:
         return
     if not sniff_image_type(body):
@@ -861,7 +913,13 @@ def img_disk_put(url, body, directory=None):
             fh.write(body)
         os.replace(tmp, path)
     except OSError:
-        pass
+        return
+
+    with _img_disk_lock:
+        _img_disk_writes += 1
+        due = _img_disk_writes % _IMG_DISK_PRUNE_EVERY == 0
+    if due:
+        prune_img_disk_cache(directory, keep=path)
 
 
 def _img_cache_drop_locked(url):
