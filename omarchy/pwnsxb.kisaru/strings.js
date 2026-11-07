@@ -75,11 +75,10 @@ function settingsFile(baseDir, legacy) {
 }
 
 // The new file when it exists, the inherited one while it is the only one that
-// does, and the new one when neither does (same as services/app_paths.js).
-function resolveSettingsPath(newPath, oldPath, newFound, oldFound) {
-    if (newFound) return newPath;
-    if (oldFound) return oldPath;
-    return newPath;
+// does, and the new one when neither does — one ordered list, never two
+// probes racing: the caller tries [0], and only a failed load moves it to [1].
+function settingsCandidates(baseDir) {
+    return [settingsFile(baseDir, false), settingsFile(baseDir, true)];
 }
 
 // A missing key falls back to English, then to the key itself, so a typo shows
@@ -102,7 +101,7 @@ if (typeof module !== "undefined" && module.exports) {
         languageFromSettings: languageFromSettings,
         resolveLanguage: resolveLanguage,
         settingsFile: settingsFile,
-        resolveSettingsPath: resolveSettingsPath,
+        settingsCandidates: settingsCandidates,
         t: t
     };
 }

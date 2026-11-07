@@ -52,15 +52,19 @@ test("languageFromSettings() reads only a valid language key", () => {
     assert.equal(strings.languageFromSettings(""), "");
 });
 
-test("the settings path is the new folder unless only the inherited one exists", () => {
+test("the settings files are tried in one order: the app's folder, then the inherited one", () => {
     const base = "/home/someone/.config";
-    const fresh = strings.settingsFile(base, false);
-    const legacy = strings.settingsFile(base, true);
-    assert.equal(fresh, "/home/someone/.config/kisaru/settings.json");
-    assert.equal(legacy, "/home/someone/.config/qs-novelmangareader/settings.json");
-    assert.equal(strings.resolveSettingsPath(fresh, legacy, true, true), fresh);
-    assert.equal(strings.resolveSettingsPath(fresh, legacy, false, true), legacy);
-    assert.equal(strings.resolveSettingsPath(fresh, legacy, false, false), fresh);
+    assert.deepEqual(strings.settingsCandidates(base), [
+        "/home/someone/.config/kisaru/settings.json",
+        "/home/someone/.config/qs-novelmangareader/settings.json"
+    ]);
+});
+
+test("Panel.qml falls back sequentially, never through a racing probe", () => {
+    assert.match(panel, /Strings\.settingsCandidates\(root\.configHome\)/);
+    assert.doesNotMatch(panel, /oldProbe|_oldSeen|_newSeen|resolveSettingsPath/);
+    // The inherited file is only reached after the new one failed to load.
+    assert.match(panel, /if \(root\._candidateIndex === 0\) \{[\s\S]*?root\._candidateIndex = 1/);
 });
 
 test("t() translates a key and falls back to English, then to the key", () => {

@@ -28,12 +28,13 @@ Panel {
   readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
   readonly property string settingsFile: Strings.settingsFile(root.configHome, false)
   readonly property string legacySettingsFile: Strings.settingsFile(root.configHome, true)
-  // Probes: which of the two folders holds a settings file today.
-  property bool _newSeen: false
-  property bool _oldSeen: false
-  property bool oldChecked: false
-  readonly property string settingsPath:
-    Strings.resolveSettingsPath(root.settingsFile, root.legacySettingsFile, root._newSeen, root._oldSeen)
+  // The files to try, in order: the app's own folder first, the inherited one
+  // only when the first is missing. Sequential on purpose: probing both at
+  // once lets completion order decide, so the legacy file could win while the
+  // new one exists (review finding R3-SettingsProbeRace).
+  readonly property var _settingsCandidates: Strings.settingsCandidates(root.configHome)
+  property int _candidateIndex: 0
+  readonly property string settingsPath: root._settingsCandidates[root._candidateIndex]
   property string settingsLang: ""
 
   readonly property string lang:
@@ -77,32 +78,14 @@ Panel {
   FileView {
     id: reader
     path: root.settingsPath
-    onLoaded: {
-      root._newSeen = root.settingsPath === root.settingsFile
-      root.settingsLang = Strings.languageFromSettings(reader.text())
-    }
+    onLoaded: root.settingsLang = Strings.languageFromSettings(reader.text())
     onLoadFailed: {
-      // The new file is missing: if the inherited one exists, the probe flips
-      // settingsPath and this read runs again there.
-      if (root._oldSeen && root.settingsPath !== root.legacySettingsFile)
+      // The new file is missing: try the inherited one once, then settle.
+      if (root._candidateIndex === 0) {
+        root._candidateIndex = 1
         return
-      if (!root.oldChecked)
-        return
+      }
       root.settingsLang = ""
-    }
-  }
-
-  // Does the inherited settings file exist? Read-only, never written.
-  FileView {
-    id: oldProbe
-    path: root.legacySettingsFile
-    onLoaded: {
-      root._oldSeen = true
-      root.oldChecked = true
-    }
-    onLoadFailed: {
-      root._oldSeen = false
-      root.oldChecked = true
     }
   }
 
