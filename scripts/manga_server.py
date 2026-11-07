@@ -805,10 +805,15 @@ def dl_remove(chapter_id):
 
 # ── Image byte cache ───────────────────────────────────────────────────────
 
-_img_cache      = {}
-_img_cache_lock = threading.Lock()
-_img_cache_max  = 600
-_img_sem        = threading.Semaphore(10)
+_img_cache       = {}
+_img_cache_lock  = threading.Lock()
+_img_cache_max   = 600
+_img_cache_bytes = 0
+# Entries are capped by count and by bytes: 600 large pages can hold more than
+# the whole app needs (audit 2026-11-06, finding 4). One image over the budget
+# is served but never kept.
+IMG_CACHE_MAX_BYTES = 64 * 1024 * 1024
+_img_sem         = threading.Semaphore(10)
 
 # Covers also live on disk. An image that was fetched once must never disappear
 # again: the panel re-asks for the same 32 URLs on every restart, and when the
@@ -859,15 +864,46 @@ def img_disk_put(url, body, directory=None):
         pass
 
 
-def _img_get(url):
+def _img_cache_drop_locked(url):
+    """Remove one entry and keep the byte count honest. Caller holds the lock."""
+    global _img_cache_bytes
+    entry = _img_cache.pop(url, None)
+    if entry is not None:
+        _img_cache_bytes -= len(entry[0] or b"")
+
+
+def _img_cache_store(url, entry):
+    """Remember one image, evicting oldest entries until both caps hold."""
+    global _img_cache_bytes
+    body = entry[0] or b""
+    if len(body) > IMG_CACHE_MAX_BYTES:
+        return
     with _img_cache_lock:
-        cached = _img_cache.get(url)
+        _img_cache_drop_locked(url)
+        _img_cache[url] = entry
+        _img_cache_bytes += len(body)
+        while _img_cache and (len(_img_cache) > _img_cache_max
+                              or _img_cache_bytes > IMG_CACHE_MAX_BYTES):
+            _img_cache_drop_locked(next(iter(_img_cache)))
+
+
+def _img_cache_touch(url):
+    """The cached entry, moved to the newest position, or None."""
+    with _img_cache_lock:
+        entry = _img_cache.pop(url, None)
+        if entry is None:
+            return None
+        _img_cache[url] = entry
+        return entry
+
+
+def _img_get(url):
+    cached = _img_cache_touch(url)
     if cached:
         return cached
     on_disk = img_disk_get(url)
     if on_disk:
-        with _img_cache_lock:
-            _img_cache[url] = on_disk
+        _img_cache_store(url, on_disk)
     return on_disk
 
 
@@ -929,10 +965,7 @@ def img_mark_host_down(host, now=None):
 
 
 def _img_put(url, body, ctype):
-    with _img_cache_lock:
-        if len(_img_cache) >= _img_cache_max:
-            _img_cache.pop(next(iter(_img_cache)))
-        _img_cache[url] = (body, ctype)
+    _img_cache_store(url, (body, ctype))
     img_disk_put(url, body)
 
 
