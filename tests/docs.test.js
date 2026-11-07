@@ -32,3 +32,10 @@ test("the README shows how to run the migration", () => {
     assert.match(text, /--apply/);
     assert.match(text, /no escribe nada|muestra el plan/);
 });
+
+test("the README does not promise chapter downloads", () => {
+    const text = read("README.md");
+    assert.ok(!/descargar capítulos y leerlos/.test(text));
+    assert.match(text, /todavía no está disponible/);
+    assert.match(text, /https:\/\/github\.com\/pwn27sbx\/kisaru\/issues\/1/);
+});

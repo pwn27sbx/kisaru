@@ -7,7 +7,8 @@ panel trae su propio backend Python local que consulta los sitios de origen y so
 
 - **Anime** — explorar, buscar y biblioteca; los episodios se reproducen en `mpv`, con
   subtítulos en español cuando la fuente los tiene.
-- **Manga** — explorar, buscar, favoritos, descargar capítulos y leerlos en el panel.
+- **Manga** — explorar, buscar, favoritos y leer en el panel. La descarga de capítulos
+  todavía no está disponible ([issue #1](https://github.com/pwn27sbx/kisaru/issues/1)).
 - **Novelas** — explorar, buscar, biblioteca, y leer en el panel o a pantalla completa.
 
 Fuera del panel no hay ventana principal: el shell corre callado hasta que pides un panel, y
