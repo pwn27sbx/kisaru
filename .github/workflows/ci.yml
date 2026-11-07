@@ -1,0 +1,47 @@
+name: CI
+
+# The local suites need an installed Omarchy: qmllint resolves qs.Commons and
+# qs.Ui from /usr/share/omarchy/shell, so the QML files are not linted here.
+# The node suite reads them as text, the Python suite uses its own fixtures,
+# and both run with the Commons/Ui symlinks dangling (they are absolute links
+# into /usr/share/omarchy).
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Node suite
+        run: node --test
+
+      - name: Style lint
+        run: node tools/lint-style.js
+
+      - name: i18n lint
+        run: node tools/lint-i18n.js
+
+      - name: Python suite
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements-dev.txt
+          .venv/bin/python -m unittest discover -s tests -p "test_*.py"

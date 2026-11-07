@@ -53,7 +53,13 @@ class RequirementsTest(unittest.TestCase):
     def test_the_dev_requirements_build_on_the_lock(self):
         text = read("requirements-dev.txt")
         self.assertIn("-r requirements.txt", text)
-        self.assertRegex(text, r"(?m)^pip-tools==")
+
+    def test_every_dev_requirement_is_hashed(self):
+        # A hash anywhere in the file turns on pip's require-hashes mode, so an
+        # unhashed line makes `pip install -r requirements-dev.txt` refuse to
+        # install anything. CI runs exactly that command.
+        for line in requirement_blocks(read("requirements-dev.txt")):
+            self.assertIn("--hash=sha256:", line, line)
 
     def test_the_installer_installs_the_lock_with_hash_checking(self):
         text = read("install.sh")

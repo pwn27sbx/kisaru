@@ -1,3 +1,7 @@
 # Development tools only; the runtime lock is requirements.txt.
+#
+# Regenerating the lock needs pip-tools (`pip install pip-tools`, ad hoc). It is
+# not pinned here: any hash in this file turns on pip's require-hashes mode, and
+# pip-tools' own dependencies are unpinned, so a hashed install of it refuses
+# to resolve and the whole file becomes uninstallable.
 -r requirements.txt
-pip-tools==7.6.2
