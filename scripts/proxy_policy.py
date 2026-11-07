@@ -56,9 +56,17 @@ def proxy_target_allowed(url, resolver=None):
     if host in _BLOCKED_NAMES or any(host.endswith(suffix) for suffix in _BLOCKED_SUFFIXES):
         return False
 
+    # A malformed or out-of-range port makes UrlSplitResult.port raise; a
+    # request to /image?url=http://host:abc/ must be refused, not crash the
+    # handler (review advisory R1-proxy-port-valueerror).
+    try:
+        port = parts.port
+    except ValueError:
+        return False
+
     resolver = resolver or _resolve
     try:
-        addresses = resolver(host, parts.port or (443 if parts.scheme == "https" else 80))
+        addresses = resolver(host, port or (443 if parts.scheme == "https" else 80))
     except (OSError, UnicodeError):
         return False
     if not addresses:

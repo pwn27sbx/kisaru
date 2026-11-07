@@ -69,6 +69,11 @@ class ProxyTargetPolicyTest(unittest.TestCase):
         self.assertFalse(proxy_policy.proxy_target_allowed(
             "https://gone.example/x.jpg", resolver=broken))
 
+    def test_a_malformed_port_is_refused_instead_of_raising(self):
+        for url in ("http://cdn.example:abc/x.jpg",
+                    "http://cdn.example:99999/x.jpg"):
+            self.assertFalse(proxy_policy.proxy_target_allowed(url, resolver=public_resolver), url)
+
     def test_non_http_schemes_are_refused(self):
         for url in ("file:///etc/passwd", "ftp://cdn.example/x.jpg",
                     "data:image/jpeg;base64,AAAA", "//cdn.example/x.jpg"):
