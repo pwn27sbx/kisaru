@@ -5,17 +5,12 @@ import Quickshell.Io
 import qs.services
 import "anime_links.js" as AnimeLinks
 import "app_paths.js" as Paths
-import "health_backoff.js" as HealthBackoff
 import "library_view.js" as LibraryViewJs
 
 Singleton {
     id: root
 
     readonly property string apiUrl: "http://127.0.0.1:5050"
-
-    // Respawn budget: a backend that cannot start must not loop forever.
-    readonly property int maxRestarts: 20
-    property int restartCount: 0
 
     property list<var> animeList: []
     property bool isFetchingAnime: false
@@ -271,45 +266,17 @@ Singleton {
 
     Component.onCompleted: libraryFile.reload()
 
-    property bool serverReady: false
+    readonly property bool serverReady: backend.serverReady
 
-    Process {
-        id: serverProcess
-        command: [ReaderEnv.animePython, ReaderEnv.scripts + "/anime_server.py"]
-        running: true
-        onExited: (code) => {
-            root.serverReady = false
-            if (root.restartCount >= root.maxRestarts) {
-                console.error("[ServiceAnime] Server exited; restart budget spent")
-                return
-            }
-            console.warn("[ServiceAnime] Server exited with code", code, "— restarting")
-            restartTimer.interval = HealthBackoff.nextDelay(root.restartCount, 3000, 60000)
-            root.restartCount += 1
-            restartTimer.start()
-        }
-    }
-
-    // A bounded, growing pause before restarting: a server that cannot start
-    // (port taken, venv missing) must not be respawned every 3 s forever
-    // (audit 2026-11-06, finding 15).
-    Timer {
-        id: restartTimer
-        interval: 3000
-        onTriggered: {
-            serverProcess.running = true
-            // HealthPoller stops itself at ready(), so a restart has to re-arm it.
-            healthPoller.running = true
-        }
-    }
-
-    HealthPoller {
-        id: healthPoller
+    // Process, respawn budget and health poll: services/Backend.qml. Only the
+    // command, the tag and what to fetch once it answers differ per panel.
+    Backend {
+        id: backend
+        tag: "[ServiceAnime]"
         url: root.apiUrl
+        python: ReaderEnv.animePython
+        script: ReaderEnv.scripts + "/anime_server.py"
         onReady: {
-            root.serverReady = true
-            root.restartCount = 0
-            console.log("[ServiceAnime] Backend ready at", root.apiUrl)
             fetchPopular()
         }
     }

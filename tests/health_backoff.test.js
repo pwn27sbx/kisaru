@@ -67,11 +67,27 @@ test("Http sets a timeout and reports it", () => {
     assert.match(qml, /"timeout"/);
 });
 
-test("every backend caps its respawns", () => {
+test("the shared Backend component caps its respawns", () => {
+    const qml = read("services/Backend.qml");
+    assert.match(qml, /restartCount/);
+    assert.match(qml, /maxRestarts/);
+    assert.match(qml, /HealthBackoff\.nextDelay/);
+});
+
+test("each backend service runs through the shared component", () => {
     for (const service of ["services/Anime.qml", "services/Manga.qml", "services/Novel.qml"]) {
         const qml = read(service);
-        assert.match(qml, /restartCount/, service);
-        assert.match(qml, /maxRestarts/, service);
-        assert.match(qml, /HealthBackoff\.nextDelay/, service);
+        assert.match(qml, /Backend \{/, service);
+        assert.doesNotMatch(qml, /^\s*Process \{/m, `${service}: owns its own process`);
+        assert.doesNotMatch(qml, /HealthPoller \{/, `${service}: owns its own poller`);
+        // The panels read it from the service (`Manga.serverReady`), so the
+        // shared component's state must stay visible there.
+        assert.match(qml, /readonly property bool serverReady:/, service);
     }
+});
+
+test("the shared Backend re-arms the health poll on restart", () => {
+    const qml = read("services/Backend.qml");
+    assert.match(qml, /healthPoller\.running = true/);
+    assert.match(qml, /signal ready/);
 });
