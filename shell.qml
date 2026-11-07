@@ -168,8 +168,18 @@ ShellRoot {
                 Behavior on opacity { NumberAnimation { duration: Motion.fast } }
             }
 
-            // Omarchy adoption smoke test (Plan C, R-C1): invisible.
-            OmarchySmoke {}
+            // Omarchy adoption smoke test (Plan C, R-C1): invisible, and only
+            // when KISARU_SMOKE=1 asks for it. It used to build a probe Button
+            // on every launch (audit 2026-11-06, finding 27).
+            Loader {
+                active: (Quickshell.env("KISARU_SMOKE") || "") === "1"
+                sourceComponent: smokeProbe
+            }
+
+            Component {
+                id: smokeProbe
+                OmarchySmoke {}
+            }
         }
     }
 
