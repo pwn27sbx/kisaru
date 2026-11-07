@@ -23,7 +23,7 @@ import threading
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
-from urllib.parse import urlparse, parse_qs, quote, unquote
+from urllib.parse import urlparse, urlsplit, parse_qs, quote, unquote
 from concurrent.futures import ThreadPoolExecutor
 
 # ── Use curl_cffi for browser-grade TLS fingerprinting (bypasses Cloudflare)
@@ -584,6 +584,44 @@ _dl_jobs = {}
 _dl_lock = threading.Lock()
 
 
+def safe_relative_path(value):
+    """The path segments of one download id, or None when it can escape.
+
+    Ids arrive from the panel over HTTP, so they are untrusted: joining an
+    absolute id or one with `../` used to resolve outside DOWNLOADS_DIR, and
+    the delete route removed whatever it found (audit 2026-11-06, C1).
+    Source ids legitimately contain "/" (`inmanga:<manga>/<chapter>`), so a
+    relative multi-segment id stays valid; empty, "." and ".." segments do
+    not.
+    """
+    text = str(value or "")
+    if not text or "\x00" in text or "\\" in text:
+        return None
+    parts = text.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return None
+    return parts
+
+
+def downloads_path(*ids):
+    """Absolute path inside DOWNLOADS_DIR, or None when the ids leave it.
+
+    realpath also resolves symlinks, so a link planted inside the downloads
+    folder cannot point the caller somewhere else.
+    """
+    components = []
+    for value in ids:
+        parts = safe_relative_path(value)
+        if parts is None:
+            return None
+        components.extend(parts)
+    root = os.path.realpath(DOWNLOADS_DIR)
+    path = os.path.realpath(os.path.join(root, *components))
+    if path == root or not path.startswith(root + os.sep):
+        return None
+    return path
+
+
 def dl_list():
     result = []
     if not os.path.exists(DOWNLOADS_DIR):
@@ -734,14 +772,18 @@ def dl_pages(chapter_id):
 
 
 def dl_remove(chapter_id):
+    if safe_relative_path(chapter_id) is None:
+        return {"ok": False, "error": "invalid chapter id"}
     for sid in os.listdir(DOWNLOADS_DIR):
-        ch_dir = os.path.join(DOWNLOADS_DIR, sid, chapter_id)
-        if os.path.isdir(ch_dir):
+        ch_dir = downloads_path(sid, chapter_id)
+        if ch_dir and os.path.isdir(ch_dir):
             shutil.rmtree(ch_dir)
-            series_dir = os.path.join(DOWNLOADS_DIR, sid)
-            remaining  = [d for d in os.listdir(series_dir) if os.path.isdir(os.path.join(series_dir, d))]
-            if not remaining:
-                shutil.rmtree(series_dir)
+            series_dir = downloads_path(sid)
+            if series_dir:
+                remaining = [d for d in os.listdir(series_dir)
+                             if os.path.isdir(os.path.join(series_dir, d))]
+                if not remaining:
+                    shutil.rmtree(series_dir)
             with _dl_lock:
                 _dl_jobs.pop(chapter_id, None)
             return {"ok": True}
@@ -1051,6 +1093,46 @@ def proxy_image(handler, img_url, chapter=None, page=None):
     _send_image(handler, body, ctype)
 
 
+# ── Local-only request guard ───────────────────────────────────────────────
+
+LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
+
+
+def is_loopback_host(host_header):
+    """True when Host names this machine's loopback, or is absent.
+
+    A browser always sends Host, so a page that resolves an attacker domain to
+    127.0.0.1 (DNS rebinding) is the case this refuses. A missing Host cannot
+    be a browser.
+    """
+    if not host_header:
+        return True
+    try:
+        host = urlsplit("//" + host_header.strip()).hostname
+    except ValueError:
+        return False
+    return (host or "").lower() in LOOPBACK_HOSTS
+
+
+def is_allowed_origin(origin):
+    """True when there is no browser origin, or it is a loopback page.
+
+    QML's XMLHttpRequest sends no Origin (or a non-http one such as
+    `file://`), so only an http(s) origin from another host is refused. A
+    browser page always sends one, and that is what a cross-site POST to
+    /dl/delete looks like (audit 2026-11-06, C1).
+    """
+    if not origin:
+        return True
+    try:
+        parts = urlsplit(origin)
+    except ValueError:
+        return False
+    if parts.scheme not in ("http", "https"):
+        return True
+    return (parts.hostname or "").lower() in LOOPBACK_HOSTS
+
+
 # ── HTTP Server ────────────────────────────────────────────────────────────
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
@@ -1074,7 +1156,16 @@ class Handler(BaseHTTPRequestHandler):
     def _error(self, msg, status=500):
         self._json({"error": msg}, status)
 
+    def _local_only(self):
+        """Answer 403 and return True when the request is not from the panel."""
+        if not is_allowed_origin(self.headers.get("Origin")):
+            self._error("forbidden origin", 403)
+            return True
+        return False
+
     def do_HEAD(self):
+        if self._local_only():
+            return
         parsed = urlparse(self.path)
         if parsed.path == "/image":
             self.send_response(200)
@@ -1085,6 +1176,8 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_GET(self):
+        if self._local_only():
+            return
         parsed = urlparse(self.path)
         qs     = parse_qs(parsed.query)
 
@@ -1186,6 +1279,14 @@ class Handler(BaseHTTPRequestHandler):
             self._error(str(e))
 
     def do_POST(self):
+        if self._local_only():
+            return
+        # QML always posts JSON. A browser form cannot set this header, and a
+        # cross-origin JSON fetch would need the preflight this server does not
+        # answer, so requiring it closes the simple-request CSRF path.
+        if (self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+                != "application/json"):
+            return self._error("expected application/json", 403)
         parsed = urlparse(self.path)
         try:
             length = int(self.headers.get("Content-Length", 0))

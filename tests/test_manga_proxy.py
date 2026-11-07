@@ -197,6 +197,7 @@ class HealthPayloadTest(unittest.TestCase):
         """
         handler = manga_server.Handler.__new__(manga_server.Handler)
         handler.path = "/health"
+        handler.headers = {}
         handler.answered = []
         handler._json = lambda data, status=200: handler.answered.append(data)
         handler.do_GET()
