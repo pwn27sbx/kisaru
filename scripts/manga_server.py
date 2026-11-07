@@ -654,6 +654,8 @@ def dl_progress(chapter_id):
 
 
 def dl_start(manga_id, chapter_id, chapter_num, chapter_title, manga_title, raw_cover_url):
+    if downloads_path(str(manga_id or "").split("/")[0], chapter_id) is None:
+        return {"ok": False, "error": "invalid chapter id"}
     with _dl_lock:
         job = _dl_jobs.get(chapter_id, {})
         if job.get("status") in ("downloading", "done"):
@@ -686,8 +688,15 @@ def _download_pages(chapter_id):
 
 
 def _dl_worker(manga_id, chapter_id, chapter_num, chapter_title, manga_title, raw_cover_url):
-    sid    = manga_id.split("/")[0]
-    ch_dir = os.path.join(DOWNLOADS_DIR, sid, chapter_id)
+    sid    = str(manga_id or "").split("/")[0]
+    ch_dir = downloads_path(sid, chapter_id)
+    if ch_dir is None:
+        # An id that leaves DOWNLOADS_DIR is not a chapter: fail the job here,
+        # before anything is created on disk (audit 2026-11-06, C2).
+        with _dl_lock:
+            _dl_jobs[chapter_id] = {"status": "error", "total": 0, "done": 0,
+                                    "error": "invalid chapter id"}
+        return
     os.makedirs(ch_dir, exist_ok=True)
 
     try:
@@ -733,7 +742,7 @@ def _dl_worker(manga_id, chapter_id, chapter_num, chapter_title, manga_title, ra
                 "downloadedAt": datetime.now(timezone.utc).isoformat(),
             }, f)
 
-        series_dir  = os.path.join(DOWNLOADS_DIR, sid)
+        series_dir  = downloads_path(sid)
         series_meta = os.path.join(series_dir, "series_meta.json")
         with open(series_meta, "w") as f:
             json.dump({"id": manga_id, "title": manga_title,
@@ -760,9 +769,11 @@ def _dl_worker(manga_id, chapter_id, chapter_num, chapter_title, manga_title, ra
 
 
 def dl_pages(chapter_id):
+    if safe_relative_path(chapter_id) is None:
+        return []
     for sid in os.listdir(DOWNLOADS_DIR):
-        ch_dir = os.path.join(DOWNLOADS_DIR, sid, chapter_id)
-        if os.path.isdir(ch_dir):
+        ch_dir = downloads_path(sid, chapter_id)
+        if ch_dir and os.path.isdir(ch_dir):
             files = sorted(f for f in os.listdir(ch_dir)
                            if f[0].isdigit() and f.rsplit(".", 1)[-1].lower()
                            in ("jpg", "jpeg", "png", "webp"))
