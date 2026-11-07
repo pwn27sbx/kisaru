@@ -1,5 +1,4 @@
-pragma Singleton
-import Quickshell
+import QtQuick
 import "health_backoff.js" as HealthBackoff
 
 // Polls `<url>/health` until the backend answers, then stops and emits ready()
@@ -10,7 +9,7 @@ import "health_backoff.js" as HealthBackoff
 // venv, port taken) cost ~20 requests per second for the whole session. The
 // delay now doubles up to `maxInterval`, and the poll gives up after
 // `maxAttempts` with a `failed` signal (audit 2026-11-06, finding 15).
-Singleton {
+Timer {
     id: root
 
     property string url: ""

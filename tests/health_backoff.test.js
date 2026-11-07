@@ -42,6 +42,15 @@ test("the respawn backoff starts at 3 s and stops at 60 s", () => {
     assert.equal(backoff.nextDelay(10, 3000, 60000), 60000);
 });
 
+test("HealthPoller is a Timer, not a singleton", () => {
+    const qml = read("services/HealthPoller.qml");
+    // The Timer contract is what the services instantiate; a Singleton root
+    // with `interval`/`running`/`onTriggered` cannot load at all.
+    assert.match(qml, /^Timer \{/m);
+    assert.doesNotMatch(qml, /^Singleton \{/m);
+    assert.doesNotMatch(qml, /^pragma Singleton/m);
+});
+
 test("HealthPoller backs off, has a cap and a timeout", () => {
     const qml = read("services/HealthPoller.qml");
     assert.match(qml, /maxAttempts/);
