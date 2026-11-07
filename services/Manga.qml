@@ -5,6 +5,7 @@ import Quickshell.Io
 import "library.js" as Library
 import qs.services
 import "app_paths.js" as Paths
+import "health_backoff.js" as HealthBackoff
 import "library_view.js" as LibraryViewJs
 import "search_paging.js" as SearchPaging
 
@@ -12,6 +13,10 @@ Singleton {
     id: root
 
     readonly property string apiUrl: "http://127.0.0.1:5150"
+
+    // Respawn budget: a backend that cannot start must not loop forever.
+    readonly property int maxRestarts: 20
+    property int restartCount: 0
 
     // ── Manga list ───────────────────────────────────────────────────────────
     property list<var> mangaList: []
@@ -292,22 +297,27 @@ Singleton {
         command: [ReaderEnv.mangaPython, ReaderEnv.scripts + "/manga_server.py"]
         running: true
         onExited: (code) => {
+            root.serverReady = false
+            if (root.restartCount >= root.maxRestarts) {
+                console.error("[ServiceManga] Server exited; restart budget spent")
+                return
+            }
             console.warn("[ServiceManga] Server exited with code", code, "— restarting")
-            serverReady = false
+            restartTimer.interval = HealthBackoff.nextDelay(root.restartCount, 3000, 60000)
+            root.restartCount += 1
             restartTimer.start()
         }
     }
 
-    // A pause before restarting, so a server that can't start (port taken,
-    // venv missing) isn't respawned in a tight loop.
+    // A bounded, growing pause before restarting: a server that cannot start
+    // (port taken, venv missing) must not be respawned every 3 s forever
+    // (audit 2026-11-06, finding 15).
     Timer {
         id: restartTimer
         interval: 3000
         onTriggered: {
             serverProcess.running = true
-            // HealthPoller stops itself at the first ready(), so a restart has
-            // to re-arm it; otherwise serverReady stays false for the rest of
-            // the session and the cover grids never bind their images again.
+            // HealthPoller stops itself at ready(), so a restart has to re-arm it.
             healthPoller.running = true
         }
     }
@@ -317,6 +327,7 @@ Singleton {
         url: root.apiUrl
         onReady: {
             root.serverReady = true
+            root.restartCount = 0
             console.log("[ServiceManga] Backend ready at", root.apiUrl)
             fetchByOrigin("", true)
             fetchFavorites()
