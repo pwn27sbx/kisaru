@@ -249,8 +249,6 @@ La paleta sale del tema de Omarchy (`qs.Commons.Color`, respaldado por
 `~/.local/state/omarchy/current/theme/colors.toml`). No hay copia propia ni archivo de
 paleta que mantener: cambiar el tema de Omarchy cambia la app. `app/Colors.qml` solo traduce
 los nombres de rol que usan las vistas a los colores del sistema.
-`extras/matugen/quickshell.json.hbs` es legado de antes de adoptar Omarchy y ya no se usa.
-
 ## Widget de barra de Omarchy
 
 El widget `pwnsxb.kisaru` vive en `omarchy/pwnsxb.kisaru/` y tiene su

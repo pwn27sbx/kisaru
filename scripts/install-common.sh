@@ -113,6 +113,18 @@ install_nerd_symbols() {
     rm -rf "$tmp"
 }
 
+# The file that marks a folder as a copy made by this install.sh. Copies made
+# before the marker became kisaru's carry the upstream shell's
+# .package-export; both are recognised so those copies keep updating (audit
+# 2026-11-07, finding 34).
+MARKER=".kisaru-package"
+LEGACY_MARKER=".package-export"
+
+has_install_marker() {  # dir
+    [[ -e "$1/$MARKER" || -e "$1/$LEGACY_MARKER" ]]
+}
+
+
 # This folder as ~/.config/$1, which `qs -p` runs: a symlink to it, or a
 # copy with MODE=copy (an earlier copy is updated, keeping its settings and
 # colours).
@@ -122,11 +134,11 @@ install_config() {  # name
     # Cloned right there, or linked by an earlier install.
     [[ $SRC_DIR -ef $target ]] && return
     if [[ -L $target ]]; then
-        [[ ! -e $target || -e $target/.package-export ]] \
+        [[ ! -e $target ]] || has_install_marker "$target" \
             || die "$target es un enlace a otra cosa; muévelo aparte y vuelve a ejecutar esto"
         rm "$target"
     elif [[ -e $target ]]; then
-        [[ -e $target/.package-export ]] \
+        has_install_marker "$target" \
             || die "$target ya existe y no es $1; muévelo aparte y vuelve a ejecutar esto"
         [[ $MODE == copy ]] \
             || die "$target es una copia anterior de $1; bórrala, o vuelve a ejecutar con --copy para actualizarla"
