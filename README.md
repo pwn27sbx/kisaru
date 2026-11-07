@@ -249,6 +249,11 @@ La paleta sale del tema de Omarchy (`qs.Commons.Color`, respaldado por
 `~/.local/state/omarchy/current/theme/colors.toml`). No hay copia propia ni archivo de
 paleta que mantener: cambiar el tema de Omarchy cambia la app. `app/Colors.qml` solo traduce
 los nombres de rol que usan las vistas a los colores del sistema.
+
+La única excepción deliberada es el lector de novelas
+(`modules/novel/components/ReaderView.qml`): su fondo cálido (`#1a1714`) y su texto hueso
+imitan papel a propósito y no siguen el tema. Es una decisión de diseño, no una paleta
+paralela, y `tools/lint-style.js` no tiene ninguna regla de color que eximir.
 ## Widget de barra de Omarchy
 
 El widget `pwnsxb.kisaru` vive en `omarchy/pwnsxb.kisaru/` y tiene su

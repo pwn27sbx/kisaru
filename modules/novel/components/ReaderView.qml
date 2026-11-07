@@ -29,6 +29,11 @@ Item {
     readonly property bool _hasPrev: Novel.hasPrevChapter
     readonly property bool _hasNext: Novel.hasNextChapter
 
+    // The warm palette below is intentional (owner decision, audit finding 17):
+    // the novel reader is a page of paper, so its ground is #1a1714 and its text
+    // a bone-white, not the theme's surface and on-surface roles. It is copied
+    // by hand on purpose and does not follow a theme switch; tools/lint-style.js
+    // has no colour rule, so there is nothing to exempt.
     Rectangle { anchors.fill: parent; color: "#1a1714" }
 
     Rectangle {
