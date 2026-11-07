@@ -96,6 +96,11 @@ ClickableRect {
         // cell, so the card has no gap under the artwork.
         height: root.width * MangaCard.COVER_RATIO
         source: root._coverUrl
+        // Decode at the size actually painted: a full-size poster is several
+        // megapixels for a card a few hundred wide (audit 2026-11-06,
+        // finding 26).
+        sourceSize.width: Math.max(1, Math.ceil(width))
+        sourceSize.height: Math.max(1, Math.ceil(height))
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
         cache: true

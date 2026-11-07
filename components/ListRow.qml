@@ -92,6 +92,9 @@ ClickableRect {
             id: cover
             anchors.fill: parent
             source: root._coverUrl
+            // Same rule as CoverCard: decode at display size, not source size.
+            sourceSize.width: Math.max(1, Math.ceil(width))
+            sourceSize.height: Math.max(1, Math.ceil(height))
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             cache: true
