@@ -16,7 +16,7 @@ SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SRC_DIR/scripts/install-common.sh"
 
 VENV="${XDG_DATA_HOME:-$HOME/.local/share}/kisaru/venv"
-PIP_PKGS=(flask requests curl_cffi)
+REQUIREMENTS="$SRC_DIR/requirements.txt"
 
 PACMAN_PKGS=(quickshell python mpv noto-fonts curl)
 APT_PKGS=(python3 python3-venv mpv fonts-noto-core curl)
@@ -57,7 +57,9 @@ install_command kisaru
 if ((VENV_SETUP)); then
     info "Preparando el venv de los backends en $VENV"
     [[ -x $VENV/bin/python3 ]] || python3 -m venv "$VENV"
-    "$VENV/bin/pip" install --quiet --upgrade "${PIP_PKGS[@]}"
+    # Pinned with hashes: the installer must not resolve new versions on its
+    # own (audit 2026-11-06, finding 10).
+    "$VENV/bin/pip" install --quiet --require-hashes -r "$REQUIREMENTS"
 fi
 
 cat <<MSG

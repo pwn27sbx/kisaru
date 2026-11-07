@@ -291,7 +291,13 @@ está arriba, en «Los nombres», y la migración las copia a `~/.local/share/ki
 node --test                  # i18n, lint de estilo y de i18n, CLI, componentes, backends
 node tools/lint-i18n.js      # literales en inglés sin I18n.t
 node tools/lint-style.js     # números crudos de radio/espaciado/tipografía
-python3 -m unittest discover -s tests -p "test_*.py"   # backends (fixtures, sin red)
+
+# Los backends necesitan Flask, requests y curl_cffi. Están fijados, con hashes,
+# en requirements.txt (las mismas versiones que instala install.sh). Sin ese
+# venv la suite no falla: se salta las pruebas de los backends.
+python3 -m venv /var/tmp/kisaru-venv
+/var/tmp/kisaru-venv/bin/pip install -r requirements-dev.txt
+/var/tmp/kisaru-venv/bin/python -m unittest discover -s tests -p "test_*.py"
 ```
 
 Las pruebas de los backends usan fixtures grabadas y `HOME`/`XDG_DATA_HOME` temporales:
