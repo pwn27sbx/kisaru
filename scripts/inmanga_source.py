@@ -52,10 +52,15 @@ _cffi_local = threading.local()
 
 
 def _cached(key, ttl, fn):
+    now = time.monotonic()
     with _cache_lock:
         entry = _cache.get(key)
-    if entry and time.monotonic() < entry[1]:
-        return entry[0]
+        if entry and now < entry[1]:
+            return entry[0]
+        # Drop expired entries on a miss: the cache used to grow for the whole
+        # session (audit 2026-11-06, finding 25).
+        for stale in [k for k, (_, deadline) in _cache.items() if deadline <= now]:
+            _cache.pop(stale, None)
     value = fn()
     with _cache_lock:
         _cache[key] = (value, time.monotonic() + ttl)

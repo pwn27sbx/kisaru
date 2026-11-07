@@ -178,12 +178,15 @@ _cache_lock: threading.Lock = threading.Lock()
 
 def cached(key: str, ttl: int, fn):
     """Return cached value for key, or call fn() and cache the result."""
+    now = time.monotonic()
     with _cache_lock:
         entry = _cache.get(key)
-    if entry:
-        val, expires = entry
-        if time.monotonic() < expires:
-            return val
+        if entry and now < entry[1]:
+            return entry[0]
+        # A miss drops what expired; the dict used to keep every key the
+        # session asked for (audit 2026-11-06, finding 25).
+        for stale in [k for k, (_, deadline) in _cache.items() if deadline <= now]:
+            _cache.pop(stale, None)
     val = fn()
     with _cache_lock:
         _cache[key] = (val, time.monotonic() + ttl)

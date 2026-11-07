@@ -130,12 +130,16 @@ TTL_PAGES  = 3600
 
 
 def _cached(key, ttl, fn):
+    now = time.monotonic()
     with _cache_lock:
         entry = _cache.get(key)
-    if entry:
-        val, expires = entry
-        if time.monotonic() < expires:
-            return val
+        if entry and now < entry[1]:
+            return entry[0]
+        # A miss is the right time to drop what has expired: the dict used to
+        # keep every key the session ever asked for (audit 2026-11-06,
+        # finding 25).
+        for stale in [k for k, (_, deadline) in _cache.items() if deadline <= now]:
+            _cache.pop(stale, None)
     val = fn()
     with _cache_lock:
         _cache[key] = (val, time.monotonic() + ttl)
@@ -629,6 +633,14 @@ def downloads_path(*ids):
     return path
 
 
+def chapter_number(value):
+    """`chapterNum` as a float for sorting; anything else sorts last."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("-inf")
+
+
 def dl_list():
     result = []
     if not os.path.exists(DOWNLOADS_DIR):
@@ -648,7 +660,7 @@ def dl_list():
                 continue
             with open(ch_meta) as f:
                 chapters.append(json.load(f))
-        chapters.sort(key=lambda c: float(c.get("chapterNum", "0") or "0"), reverse=True)
+        chapters.sort(key=lambda c: chapter_number(c.get("chapterNum", "0")), reverse=True)
         cover_path      = os.path.join(series_dir, "cover.jpg")
         cover_url_local = f"file://{cover_path}" if os.path.exists(cover_path) else proxy_url(sm.get("rawCoverUrl", ""))
         result.append({**sm, "image": cover_url_local, "chapters": chapters})
@@ -830,7 +842,11 @@ IMG_DISK_MAX_BYTES = 8 * 1024 * 1024   # one image bigger than this is not a cov
 # removing the oldest file first (audit 2026-11-06, finding 5).
 IMG_DISK_MAX_TOTAL_BYTES = 256 * 1024 * 1024
 _IMG_DISK_PRUNE_EVERY = 32      # one directory scan every N writes, not per write
+# A write also counts the bytes it added, so a few maximum-size images cannot
+# overshoot the budget while the write counter waits (review advisory R3-001).
+_IMG_DISK_PRUNE_BYTES = 8 * 1024 * 1024
 _img_disk_writes = 0
+_img_disk_pending = 0
 _img_disk_lock = threading.Lock()
 
 
@@ -905,7 +921,7 @@ def img_disk_get(url, directory=None):
 
 def img_disk_put(url, body, directory=None):
     """Store an image on disk. Failures are silent: a full disk is not an error."""
-    global _img_disk_writes
+    global _img_disk_writes, _img_disk_pending
     if not body or len(body) > IMG_DISK_MAX_BYTES:
         return
     if not sniff_image_type(body):
@@ -922,7 +938,11 @@ def img_disk_put(url, body, directory=None):
 
     with _img_disk_lock:
         _img_disk_writes += 1
-        due = _img_disk_writes % _IMG_DISK_PRUNE_EVERY == 0
+        _img_disk_pending += len(body)
+        due = (_img_disk_writes % _IMG_DISK_PRUNE_EVERY == 0
+               or _img_disk_pending >= _IMG_DISK_PRUNE_BYTES)
+        if due:
+            _img_disk_pending = 0
     if due:
         prune_img_disk_cache(directory, keep=path)
 
