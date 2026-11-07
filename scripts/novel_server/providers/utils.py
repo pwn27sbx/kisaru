@@ -3,10 +3,18 @@ Shared utilities: HTTP session, fetch helpers, TTL cache, text cleaning.
 Imported by providers — never by server.py directly.
 """
 
+import os
 import re
+import sys
 import time
 import threading
-from urllib.parse import quote
+from urllib.parse import quote, urljoin
+
+_SCRIPTS = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _SCRIPTS not in sys.path:
+    sys.path.insert(0, _SCRIPTS)
+
+from proxy_policy import BlockedTarget, proxy_target_allowed
 
 # ── HTTP session (curl_cffi preferred for Cloudflare bypass) ───────────────
 # Sessions are checked out of a pool, one per request in flight: the server
@@ -31,7 +39,8 @@ _pool: list = []
 _pool_lock = threading.Lock()
 
 
-def _get(url: str, headers: dict, timeout: int, attempts: int = 3, data=None):
+def _get(url: str, headers: dict, timeout: int, attempts: int = 3, data=None,
+         follow: bool = True):
     # A burst of new connections (a grid of covers) sometimes gets its TLS
     # handshake refused; those connection-level failures are retried with a
     # fresh session after a short backoff. HTTP error statuses are not.
@@ -42,9 +51,11 @@ def _get(url: str, headers: dict, timeout: int, attempts: int = 3, data=None):
             s = _SessionClass(**_SESSION_KW)
         try:
             if data is None:
-                r = s.get(url, headers=headers, timeout=timeout)
+                r = s.get(url, headers=headers, timeout=timeout,
+                          allow_redirects=follow)
             else:
-                r = s.post(url, headers=headers, data=data, timeout=timeout)
+                r = s.post(url, headers=headers, data=data, timeout=timeout,
+                           allow_redirects=follow)
         except Exception:
             try:
                 s.close()
@@ -138,10 +149,24 @@ def fetch(url: str, extra_headers: dict | None = None, timeout: int = 30,
 
 
 def fetch_bytes(url: str, timeout: int = 30) -> tuple[bytes, str]:
-    """GET url, return (body_bytes, content_type). Used for image proxy."""
-    r = _get(url, BASE_HEADERS, timeout)
-    r.raise_for_status()
-    return r.content, r.headers.get("Content-Type", "image/jpeg")
+    """GET an image (body_bytes, content_type), public addresses only.
+
+    `/image?url=` is reachable from a page, so a redirect must not smuggle a
+    loopback or LAN target past the first check (audit 2026-11-06, finding 18).
+    """
+    for _ in range(4):
+        if not proxy_target_allowed(url):
+            raise BlockedTarget(url)
+        r = _get(url, BASE_HEADERS, timeout, follow=False)
+        if r.status_code in (301, 302, 303, 307, 308):
+            location = r.headers.get("Location")
+            if not location:
+                break
+            url = urljoin(url, location)
+            continue
+        r.raise_for_status()
+        return r.content, r.headers.get("Content-Type", "image/jpeg")
+    raise BlockedTarget("too many redirects")
 
 
 # ── TTL cache (shared across all providers) ────────────────────────────────

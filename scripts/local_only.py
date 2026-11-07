@@ -14,14 +14,15 @@ LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 
 def is_loopback_host(host_header):
-    """True when Host names this machine's loopback, or is absent.
+    """True only when Host names this machine's loopback.
 
     A browser always sends Host, so a page that resolves an attacker domain to
-    127.0.0.1 (DNS rebinding) is the case this refuses. A missing Host cannot
-    be a browser.
+    127.0.0.1 (DNS rebinding) is what this refuses. A missing Host is refused
+    too: no real client of these servers omits it, and failing open would let
+    anything that strips the header through (review advisory R1-missing-host-open).
     """
     if not host_header:
-        return True
+        return False
     try:
         host = urlsplit("//" + host_header.strip()).hostname
     except ValueError:
@@ -32,13 +33,16 @@ def is_loopback_host(host_header):
 def is_allowed_origin(origin):
     """True when there is no browser origin, or it is a loopback page.
 
-    QML's XMLHttpRequest sends no Origin (or a non-http one such as
-    `file://`), so only an http(s) origin from another host is refused. A
-    browser page always sends one, and that is what a cross-site request looks
-    like.
+    QML's XMLHttpRequest sends no Origin, so a missing header is allowed. An
+    opaque `Origin: null` (a sandboxed iframe) is refused, as is an http(s)
+    origin from another host; a non-http origin can only come from local
+    content, which is not the cross-site case here (review advisory
+    R1-local-only-origin-bypass).
     """
     if not origin:
         return True
+    if origin.strip().lower() == "null":
+        return False
     try:
         parts = urlsplit(origin)
     except ValueError:

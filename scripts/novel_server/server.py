@@ -45,6 +45,7 @@ import providers
 import storage
 
 from local_only import is_allowed_origin, is_loopback_host
+from proxy_policy import BlockedTarget, proxy_target_allowed
 
 PORT = 5151
 
@@ -149,12 +150,19 @@ class Handler(BaseHTTPRequestHandler):
             pass
 
     def _proxy_image(self, img_url: str):
+        if not proxy_target_allowed(img_url):
+            self._error("blocked image address", 403)
+            return
         cached = _img_get(img_url)
         if cached:
             self._send_image(*cached)
             return
-        with _img_sem:
-            body, ctype = providers.get().fetch_image(img_url)
+        try:
+            with _img_sem:
+                body, ctype = providers.get().fetch_image(img_url)
+        except BlockedTarget:
+            self._error("blocked image address", 403)
+            return
         _img_put(img_url, body, ctype)
         self._send_image(body, ctype)
 

@@ -78,28 +78,37 @@ class ImageRefererTest(unittest.TestCase):
 
 @unittest.skipUnless(HAVE_SERVER, "manga_server requires curl_cffi or requests")
 class ProxyImageTest(unittest.TestCase):
+    def setUp(self):
+        # The proxy refuses non-public targets now; these tests are about the
+        # upstream error mapping, so the target check is satisfied explicitly.
+        self.original_policy = manga_server.proxy_target_allowed
+        manga_server.proxy_target_allowed = lambda url: True
+
+    def tearDown(self):
+        manga_server.proxy_target_allowed = self.original_policy
+
     def test_upstream_404_maps_to_404(self):
         class Upstream404(Exception):
             class response:
                 status_code = 404
 
         handler = RecordingHandler()
-        original = manga_server._raw_get
-        manga_server._raw_get = lambda *a, **k: (_ for _ in ()).throw(Upstream404())
+        original = manga_server._proxy_fetch
+        manga_server._proxy_fetch = lambda *a, **k: (_ for _ in ()).throw(Upstream404())
         try:
             manga_server.proxy_image(handler, "https://x/nope.jpg")
         finally:
-            manga_server._raw_get = original
+            manga_server._proxy_fetch = original
         self.assertEqual(handler.errors, [404])
 
     def test_generic_error_maps_to_502(self):
         handler = RecordingHandler()
-        original = manga_server._raw_get
-        manga_server._raw_get = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
+        original = manga_server._proxy_fetch
+        manga_server._proxy_fetch = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
         try:
             manga_server.proxy_image(handler, "https://x/nope.jpg")
         finally:
-            manga_server._raw_get = original
+            manga_server._proxy_fetch = original
         self.assertEqual(handler.errors, [502])
 
     def test_retry_on_404_recovers(self):
@@ -116,13 +125,16 @@ class ProxyImageTest(unittest.TestCase):
                 raise Upstream404()
             return b"img", "image/jpeg"
 
-        orig_raw, orig_retry = manga_server._raw_get, manga_server._retry_mangadex_page
-        manga_server._raw_get = raw
+        orig_fetch, orig_retry = manga_server._proxy_fetch, manga_server._retry_mangadex_page
+        manga_server._proxy_fetch = raw
         manga_server._retry_mangadex_page = lambda chapter, page, old: "https://uploads.mangadex.org/data-saver/h/f.jpg"
+        original_policy = manga_server.proxy_target_allowed
+        manga_server.proxy_target_allowed = lambda url: True
         try:
             manga_server.proxy_image(handler, "https://node.example/data-saver/h/f.jpg", "chapter", "1")
         finally:
-            manga_server._raw_get, manga_server._retry_mangadex_page = orig_raw, orig_retry
+            manga_server._proxy_fetch, manga_server._retry_mangadex_page = orig_fetch, orig_retry
+            manga_server.proxy_target_allowed = original_policy
         self.assertEqual(handler.responses, [200])
         self.assertEqual(handler.errors, [])
         self.assertEqual(state["n"], 2)
@@ -197,7 +209,7 @@ class HealthPayloadTest(unittest.TestCase):
         """
         handler = manga_server.Handler.__new__(manga_server.Handler)
         handler.path = "/health"
-        handler.headers = {}
+        handler.headers = {"Host": "127.0.0.1:5150"}
         handler.answered = []
         handler._json = lambda data, status=200: handler.answered.append(data)
         handler.do_GET()
@@ -298,7 +310,7 @@ class FakeSession:
         self.body = body
         self.ctype = ctype
 
-    def get(self, url, headers=None, timeout=None):
+    def get(self, url, headers=None, timeout=None, **kwargs):
         self.calls.append(headers or {})
         return FakeResponse(self.body, self.ctype)
 

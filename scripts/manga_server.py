@@ -23,9 +23,10 @@ import threading
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
-from urllib.parse import urlparse, parse_qs, quote, unquote
+from urllib.parse import urlparse, urljoin, parse_qs, quote, unquote
 
 from local_only import is_allowed_origin, is_loopback_host
+from proxy_policy import proxy_target_allowed
 from concurrent.futures import ThreadPoolExecutor
 
 # ── Use curl_cffi for browser-grade TLS fingerprinting (bypasses Cloudflare)
@@ -103,15 +104,17 @@ def _session():
     return sess
 
 
-def _get(url, headers, timeout):
+def _get(url, headers, timeout, follow=True):
     """GET with one retry on connection-level errors (TLS resets, timeouts)."""
     try:
-        return _session().get(url, headers=headers, timeout=timeout)
+        return _session().get(url, headers=headers, timeout=timeout,
+                              allow_redirects=follow)
     except Exception as e:
         if getattr(e, "response", None) is not None:
             raise
         _tls.session = None
-        return _session().get(url, headers=headers, timeout=timeout)
+        return _session().get(url, headers=headers, timeout=timeout,
+                              allow_redirects=follow)
 
 
 # ── TTL Cache ──────────────────────────────────────────────────────────────
@@ -247,15 +250,17 @@ def _plain_session():
     return sess
 
 
-def _plain_get(url, headers, timeout):
+def _plain_get(url, headers, timeout, follow=True):
     """GET without browser impersonation, one retry on connection errors."""
     try:
-        return _plain_session().get(url, headers=headers, timeout=timeout)
+        return _plain_session().get(url, headers=headers, timeout=timeout,
+                                    allow_redirects=follow)
     except Exception as e:
         if getattr(e, "response", None) is not None:
             raise
         _tls_plain.session = None
-        return _plain_session().get(url, headers=headers, timeout=timeout)
+        return _plain_session().get(url, headers=headers, timeout=timeout,
+                                    allow_redirects=follow)
 
 
 def _raw_get(url, timeout=30):
@@ -1145,7 +1150,39 @@ def is_image_response(content_type, body):
             or (head[:4] == b"RIFF" and head[8:12] == b"WEBP"))
 
 
+class ProxyBlocked(Exception):
+    """The proxy refused a URL that is not a public image address."""
+
+
+def _proxy_fetch(url, timeout=30):
+    """Fetch one image for /image, following only public redirects.
+
+    A public URL can redirect to 127.0.0.1, so redirects are disabled here and
+    every hop goes through `proxy_target_allowed` before it is asked for.
+    """
+    for _ in range(4):
+        if not proxy_target_allowed(url):
+            raise ProxyBlocked(url)
+        if uses_mangadex_image_policy(url):
+            r = _plain_get(url, mangadex_image_headers(url), timeout, follow=False)
+        else:
+            r = _get(url, image_headers(url), timeout, follow=False)
+        if r.status_code in (301, 302, 303, 307, 308):
+            location = r.headers.get("Location")
+            if not location:
+                r.raise_for_status()
+                return r.content, r.headers.get("Content-Type", "image/jpeg")
+            url = urljoin(url, location)
+            continue
+        r.raise_for_status()
+        return r.content, r.headers.get("Content-Type", "image/jpeg")
+    raise ProxyBlocked("too many redirects")
+
+
 def proxy_image(handler, img_url, chapter=None, page=None):
+    if not proxy_target_allowed(img_url):
+        handler.send_error(403, "not a public image address")
+        return
     cached = _img_get(img_url)
     if cached:
         _send_image(handler, *cached)
@@ -1160,7 +1197,10 @@ def proxy_image(handler, img_url, chapter=None, page=None):
 
     try:
         with _img_sem:
-            body, ctype = _raw_get(img_url)
+            body, ctype = _proxy_fetch(img_url)
+    except ProxyBlocked:
+        handler.send_error(403, "blocked image address")
+        return
     except Exception as e:  # noqa: BLE001 — upstream 4xx/5xx or connection error
         upstream = getattr(getattr(e, "response", None), "status_code", None)
         if upstream == 404 and chapter and page:
@@ -1169,7 +1209,7 @@ def proxy_image(handler, img_url, chapter=None, page=None):
             if retry_url and retry_url != img_url:
                 try:
                     with _img_sem:
-                        body, ctype = _raw_get(retry_url)
+                        body, ctype = _proxy_fetch(retry_url)
                     _img_put(img_url, body, ctype)
                     _send_image(handler, body, ctype)
                     return
