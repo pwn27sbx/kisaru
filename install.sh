@@ -18,10 +18,10 @@ source "$SRC_DIR/scripts/install-common.sh"
 VENV="${XDG_DATA_HOME:-$HOME/.local/share}/kisaru/venv"
 REQUIREMENTS="$SRC_DIR/requirements.txt"
 
-PACMAN_PKGS=(quickshell python mpv noto-fonts curl)
-APT_PKGS=(python3 python3-venv mpv fonts-noto-core curl)
-DNF_PKGS=(python3 mpv google-noto-sans-fonts curl)
-MANUAL=("quickshell: mira https://quickshell.org para paquetes y cómo compilarlo")
+# Omarchy (Arch + Hyprland) is a hard requirement; install_system_packages
+# refuses anything else instead of pretending apt or dnf would work here
+# (audit 2026-11-06, finding 19).
+PACMAN_PKGS=(quickshell python mpv noto-fonts curl fontconfig rsync)
 
 MODE=link
 DEPS=1

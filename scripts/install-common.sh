@@ -6,11 +6,9 @@
 #
 # install.sh sets, before calling these:
 #   ASSUME_YES     1 to skip the prompts
-#   PACMAN_PKGS    Arch packages     APT_PKGS   Debian/Ubuntu packages
-#   DNF_PKGS       Fedora packages   MANUAL     lines saying what to get by hand
-#                                               where a distro has no package
-# (INSTALL_PM and SYSTEM_BIN override the package manager and /usr/local/bin,
-# for testing.)
+#   PACMAN_PKGS    Arch packages
+# (SYSTEM_BIN overrides /usr/local/bin; INSTALL_PM exists only so a test can
+# pin the package manager.)
 
 info() { printf '\033[1;34m::\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*" >&2; }
@@ -23,29 +21,29 @@ confirm() {
     [[ -z $reply || $reply =~ ^[SsYy] ]]
 }
 
-# pacman, apt-get or dnf, whichever is here first (INSTALL_PM overrides).
+# pacman, or nothing: this package requires Omarchy, which is Arch (INSTALL_PM
+# exists so a test can pin it).
 package_manager() {
-    local pm
     if [[ -n ${INSTALL_PM-} ]]; then
         echo "$INSTALL_PM"
         return
     fi
-    for pm in pacman apt-get dnf; do
-        command -v "$pm" >/dev/null && { echo "$pm"; return; }
-    done
+    command -v pacman >/dev/null && echo pacman
 }
 
 # Installs the system packages this package needs, with whichever of
 # pacman, apt or dnf is there. Quickshell is left alone when some build of
 # it is already installed (quickshell and quickshell-git conflict on Arch).
 install_system_packages() {
-    local pm pkgs=() p failed=()
+    local pm pkgs=("${PACMAN_PKGS[@]}") p flags=(-S --needed)
+
     pm=$(package_manager)
-    case $pm in
-        pacman)  pkgs=("${PACMAN_PKGS[@]}") ;;
-        apt-get) pkgs=("${APT_PKGS[@]}") ;;
-        dnf)     pkgs=("${DNF_PKGS[@]}") ;;
-    esac
+    if [[ $pm != pacman ]]; then
+        die "este instalador solo admite Arch con pacman (Omarchy); instala esto tú mismo: ${pkgs[*]}"
+    fi
+
+    # Quickshell is left alone when some build of it is already installed
+    # (quickshell and quickshell-git conflict on Arch).
     if command -v qs >/dev/null || command -v quickshell >/dev/null; then
         for p in "${!pkgs[@]}"; do
             [[ ${pkgs[p]} == quickshell ]] && unset 'pkgs[p]'
@@ -53,48 +51,10 @@ install_system_packages() {
         pkgs=("${pkgs[@]}")
     fi
 
-    if [[ -z $pm ]]; then
-        warn "no hay pacman, apt ni dnf aquí; instala esto tú mismo:"
-        printf '     %s\n' "${PACMAN_PKGS[@]}" >&2
-        return
-    fi
-
-    if ((${#pkgs[@]})); then
-        info "Instalando paquetes con $pm: ${pkgs[*]}"
-        case $pm in
-            pacman)
-                local flags=(-S --needed)
-                ((ASSUME_YES)) && flags+=(--noconfirm)
-                sudo pacman "${flags[@]}" "${pkgs[@]}" || failed=("${pkgs[@]}")
-                ;;
-            apt-get | dnf)
-                # One at a time, so a package this release doesn't have
-                # doesn't stop the rest.
-                if confirm "¿Los instalo?"; then
-                    [[ $pm == apt-get ]] && sudo apt-get update -qq
-                    for p in "${pkgs[@]}"; do
-                        sudo "$pm" install -y -q "$p" >/dev/null || failed+=("$p")
-                    done
-                else
-                    failed=("${pkgs[@]}")
-                fi
-                ;;
-        esac
-        ((${#failed[@]})) && warn "no instalados: ${failed[*]}"
-    fi
-
-    # What this distro doesn't package, unless it's installed already (each
-    # line starts with the command's name).
-    local line todo=()
-    if [[ $pm != pacman ]]; then
-        for line in "${MANUAL[@]}"; do
-            command -v "${line%%[ :]*}" >/dev/null || todo+=("$line")
-        done
-    fi
-    if ((${#todo[@]})); then
-        warn "consigue esto tú mismo (no está en los repos de $pm):"
-        printf '     %s\n' "${todo[@]}" >&2
-    fi
+    ((${#pkgs[@]})) || return
+    info "Instalando paquetes con pacman: ${pkgs[*]}"
+    ((ASSUME_YES)) && flags+=(--noconfirm)
+    sudo pacman "${flags[@]}" "${pkgs[@]}" || warn "no instalados: ${pkgs[*]}"
 }
 
 fonts_dir() { echo "${XDG_DATA_HOME:-$HOME/.local/share}/fonts"; }
@@ -119,19 +79,36 @@ install_font() {  # family url file
 }
 
 # Nerd Fonts' symbols-only font (icon glyphs), unless some Nerd Font is there.
+# Pinned to one release and checked before extracting: this runs as the user
+# and unpacks a tarball, so "latest" is not good enough (audit 2026-11-06,
+# finding 11).
+NERD_FONT_VERSION="3.5.1"
+NERD_FONT_SHA256="01172f37db8543edb102e5cb5c64101c9f4686630804d49b419aa07b23a69996"
+NERD_FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/v${NERD_FONT_VERSION}/NerdFontsSymbolsOnly.tar.xz"
+
 install_nerd_symbols() {
-    local dir tmp
+    local dir tmp sum
     has_font "Nerd Font" && return
     dir=$(fonts_dir)
     tmp=$(mktemp -d)
-    info "Descargando la fuente Symbols Nerd Font"
-    if curl -fsSL https://github.com/ryanoasis/nerd-fonts/releases/latest/download/NerdFontsSymbolsOnly.tar.xz -o "$tmp/f.tar.xz" \
-        && tar -xJf "$tmp/f.tar.xz" -C "$tmp"; then
+    info "Descargando la fuente Symbols Nerd Font ${NERD_FONT_VERSION}"
+    if ! curl -fsSL "$NERD_FONT_URL" -o "$tmp/f.tar.xz"; then
+        rm -rf "$tmp"
+        warn "no se pudo descargar la fuente Symbols Nerd Font; los iconos se verán como cuadros hasta que instales una Nerd Font"
+        return
+    fi
+    sum=$(sha256sum "$tmp/f.tar.xz" | cut -d' ' -f1)
+    if [[ $sum != "$NERD_FONT_SHA256" ]]; then
+        rm -rf "$tmp"
+        warn "la fuente Symbols Nerd Font no coincide con su sha256; no la instalo"
+        return
+    fi
+    if tar -xJf "$tmp/f.tar.xz" -C "$tmp"; then
         mkdir -p "$dir"
         cp "$tmp"/*.ttf "$dir/"
         fc-cache -f "$dir" >/dev/null 2>&1 || true
     else
-        warn "no se pudo descargar la fuente Symbols Nerd Font; los iconos se verán como cuadros hasta que instales una Nerd Font"
+        warn "no se pudo descomprimir la fuente Symbols Nerd Font"
     fi
     rm -rf "$tmp"
 }
@@ -153,17 +130,23 @@ install_config() {  # name
             || die "$target ya existe y no es $1; muévelo aparte y vuelve a ejecutar esto"
         [[ $MODE == copy ]] \
             || die "$target es una copia anterior de $1; bórrala, o vuelve a ejecutar con --copy para actualizarla"
-        # Not the copy's own state: its settings and the palette file an
-        # install from before the Omarchy adoption still carries.
-        tar -C "$SRC_DIR" --exclude=./.git --exclude=./settings.json --exclude=./colors/Colors.json -cf - . \
-            | tar -C "$target" -xf -
+        # Keep the copy's own state (settings and the palette file an install
+        # from before the Omarchy adoption still carries), delete what no
+        # longer exists, and never carry development folders into the config
+        # (audit 2026-11-06, finding 24).
+        rsync -a --delete \
+            --exclude=.git --exclude=odd --exclude=tests \
+            --exclude=settings.json --exclude=colors/Colors.json \
+            "$SRC_DIR/" "$target/"
         info "Copia actualizada en $target"
         return
     fi
     mkdir -p "$(dirname "$target")"
     if [[ $MODE == copy ]]; then
         mkdir -p "$target"
-        tar -C "$SRC_DIR" --exclude=./.git -cf - . | tar -C "$target" -xf -
+        rsync -a --delete \
+            --exclude=.git --exclude=odd --exclude=tests \
+            "$SRC_DIR/" "$target/"
         info "Copiada a $target"
     else
         ln -s "$SRC_DIR" "$target"

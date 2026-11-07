@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Contract canary for the Spanish sources.
 
 The reader depends on third-party sites whose API can change under us. On

@@ -72,9 +72,8 @@ ninguna) sin tocarla.
 
 `install.sh` hace todo:
 
-- instala lo que los lectores necesitan con tu gestor de paquetes: Quickshell, Python, mpv,
-  Noto Sans y curl (pacman en Arch; apt en Debian/Ubuntu y dnf en Fedora, que no empaquetan
-  Quickshell, así que te dice dónde conseguirlo)
+- instala lo que los lectores necesitan con pacman: Quickshell, Python, mpv, Noto Sans,
+  curl, fontconfig y rsync. Omarchy es un requisito duro; el instalador no intenta apt ni dnf
 - descarga la fuente Symbols Nerd Font en `~/.local/share/fonts` si no tienes ninguna Nerd
   Font
 - enlaza la carpeta a `~/.config/kisaru` si la clonaste en otro sitio
@@ -110,15 +109,6 @@ exec-once = kisaru
 bind = SUPER ALT, A, exec, kisaru anime
 bind = SUPER ALT, M, exec, kisaru manga
 bind = SUPER ALT, N, exec, kisaru novel
-```
-
-Sway:
-
-```
-exec kisaru
-bindsym $mod+Alt+a exec kisaru anime
-bindsym $mod+Alt+m exec kisaru manga
-bindsym $mod+Alt+n exec kisaru novel
 ```
 
 El botón de minimizar del header oculta el panel pero guarda tu lugar; el siguiente toggle

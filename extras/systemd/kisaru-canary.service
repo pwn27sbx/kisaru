@@ -7,5 +7,7 @@ Type=oneshot
 # Secrets (Sentry check-in URL, Discord webhook) live outside the repo, mode 600.
 EnvironmentFile=%h/.config/kisaru-canary/canary.env
 Environment=PYTHONDONTWRITEBYTECODE=1
-# Repo path is machine-specific: adjust it if the checkout moves.
-ExecStart=/usr/bin/env python3 %h/Projects/kisaru/scripts/source_canary.py
+# install.sh puts the config in ~/.config/kisaru and its venv in
+# ~/.local/share/kisaru/venv; the canary needs the venv's interpreter, not the
+# system one (audit 2026-11-06, finding 14).
+ExecStart=%h/.local/share/kisaru/venv/bin/python3 %h/.config/kisaru/scripts/source_canary.py
