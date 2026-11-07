@@ -46,9 +46,15 @@ y renombrarlos rompería a cualquiera que los llame por IPC.
 
 El proyecto se llamó `qs-novelmangareader` hasta la migración de noviembre de 2026. Los datos,
 la configuración y la caché de esa época siguen leyéndose mientras solo existan en su sitio
-viejo; el plan de migración (`2026-11-01-kisaru-rename-migration-plan.md`, decisión D4) fija
-cuándo se borran, y exige que el checklist pase dos veces y que el canary haya corrido al menos
-una vez con la ruta nueva.
+viejo. `tools/migrate_to_kisaru.py` copia lo que falte (nunca mueve) y se puede repetir:
+
+```sh
+tools/migrate_to_kisaru.py            # muestra el plan, no escribe nada
+tools/migrate_to_kisaru.py --apply    # copia; un segundo run no hace nada
+```
+
+Las copias viejas se borran a mano cuando el checklist pasa dos veces y el canary ha corrido al
+menos una vez con la ruta nueva.
 
 ## Requisitos
 

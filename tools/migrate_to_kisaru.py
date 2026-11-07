@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Move this app's local data from the inherited names to `kisaru`.
 
-Owner decisions D3, D6 and D4 of the migration plan
-(`2026-11-01-kisaru-rename-migration-plan.md`).
+The owner decisions D3, D6 and D4 recorded for the rename.
 
 What it does, and what it deliberately does not:
 
