@@ -41,7 +41,7 @@ against the original work:
     git clone https://github.com/pwn27sbx/kisaru
     git remote add upstream https://github.com/dhrruvsharma/qs-novelmangareader
     git fetch upstream
-    git log --patch c3ebeca..origin/i18n-es
+    git log --patch c3ebeca..origin/main
 
 Summary of the modifications:
 
