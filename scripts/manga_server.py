@@ -23,7 +23,9 @@ import threading
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
-from urllib.parse import urlparse, urlsplit, parse_qs, quote, unquote
+from urllib.parse import urlparse, parse_qs, quote, unquote
+
+from local_only import is_allowed_origin, is_loopback_host
 from concurrent.futures import ThreadPoolExecutor
 
 # ── Use curl_cffi for browser-grade TLS fingerprinting (bypasses Cloudflare)
@@ -954,7 +956,6 @@ def _send_image(handler, body, ctype):
     handler.send_header("Content-Type", ctype)
     handler.send_header("Content-Length", str(len(body)))
     handler.send_header("Cache-Control", "public, max-age=86400")
-    handler.send_header("Access-Control-Allow-Origin", "*")
     handler.end_headers()
     try:
         handler.wfile.write(body)
@@ -1104,46 +1105,6 @@ def proxy_image(handler, img_url, chapter=None, page=None):
     _send_image(handler, body, ctype)
 
 
-# ── Local-only request guard ───────────────────────────────────────────────
-
-LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
-
-
-def is_loopback_host(host_header):
-    """True when Host names this machine's loopback, or is absent.
-
-    A browser always sends Host, so a page that resolves an attacker domain to
-    127.0.0.1 (DNS rebinding) is the case this refuses. A missing Host cannot
-    be a browser.
-    """
-    if not host_header:
-        return True
-    try:
-        host = urlsplit("//" + host_header.strip()).hostname
-    except ValueError:
-        return False
-    return (host or "").lower() in LOOPBACK_HOSTS
-
-
-def is_allowed_origin(origin):
-    """True when there is no browser origin, or it is a loopback page.
-
-    QML's XMLHttpRequest sends no Origin (or a non-http one such as
-    `file://`), so only an http(s) origin from another host is refused. A
-    browser page always sends one, and that is what a cross-site POST to
-    /dl/delete looks like (audit 2026-11-06, C1).
-    """
-    if not origin:
-        return True
-    try:
-        parts = urlsplit(origin)
-    except ValueError:
-        return False
-    if parts.scheme not in ("http", "https"):
-        return True
-    return (parts.hostname or "").lower() in LOOPBACK_HOSTS
-
-
 # ── HTTP Server ────────────────────────────────────────────────────────────
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
@@ -1160,7 +1121,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
 
@@ -1169,6 +1129,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def _local_only(self):
         """Answer 403 and return True when the request is not from the panel."""
+        if not is_loopback_host(self.headers.get("Host")):
+            self._error("forbidden host", 403)
+            return True
         if not is_allowed_origin(self.headers.get("Origin")):
             self._error("forbidden origin", 403)
             return True

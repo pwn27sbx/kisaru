@@ -44,6 +44,8 @@ from urllib.parse import urlparse, parse_qs, quote, unquote
 import providers
 import storage
 
+from local_only import is_allowed_origin, is_loopback_host
+
 PORT = 5151
 
 
@@ -119,19 +121,27 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type",   "application/json")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
 
     def _error(self, msg, status=500):
         self._json({"error": msg}, status)
 
+    def _local_only(self):
+        """Answer 403 and return True when the request is not from the panel."""
+        if not is_loopback_host(self.headers.get("Host")):
+            self._error("forbidden host", 403)
+            return True
+        if not is_allowed_origin(self.headers.get("Origin")):
+            self._error("forbidden origin", 403)
+            return True
+        return False
+
     def _send_image(self, body, ctype):
         self.send_response(200)
         self.send_header("Content-Type",   ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control",  "public, max-age=86400")
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         try:
             self.wfile.write(body)
@@ -151,6 +161,8 @@ class Handler(BaseHTTPRequestHandler):
     # ── GET ────────────────────────────────────────────────────────────────
 
     def do_HEAD(self):
+        if self._local_only():
+            return
         parsed = urlparse(self.path)
         if parsed.path == "/image":
             self.send_response(200)
@@ -161,6 +173,8 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_GET(self):
+        if self._local_only():
+            return
         parsed = urlparse(self.path)
         qs     = parse_qs(parsed.query)
 
@@ -269,6 +283,14 @@ class Handler(BaseHTTPRequestHandler):
     # ── POST ───────────────────────────────────────────────────────────────
 
     def do_POST(self):
+        if self._local_only():
+            return
+        # QML posts JSON; a browser form cannot set this header, and a
+        # cross-origin JSON fetch would need a preflight this server does not
+        # answer.
+        if (self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+                != "application/json"):
+            return self._error("expected application/json", 403)
         parsed = urlparse(self.path)
         try:
             length = int(self.headers.get("Content-Length", 0))
