@@ -950,7 +950,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ani-cli Python API server")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=5050, help="Port to listen on (default: 5050)")
-    parser.add_argument("--debug", action="store_true", help="Enable Flask debug mode")
+    parser.add_argument("--debug", action="store_true",
+                        help="Verbose request logging (the interactive debugger stays off)")
     args = parser.parse_args()
     exit_with_parent()
 
@@ -970,4 +971,9 @@ if __name__ == "__main__":
   │  GET /                (docs)           │
   └─────────────────────────────────────────┘
 """)
-    app.run(host=args.host, port=args.port, debug=args.debug)
+    if args.debug:
+        import logging
+        app.logger.setLevel(logging.DEBUG)
+    # Never the Werkzeug debugger: `debug=True` serves a console with code
+    # execution to anyone who can reach the port (audit 2026-11-06, finding 36).
+    app.run(host=args.host, port=args.port, debug=False, use_reloader=False)

@@ -21,7 +21,15 @@ esac
 ensure_instance() {
     qs -p "$cfg" ipc show >/dev/null 2>&1 && return 0
     qs -p "$cfg" --no-duplicate >/dev/null 2>&1 &
-    sleep 3
+    # Poll for the IPC targets instead of assuming 3 s is always enough: a
+    # cold start can be slower, a warm one is ready at once (audit
+    # 2026-11-06, finding 21).
+    local i
+    for i in {1..40}; do
+        qs -p "$cfg" ipc show >/dev/null 2>&1 && return 0
+        sleep 0.1
+    done
+    return 0
 }
 
 case ${1-start} in

@@ -104,6 +104,9 @@ Item {
         if (subtitle && subtitle.length > 0)
             args.push("--sub-file=" + subtitle)
 
+        // `--` keeps a URL that starts with "-" from being read as an option
+        // (audit 2026-11-06, finding 22).
+        args.push("--")
         args.push(url)
         mpvProcess.command = args
         mpvProcess.running = true
