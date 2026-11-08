@@ -23,8 +23,17 @@ Item {
         bottom: parent.bottom
         right: parent.right
     }
-    implicitWidth: fullscreen ? (parent && parent.parent ? parent.parent.width : 1200) : 550
+    implicitWidth: targetWidth
     visible: false
+
+    // The width the panel is heading to. The chapter takes its measure from
+    // this and not from the animated `implicitWidth`: while the panel shrinks
+    // from fullscreen to 550 the measure used to follow every frame, so the
+    // whole chapter reflowed frame by frame once the width crossed ~768 px
+    // (owner, 2026-11-08: "hay como un lag al final"). One reflow per toggle.
+    readonly property real targetWidth: fullscreen
+        ? (parent && parent.parent ? parent.parent.width : 1200)
+        : 550
 
     Behavior on implicitWidth { NumberAnimation { duration: Motion.slow; easing.type: Motion.easeOut } }
 
@@ -234,6 +243,7 @@ Item {
                     opacity: visible ? 1 : 0
                     Behavior on opacity { NumberAnimation { duration: Motion.slow; easing.type: Motion.easeOut } }
 
+                    contentWidth: root.targetWidth
                     isFullscreen: root.fullscreen
                     onToggleFullscreen: root.fullscreen = !root.fullscreen
 
@@ -284,6 +294,7 @@ Item {
                     opacity: visible ? 1 : 0
                     Behavior on opacity { NumberAnimation { duration: Motion.slow; easing.type: Motion.easeOut } }
 
+                    contentWidth: root.targetWidth
                     isFullscreen: root.fullscreen
                     onToggleFullscreen: root.fullscreen = !root.fullscreen
 

@@ -231,10 +231,15 @@ test("the anime score chip is legible: accent and bold", () => {
 
 test("all three panels are 550 wide, and the novel keeps fullscreen", () => {
     // Owner, round 6 (D2). The novel's reader is the reason the width exists, so
-    // its fullscreen branch must survive the change.
+    // its fullscreen branch must survive the change. It lives in targetWidth
+    // since the reader takes its measure from that and not from the animated
+    // implicitWidth (owner, 2026-11-08: resize lag).
     assert.match(read("modules/manga/MangaReader.qml"), /implicitWidth: 550/);
     assert.match(read("modules/anime/AnimePanel.qml"), /implicitWidth: 550/);
-    assert.match(read("modules/novel/NovelReader.qml"), /implicitWidth: fullscreen \?.*: 550/);
+    const novel = read("modules/novel/NovelReader.qml");
+    assert.match(novel, /implicitWidth: targetWidth/);
+    const target = novel.slice(novel.indexOf("property real targetWidth"));
+    assert.match(target.slice(0, target.indexOf("\n\n")), /fullscreen[\s\S]*: 550/);
 });
 
 test("the list row is the owner's sketch: tall cover, big title, small datum", () => {

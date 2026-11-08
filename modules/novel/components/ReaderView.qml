@@ -6,6 +6,7 @@ import qs.Commons
 import qs.services
 import qs.components
 import "../../../components/wheel_scroll.js" as WheelScroll
+import "../../../services/reader_metrics.js" as ReaderMetrics
 
 Item {
     id: readerView
@@ -21,10 +22,74 @@ Item {
     property real lineHeight:    1.75
     property bool headerVisible: true
 
+    // The width the panel is heading to, not the width it has mid-animation.
+    // The caller passes its target; a caller that passes nothing keeps the old
+    // behaviour of following the live width.
+    property real contentWidth: width
+    readonly property real _targetMeasure: ReaderMetrics.columnWidth(contentWidth)
+    property real _measure: ReaderMetrics.columnWidth(contentWidth)
+
     function reset() {
         headerVisible = true
+        _anchorIndex = -1
         textScroll.contentY = 0
     }
+
+    // Reflowing the chapter changes every paragraph's height, and the Flickable
+    // only holds a pixel offset, so a resize would land the reader somewhere
+    // else in the chapter. Remember the paragraph under the top edge (and how
+    // far into it the reader was) before the measure changes; the Column calls
+    // restoreAnchor() once it has re-laid out.
+    property int _anchorIndex: -1
+    property real _anchorOffset: 0
+    property var _anchorChapter: null
+
+    function captureAnchor() {
+        _anchorChapter = Novel.currentChapter
+        _anchorIndex = -1
+        _anchorOffset = 0
+        if (!paragraphsRepeater || !textScroll) return
+        for (var i = 0; i < paragraphsRepeater.count; i++) {
+            var item = paragraphsRepeater.itemAt(i)
+            if (!item) continue
+            if (item.y + item.height > textScroll.contentY) {
+                _anchorIndex = i
+                _anchorOffset = textScroll.contentY - item.y
+                return
+            }
+        }
+    }
+
+    function restoreAnchor() {
+        if (_anchorIndex < 0) return
+        var index = _anchorIndex
+        _anchorIndex = -1
+        // A chapter that changed between capture and layout has no anchor left.
+        if (!Novel.currentChapter || Novel.currentChapter !== _anchorChapter) return
+        if (!paragraphsRepeater) return
+        var item = paragraphsRepeater.itemAt(index)
+        if (!item) return
+        var offset = Math.min(_anchorOffset, item.height)
+        // The Flickable's contentHeight may not have taken the new implicit
+        // height yet, so measure the limit from the column itself.
+        var limit = Math.max(0, textColumn.implicitHeight + 80 - textScroll.height)
+        textScroll.contentY = Math.max(0, Math.min(item.y + offset, limit))
+    }
+
+    // The target measure is already known when the mode toggles, but the panel
+    // is still on its way there. Narrowing applies at once; widening waits for
+    // the panel to be wide enough, so the text is never clipped while it opens
+    // (still one reflow per toggle, never one per frame).
+    function applyMeasure() {
+        var next = ReaderMetrics.shownMeasure(_measure, _targetMeasure, width)
+        if (next === _measure) return
+        // Capture while the paragraphs are still where the reader left them.
+        captureAnchor()
+        _measure = next
+    }
+
+    onContentWidthChanged: readerView.applyMeasure()
+    onWidthChanged: readerView.applyMeasure()
 
     readonly property bool _hasPrev: Novel.hasPrevChapter
     readonly property bool _hasNext: Novel.hasNextChapter
@@ -231,7 +296,12 @@ Item {
 
         Column {
             id: textColumn
-            width: Math.min(parent.width - 48, 720)
+            width: readerView._measure
+            // The positioner finishes moving the paragraphs and only then
+            // updates its implicitHeight, so restoring here lands after the
+            // reflow and before the frame is painted: one reflow, one anchor
+            // restore, no per-frame work.
+            onImplicitHeightChanged: readerView.restoreAnchor()
             anchors.horizontalCenter: parent.horizontalCenter
             topPadding: Style.space(36); bottomPadding: Style.space(48); spacing: Style.space(0)
 
@@ -259,6 +329,7 @@ Item {
             Item { width: 1; height: 20 }
 
             Repeater {
+                id: paragraphsRepeater
                 model: Novel.currentChapter ? Novel.currentChapter.paragraphs : []
                 StyledText {
                     width: textColumn.width
