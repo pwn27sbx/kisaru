@@ -42,6 +42,7 @@ function stub(file, body) {
 // keeps requirements.txt identical between them.
 function sandbox(options) {
     const changeRequirements = !options || options.requirements !== false;
+    const changePanel = !!options && options.panel === true;
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kisaru-update-"));
     const home = path.join(dir, "home");
     const configHome = path.join(dir, "config");
@@ -66,6 +67,8 @@ function sandbox(options) {
     fs.appendFileSync(path.join(src, "shell.qml"), "// newer\n");
     if (changeRequirements)
         fs.writeFileSync(path.join(src, "requirements.txt"), "new-pin==2\n");
+    if (changePanel)
+        fs.writeFileSync(path.join(src, "omarchy", "pwnsxb.kisaru", "Panel.qml"), "// newer panel\n");
     git(["add", "."], src);
     git(["commit", "-qm", "release 1.1.0"], src);
     git(["tag", "v1.1.0"], src);
@@ -143,8 +146,10 @@ test("update fast-forwards, refreshes the venv and restarts with the panel", () 
 
     const result = run(["update", "--reopen", "manga"], box);
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /Done\. Kisaru 1\.1\.0/);
-    assert.match(result.stdout, /omarchy restart shell/);
+    assert.match(result.stdout, /Listo\. Kisaru 1\.1\.0/);
+    // Every release bumps the manifest; that alone must not ask for a shell
+    // restart (F2), so the default release keeps quiet.
+    assert.doesNotMatch(result.stdout, /omarchy restart shell/);
     assert.equal(manifestVersion(box), "1.1.0");
     assert.equal(git(["rev-parse", "HEAD"], box.cfg),
         git(["rev-parse", "v1.1.0"], box.cfg));
@@ -245,8 +250,26 @@ test("requirements.txt unchanged means no venv work", () => {
 
     const result = run(["update"], box);
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /Done\. Kisaru 1\.1\.0/);
+    assert.match(result.stdout, /Listo\. Kisaru 1\.1\.0/);
     assert.equal(read(box.env.PIP_LOG), "", "pip must not run when the pins did not change");
+});
+
+// F2: a release always bumps omarchy/pwnsxb.kisaru/manifest.json, so the hint
+// must depend on the rest of omarchy/, not on the manifest.
+test("a release that only bumps the manifest does not ask for a shell restart", () => {
+    const box = sandbox();
+
+    const result = run(["update"], box);
+    assert.equal(result.status, 0, result.stderr);
+    assert.doesNotMatch(result.stdout, /omarchy restart shell/);
+});
+
+test("a Panel.qml change does ask for an omarchy shell restart", () => {
+    const box = sandbox({ panel: true });
+
+    const result = run(["update"], box);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /omarchy restart shell/);
 });
 
 test("a --copy install (no .git) is refused with the reinstall message", () => {
@@ -270,23 +293,23 @@ test("nothing is started when Kisaru was not running and no panel is asked for",
 
     const result = run(["update"], box);
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /Done\. Kisaru 1\.1\.0/);
+    assert.match(result.stdout, /Listo\. Kisaru 1\.1\.0/);
     const qs = read(box.env.QS_LOG);
     assert.doesNotMatch(qs, /--no-duplicate/);
     assert.doesNotMatch(qs, / kill/);
 });
 
 // The restart must report the truth (A12): if the launcher loses the app, a
-// "Done" would leave the user with no Kisaru and no clue. Both directions are
+// success line would leave the user with no Kisaru and no clue. Both directions are
 // polled, so both are pinned here.
-test("a relaunch that never comes back is an error, not a Done", () => {
+test("a relaunch that never comes back is an error, not a success line", () => {
     const box = sandbox();
     fs.writeFileSync(box.env.QS_RUNNING, "");
 
     const result = run(["update"], box, { QS_START_FAIL: "1" });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /no volvió a arrancar/);
-    assert.doesNotMatch(result.stdout, /Done\. Kisaru/);
+    assert.doesNotMatch(result.stdout, /Listo\. Kisaru/);
 });
 
 test("an instance that refuses to stop is an error, not a restart", () => {
@@ -296,5 +319,5 @@ test("an instance that refuses to stop is an error, not a restart", () => {
     const result = run(["update"], box, { QS_KILL_FAIL: "1" });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /no se detuvo/);
-    assert.doesNotMatch(result.stdout, /Done\. Kisaru/);
+    assert.doesNotMatch(result.stdout, /Listo\. Kisaru/);
 });

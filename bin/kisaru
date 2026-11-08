@@ -196,12 +196,14 @@ run_update() {
     fi
 
     # The bar widget is loaded by Omarchy's shell, not by Kisaru: a change
-    # under omarchy/ only takes effect after its shell reloads.
-    if [[ -n $(git -C "$cfg" diff --name-only "$old" "$new" -- omarchy/) ]]; then
+    # under omarchy/ only takes effect after its shell reloads. Every release
+    # bumps the manifest there, and that alone does not need a reload (F2).
+    if [[ -n $(git -C "$cfg" diff --name-only "$old" "$new" -- omarchy/ \
+        | grep -v '^omarchy/pwnsxb.kisaru/manifest\.json$' || true) ]]; then
         echo ":: Cambió omarchy/: ejecuta 'omarchy restart shell' para recargar el widget de la barra."
     fi
 
-    echo "Done. Kisaru $version"
+    echo "Listo. Kisaru $version"
     return 0
 }
 
