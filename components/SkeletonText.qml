@@ -17,7 +17,9 @@ Rectangle {
     property real topInset: 56
     property real bottomInset: 56
     property real maxWidth: 720
-    property color blockColor: Qt.rgba(1, 1, 1, 0.07)
+    // Skeleton bars: the theme's text tone at low alpha, so the ghost page
+    // shows on a dark and on a light theme. Never a literal white.
+    property color blockColor: Util.alpha(Colors.text, 0.12)
 
     readonly property real _line: fontSize * lineHeight
     readonly property real _measure: Math.min(width - 48, maxWidth)

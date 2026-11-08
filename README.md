@@ -250,10 +250,12 @@ La paleta sale del tema de Omarchy (`qs.Commons.Color`, respaldado por
 paleta que mantener: cambiar el tema de Omarchy cambia la app. `app/Colors.qml` solo traduce
 los nombres de rol que usan las vistas a los colores del sistema.
 
-La única excepción deliberada es el lector de novelas
-(`modules/novel/components/ReaderView.qml`): su fondo cálido (`#1a1714`) y su texto hueso
-imitan papel a propósito y no siguen el tema. Es una decisión de diseño, no una paleta
-paralela, y `tools/lint-style.js` no tiene ninguna regla de color que eximir.
+Los dos lectores siguen el tema, incluido el lector de novelas
+(`modules/novel/components/ReaderView.qml`): fondo, texto, título, regla, progreso y pie
+salen de los mismos roles `Colors.*` que el resto de la app. El texto va a plena intensidad
+sobre el fondo, así que el propio par del tema mantiene 4,5:1 o más de contraste en temas
+oscuros y claros. `tools/lint-style.js` falla si vuelve a aparecer un color literal.
+
 ## Widget de barra de Omarchy
 
 El widget `pwnsxb.kisaru` vive en `omarchy/pwnsxb.kisaru/` y tiene su

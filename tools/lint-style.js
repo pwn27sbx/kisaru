@@ -2,13 +2,17 @@
 
 // Raw-token guards for the UI redesign (Fase R1).
 //
-// Fails when a view hardcodes a radius, a spacing value, a motion duration or a
-// font size instead of asking the shared token singleton (`qs.Commons.Style`).
-// `Style.*`, a derived expression (`height / 2`, `root.radius`) or a property
-// reference all pass; a bare number on the right of a tracked property does not.
+// Fails when a view hardcodes a radius, a spacing value, a motion duration, a
+// font size or a colour instead of asking the shared token singleton
+// (`qs.Commons.Style`) or the theme palette (`qs.app.Colors`). `Style.*`, a
+// derived expression (`height / 2`, `root.radius`), a property reference or a
+// theme role all pass; a bare number on the right of a tracked property and a
+// colour literal anywhere do not.
 //
-// Examples that fail:  radius: 12   ·   spacing: 6   ·   anchors.margins: 5
+// Examples that fail:  radius: 12   ·   spacing: 6   ·   color: "#1a1714"
+//                      color: Qt.rgba(1, 1, 1, 0.07)
 // Examples that pass:  radius: Style.cornerRadius   ·   radius: height / 2
+//                      color: Colors.text   ·   color: Util.alpha(Colors.text, 0.07)
 //
 // CLI:  node tools/lint-style.js [path ...]      (exit 1 on violations)
 //       node tools/lint-style.js components modules
@@ -50,6 +54,10 @@ const TRACKED = new Set([
 const PURE_NUMBER = /^\d+(?:\.\d+)?$/;
 // A capsule/pill/circle radius: half the element's own height or width.
 const CAPSULE = /\b(?:height|width)\s*\/\s*2\b/;
+// Colour literals: a hex value (`#rgb`, `#rrggbb`, `#aarrggbb`) or a Qt.rgba()
+// call. Both freeze one palette into the view and stop it following the
+// Omarchy theme.
+const COLOR_LITERAL = /#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b|Qt\.rgba\(/;
 // A `name: value` pair, value ending at the next `;`, `}` or end of line.
 const PROP = /([A-Za-z_][A-Za-z0-9_.]*)\s*:\s*([^;}\n]*)/g;
 
@@ -58,10 +66,11 @@ function stripComment(line) {
     return idx === -1 ? line : line.slice(0, idx);
 }
 
-function scanFile(abs) {
-    const rel = path.relative(ROOT, abs);
+// Every violation in one QML source. Exported so a test can feed a literal
+// without writing a file.
+function scanText(text, rel) {
     const violations = [];
-    const lines = fs.readFileSync(abs, "utf8").split("\n");
+    const lines = String(text).split("\n");
     for (let i = 0; i < lines.length; i++) {
         // `// style-ignore` documents a deliberate exception on that line.
         if (lines[i].includes("style-ignore")) continue;
@@ -70,6 +79,10 @@ function scanFile(abs) {
             continue;
         }
         const line = stripComment(lines[i]);
+        const color = line.match(COLOR_LITERAL);
+        if (color) {
+            violations.push({ file: rel, line: i + 1, prop: "color", value: color[0] + "  → use Colors.*" });
+        }
         PROP.lastIndex = 0;
         let m;
         while ((m = PROP.exec(line)) !== null) {
@@ -88,6 +101,10 @@ function scanFile(abs) {
         }
     }
     return violations;
+}
+
+function scanFile(abs) {
+    return scanText(fs.readFileSync(abs, "utf8"), path.relative(ROOT, abs));
 }
 
 function walk(dir) {
@@ -141,4 +158,4 @@ function main() {
 
 if (require.main === module) process.exit(main());
 
-module.exports = { check, collectFiles, scanFile };
+module.exports = { check, collectFiles, scanFile, scanText };

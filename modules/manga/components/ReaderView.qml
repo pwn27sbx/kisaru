@@ -39,10 +39,10 @@ Item {
     // because the same instance is reused: any entry shows it again.
     onVisibleChanged: if (visible) headerVisible = true
 
-    // ── Ink-black background ─────────────────────────────────────────────────
-    // The reading canvas stays near-black on purpose: it is the mat under the
-    // pages, like a video player, so a light theme does not glare around them.
-    Rectangle { anchors.fill: parent; color: "#08080a" }
+    // ── Reading mat ──────────────────────────────────────────────────────────
+    // The mat under the pages is the theme's ground, like the rest of Kisaru:
+    // switching the Omarchy theme repaints the reader too.
+    Rectangle { anchors.fill: parent; color: Colors.background }
 
     // ── Reader header ────────────────────────────────────────────────────────
     Rectangle {
@@ -132,8 +132,8 @@ Item {
         anchors.fill: parent
         z: 8
         active: Manga.isFetchingPages
-        color: "#08080a"
-        textColor: "white"
+        color: Colors.background
+        textColor: Colors.text
         spinnerSize: 40
         label: I18n.t("manga.loadingPages")
         detail: Manga.currentManga ? Manga.currentManga.title : ""
@@ -143,7 +143,7 @@ Item {
     // ── Pages error overlay ──────────────────────────────────────────────────
     Rectangle {
         anchors.fill: parent
-        color: "#08080a"
+        color: Colors.background
         visible: Manga.pagesError.length > 0 && !Manga.isFetchingPages
         z: 7
 
