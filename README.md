@@ -103,6 +103,7 @@ kisaru anime     # abre/cierra el reproductor de anime
 kisaru manga     # abre/cierra el lector de manga
 kisaru novel     # abre/cierra el lector de novelas
 kisaru stop      # ciérralo
+kisaru update    # actualiza a la última versión
 kisaru log       # su registro
 ```
 
@@ -120,6 +121,36 @@ bind = SUPER ALT, N, exec, kisaru novel
 
 El botón de minimizar del header oculta el panel pero guarda tu lugar; el siguiente toggle
 lo devuelve como lo dejaste.
+
+## Actualizar
+
+Kisaru solo comprueba si hay versión nueva **al abrir un panel** (anime, manga o novelas), una
+vez por proceso: pregunta al remoto por los tags con un límite de 5 s y no deja nada corriendo
+ni sondeando en segundo plano. Solo cuentan las versiones numeradas (`vX.Y.Z`); una rama o un
+release candidate no encienden nada.
+
+Si hay una versión más nueva, aparece una banda fina arriba del panel: «Nueva versión X.Y.Z
+disponible», con **Actualizar** y **Después**. *Después* la oculta hasta que cierres Kisaru.
+
+**Actualizar** abre una terminal flotante y ejecuta `kisaru update --reopen <panel>`: hace
+`git fetch --tags`, avanza `main` al tag nuevo (solo fast-forward), refresca el venv si cambió
+`requirements.txt`, reinicia Kisaru y vuelve a abrir el panel en el que estabas. La terminal
+sale sola al terminar.
+
+También se puede lanzar a mano:
+
+```sh
+kisaru update
+kisaru update --reopen manga   # además reabre ese panel al terminar
+```
+
+Se niega sin tocar nada si `~/.config/kisaru` no es un checkout git (una instalación `--copy`:
+reinstala con `git clone`), si estás en otra rama que no sea `main`, si hay cambios locales sin
+guardar o si `main` tiene commits que no están en la versión publicada. En un checkout de
+desarrollo la banda solo ofrece **Actualizar** con `main` limpio; si no, dice por qué.
+
+Si el cambio toca `omarchy/`, el widget de la barra no se recarga solo: el comando lo avisa y
+tienes que ejecutar `omarchy restart shell`.
 
 ## Idioma: UI y contenido son independientes
 
@@ -308,6 +339,19 @@ sitios están detrás de variables de entorno opcionales (`INMANGA_LIVE_TESTS=1`
 
 Los scripts sueltos —`scripts/source_canary.py`, `scripts/error_report.py`— son
 herramientas de diagnóstico contra las fuentes; no hacen falta para usar la app.
+
+## Publicar una versión
+
+Solo el dueño publica, y solo con tags numerados (el updater ignora todo lo demás):
+
+1. Sube `"version"` en `omarchy/pwnsxb.kisaru/manifest.json` (por ejemplo `1.1.0`).
+2. Commit en `main`.
+3. Crea el tag: `git tag v1.1.0`. El número tiene que ser **exactamente** el del manifiesto,
+   sin la `v`: `tests/release.test.js` falla si no coinciden.
+4. Empuja el commit y el tag: `git push origin main && git push origin v1.1.0`.
+
+No hay que tocar el updater: en la siguiente apertura de un panel, quien tenga una instalación
+git verá la banda de actualización.
 
 ## Créditos
 
