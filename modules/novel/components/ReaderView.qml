@@ -81,10 +81,13 @@ Item {
 
     // The target measure is already known when the mode toggles, but the panel
     // is still on its way there. Narrowing applies at once; widening waits for
-    // the panel to be wide enough, so the text is never clipped while it opens
-    // (still one reflow per toggle, never one per frame).
+    // the animation to finish, so the single reflow lands on a still frame
+    // (owner, 2026-11-08: the widen hitch). A reader that is not visible (the
+    // other tab's reader holds the same chapter) defers its reflow until it is
+    // shown, so only one of them pays for it.
     function applyMeasure() {
-        var next = ReaderMetrics.shownMeasure(_measure, _targetMeasure, width)
+        if (!readerView.visible) return
+        var next = ReaderMetrics.shownMeasure(_measure, _targetMeasure, width, contentWidth)
         if (next === _measure) return
         // Capture while the paragraphs are still where the reader left them.
         captureAnchor()
@@ -93,6 +96,7 @@ Item {
 
     onContentWidthChanged: readerView.applyMeasure()
     onWidthChanged: readerView.applyMeasure()
+    onVisibleChanged: if (readerView.visible) readerView.applyMeasure()
 
     readonly property bool _hasPrev: Novel.hasPrevChapter
     readonly property bool _hasNext: Novel.hasNextChapter

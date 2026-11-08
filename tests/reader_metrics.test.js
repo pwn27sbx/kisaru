@@ -58,12 +58,28 @@ test("narrowing applies at once, even while the panel is still wide", () => {
     assert.equal(metrics.shownMeasure(720, 502, 550), 502);
 });
 
-test("widening waits until the panel can hold the text", () => {
-    // Compact -> fullscreen: 502 -> 720 needs a live panel of 768.
-    assert.equal(metrics.shownMeasure(502, 720, 550), 502, "clipped at 550");
-    assert.equal(metrics.shownMeasure(502, 720, 767), 502, "clipped at 767");
+// Compact -> fullscreen: the reflow waits for the panel animation to finish,
+// so it lands on a still frame instead of the first animated one (owner,
+// 2026-11-08: the mini hitch when the novel reader opens).
+test("widening waits until the panel animation has finished", () => {
+    assert.equal(metrics.shownMeasure(502, 720, 550, 2880), 502, "first frame");
+    assert.equal(metrics.shownMeasure(502, 720, 1500, 2880), 502,
+        "mid-animation, and also a reverse toggle");
+    assert.equal(metrics.shownMeasure(502, 720, 2879, 2880), 502, "one pixel short");
+    assert.equal(metrics.shownMeasure(502, 720, 2879.6, 2880), 720,
+        "the half-pixel tolerance lets the final frame apply it");
+    assert.equal(metrics.shownMeasure(502, 720, 2880, 2880), 720);
+    // A 1920 px target, measured just below it on the last frame.
+    assert.equal(metrics.shownMeasure(502, 720, 1919.6, 1920), 720);
+});
+
+test("a caller without a target width keeps the old widening", () => {
+    assert.equal(metrics.shownMeasure(502, 720, 550), 502);
+    assert.equal(metrics.shownMeasure(502, 720, 767), 502);
     assert.equal(metrics.shownMeasure(502, 720, 768), 720, "fits exactly");
-    assert.equal(metrics.shownMeasure(502, 720, 2880), 720);
+    assert.equal(metrics.shownMeasure(502, 720, 1500), 720);
+    assert.equal(metrics.shownMeasure(502, 720, 768, NaN), 720,
+        "a non-finite target is no target");
 });
 
 // Review R3-ConstrainedPanelZeroMeasure: the first measure must not wait for
@@ -105,7 +121,7 @@ test("the reader reads the target width, not the animated width", () => {
         "the reader lost its independent content width");
     assert.match(reader, /_targetMeasure: ReaderMetrics\.columnWidth\(contentWidth\)/,
         "the target measure is not derived from the content width");
-    assert.match(reader, /ReaderMetrics\.shownMeasure\(_measure, _targetMeasure, width\)/,
+    assert.match(reader, /ReaderMetrics\.shownMeasure\(_measure, _targetMeasure, width, contentWidth\)/,
         "the shown measure does not go through the rule");
     assert.match(reader, /width: readerView\._measure/,
         "the column still follows the animated width");
@@ -119,6 +135,29 @@ test("the panel hands the reader its target width", () => {
     assert.match(panel, /implicitWidth: targetWidth/);
     assert.ok((panel.match(/contentWidth: root\.targetWidth/g) || []).length >= 2,
         "a reader instance does not receive the target width");
+});
+
+// The amendment's source check: both readers (browse and library) must fill
+// their page and receive the panel's target width, so the rule sees the real
+// target for whichever one is shown.
+test("both readers fill their page and get the panel target width", () => {
+    const panel = read("modules/novel/NovelReader.qml");
+    const blocks = [...panel.matchAll(/ReaderView\s*\{([\s\S]*?)\n\s*\}/g)];
+    assert.equal(blocks.length, 2, "expected the browse and library readers");
+    for (const [, block] of blocks) {
+        assert.match(block, /anchors\.fill: parent/);
+        assert.match(block, /contentWidth: root\.targetWidth/);
+    }
+});
+
+// Both readers hold the same chapter; the hidden one must not reflow it too,
+// or one toggle pays for the reflow twice.
+test("a reader that is not visible waits to reflow until it is shown", () => {
+    const reader = read("modules/novel/components/ReaderView.qml");
+    assert.match(reader, /if \(!readerView\.visible\) return/,
+        "a hidden reader still reflows the chapter");
+    assert.match(reader, /onVisibleChanged: if \(readerView\.visible\) readerView\.applyMeasure\(\)/,
+        "showing the reader does not apply the pending measure");
 });
 
 test("a width change re-anchors the reading position", () => {

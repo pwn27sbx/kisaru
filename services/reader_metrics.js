@@ -22,17 +22,28 @@ function columnWidth(availableWidth) {
 //
 // The target measure is known the moment the mode toggles, but the panel is
 // still animating towards its new width. The reader never shows more than the
-// live panel can hold (`fits`), so the chapter is never clipped on both sides;
-// narrowing applies at once, and widening waits until the panel is wide enough
-// — still a single reflow, a few frames later. A panel constrained below the
-// compact target (a small screen) still gets the largest measure that fits:
-// the initial 0 is not a measure, it is "nothing measured yet".
-function shownMeasure(current, wanted, liveWidth) {
+// live panel can hold (`fits`), so the chapter is never clipped on both sides.
+// Narrowing applies at once, before anything moves. Widening waits until the
+// panel has FINISHED its animation (`liveWidth` reached `targetWidth`), so the
+// one reflow lands on a still frame instead of on the first animated frame
+// (owner, 2026-11-08: a mini hitch when the novel reader opens). A caller that
+// passes no target width keeps the old behaviour: widen as soon as it fits.
+// A panel constrained below the compact target (a small screen) still gets the
+// largest measure that fits: the initial 0 is not a measure, it is "nothing
+// measured yet".
+function shownMeasure(current, wanted, liveWidth, targetWidth) {
     var fits = columnWidth(liveWidth);
+    // Nothing measured yet: take the target, or what a small panel can hold.
     if (current <= 0) return Math.min(wanted, fits);
-    if (wanted <= fits) return wanted;
+    // The live panel shrank under the shown measure: take what still fits.
     if (current > fits) return fits;
-    return current;
+    // Narrowing (and an unchanged measure) applies at once, before anything
+    // moves. Widening needs the panel animation to be over.
+    if (wanted <= current) return wanted;
+    var target = Number(targetWidth);
+    if (!isFinite(target)) return wanted <= fits ? wanted : current;
+    if (liveWidth < target - 0.5) return current;
+    return wanted <= fits ? wanted : fits;
 }
 
 if (typeof module !== "undefined" && module.exports) {
