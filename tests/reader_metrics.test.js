@@ -66,6 +66,23 @@ test("widening waits until the panel can hold the text", () => {
     assert.equal(metrics.shownMeasure(502, 720, 2880), 720);
 });
 
+// Review R3-ConstrainedPanelZeroMeasure: the first measure must not wait for
+// room the live panel will never have, or a small screen gets a zero-width
+// column and no chapter at all.
+test("a constrained panel gets the largest measure that fits", () => {
+    // A 550 px target on a 400 px panel: the initial 0 becomes 400 - 48.
+    assert.equal(metrics.shownMeasure(0, 502, 400), 352);
+    assert.equal(metrics.shownMeasure(0, 720, 400), 352);
+    // The panel shrinks under the shown measure: take what still fits.
+    assert.equal(metrics.shownMeasure(352, 502, 300), 252);
+    // And it never asks for more than the panel holds.
+    for (const live of [300, 400, 550, 700]) {
+        const shown = metrics.shownMeasure(352, 720, live);
+        assert.ok(shown <= metrics.columnWidth(live),
+            `a ${live} px panel would show ${shown}`);
+    }
+});
+
 test("an unchanged measure is never reapplied", () => {
     assert.equal(metrics.shownMeasure(720, 720, 2880), 720);
     assert.equal(metrics.shownMeasure(502, 502, 550), 502);

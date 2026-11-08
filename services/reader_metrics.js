@@ -21,15 +21,18 @@ function columnWidth(availableWidth) {
 // Which measure the reader may show right now.
 //
 // The target measure is known the moment the mode toggles, but the panel is
-// still animating towards its new width. Narrowing is always safe — the text
-// is narrower than the panel for the whole way — so it applies at once.
-// Widening waits until the live panel is at least as wide as the text would be,
-// so the chapter is never clipped on both sides while the panel opens; that is
-// still a single reflow, just a few frames later.
+// still animating towards its new width. The reader never shows more than the
+// live panel can hold (`fits`), so the chapter is never clipped on both sides;
+// narrowing applies at once, and widening waits until the panel is wide enough
+// — still a single reflow, a few frames later. A panel constrained below the
+// compact target (a small screen) still gets the largest measure that fits:
+// the initial 0 is not a measure, it is "nothing measured yet".
 function shownMeasure(current, wanted, liveWidth) {
-    if (wanted === current) return current;
-    if (wanted < current) return wanted;
-    return Number(liveWidth) >= wanted + SIDE_GUTTER ? wanted : current;
+    var fits = columnWidth(liveWidth);
+    if (current <= 0) return Math.min(wanted, fits);
+    if (wanted <= fits) return wanted;
+    if (current > fits) return fits;
+    return current;
 }
 
 if (typeof module !== "undefined" && module.exports) {
