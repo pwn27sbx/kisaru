@@ -144,6 +144,17 @@ kisaru update
 kisaru update --reopen manga   # además reabre ese panel al terminar
 ```
 
+Si Kisaru no vive en `~/.config/kisaru` (una copia de prueba, otro `XDG_CONFIG_HOME`), indícale
+la carpeta exacta: actualiza y reinicia **esa** instalación. La ruta se usa tal cual la
+escribes, sin resolver enlaces, para que `qs -p` coincida con la instancia que está corriendo.
+
+```sh
+kisaru update --config /ruta/a/kisaru
+kisaru update --config /ruta/a/kisaru --reopen manga
+```
+
+La banda de actualización ya pasa la carpeta del panel que la muestra.
+
 Se niega sin tocar nada si `~/.config/kisaru` no es un checkout git (una instalación `--copy`:
 reinstala con `git clone`), si estás en otra rama que no sea `main`, si hay cambios locales sin
 guardar o si `main` tiene commits que no están en la versión publicada. En un checkout de

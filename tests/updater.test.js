@@ -10,8 +10,13 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const updater = require("../services/updater.js");
+
+const ROOT = path.resolve(__dirname, "..");
+const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
 test("compareVersions() orders release versions numerically", () => {
     assert.equal(updater.compareVersions("1.2.3", "1.2.3"), 0);
@@ -106,4 +111,26 @@ test("parseCheck() reads the checker's state lines", () => {
     assert.equal(copy.dirty, false);
     assert.deepEqual(copy.tags, ["1.3.0"]);
     assert.equal(copy.error, false);
+});
+
+// A4: the Omarchy launcher joins its argv with `$*` into one `bash -c`, so the
+// update command must arrive already quoted; a scratch path can contain both a
+// space and a quote.
+test("shellQuote() protects one argument from the launcher's shell", () => {
+    assert.equal(updater.shellQuote("/home/u/kisaru"), "'/home/u/kisaru'");
+    assert.equal(updater.shellQuote("/home/u/My Projects/kisaru"),
+        "'/home/u/My Projects/kisaru'");
+    assert.equal(updater.shellQuote("/home/u/o'brien"), "'/home/u/o'\\''brien'");
+});
+
+test("launchArguments() pins --config to this install and quotes everything", () => {
+    assert.deepEqual(updater.launchArguments("/cfg/bin/kisaru", "/cfg", "manga"),
+        ["'/cfg/bin/kisaru'", "'update'", "'--config'", "'/cfg'", "'--reopen'", "'manga'"]);
+});
+
+test("the banner hands the updater its own config dir", () => {
+    const source = read("services/Updater.qml");
+    assert.match(source,
+        /Core\.launchArguments\(root\.shellDir \+ "\/bin\/kisaru", root\.shellDir, panel\)/,
+        "the Update button does not pin --config to this install");
 });

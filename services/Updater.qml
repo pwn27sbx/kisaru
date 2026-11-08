@@ -62,13 +62,15 @@ Singleton {
 
     function dismiss() { root.dismissed = true }
 
-    // S5/A7: the absolute bin/kisaru, so the floating terminal updates the
-    // tree this panel runs from, not whatever is first on PATH.
+    // S5/A7 + A4: the absolute bin/kisaru and the exact shellDir, so the
+    // floating terminal updates the tree this panel runs from (never
+    // ~/.config/kisaru) and `qs -p` still matches the running instance. The
+    // launcher joins its arguments into one bash command, so
+    // services/updater.js quotes them.
     function launch(panel) {
         Quickshell.execDetached([
-            "omarchy-launch-floating-terminal-with-presentation",
-            root.shellDir + "/bin/kisaru", "update", "--reopen", panel
-        ])
+            "omarchy-launch-floating-terminal-with-presentation"
+        ].concat(Core.launchArguments(root.shellDir + "/bin/kisaru", root.shellDir, panel)))
     }
 
     function apply(text) {

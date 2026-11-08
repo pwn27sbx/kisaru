@@ -12,7 +12,10 @@
 set -euo pipefail
 
 cfg="${XDG_CONFIG_HOME:-$HOME/.config}/kisaru"
-case ${1-} in -h | --help | help) ;; *)
+# `update` carries its own --config: it parses its arguments first and then
+# validates that folder (A1), so the default check must not reject a scratch
+# install here. Every other subcommand keeps the check unchanged.
+case ${1-} in -h | --help | help | update) ;; *)
     [[ -f $cfg/shell.qml ]] || { echo "kisaru: no hay configuración en $cfg (ejecuta su install.sh)" >&2; exit 1; } ;;
 esac
 
@@ -37,6 +40,11 @@ ensure_instance() {
 # The upgrade path for a git install (README, Actualizar): fetch the release
 # tags, fast-forward main to the newest one, refresh the venv when its pins
 # changed, then restart Kisaru so the new QML is loaded.
+#
+# `cfg` is the install named by `--config` (or the default), and every git,
+# venv, restart and reopen step reads that same global (S2/A2). The path is
+# used exactly as given: `qs -p` identifies an instance by its literal path,
+# so resolving a symlink here would target a different instance.
 #
 # The running copy of this file is safe to replace: git writes the new
 # bin/kisaru by unlink + create, so this shell keeps executing the code it
@@ -63,8 +71,19 @@ update_args_error() {
 # A13: the panel is validated before any git command runs.
 parse_update_args() {
     update_reopen=""
+    # A3 + "without --config, behaviour is unchanged": only an explicitly
+    # named folder gets the new error; the default keeps its baseline message.
+    update_config_given=0
     while (($#)); do
         case $1 in
+            --config)
+                (($# >= 2)) || update_args_error "--config necesita una carpeta"
+                # A2: the global, so every git and qs step of run_update and
+                # ensure_instance follows the install the caller named.
+                cfg=$2
+                update_config_given=1
+                shift 2
+                ;;
             --reopen)
                 (($# >= 2)) || update_args_error "--reopen necesita anime, manga o novel"
                 case $2 in
@@ -210,6 +229,16 @@ run_update() {
 if [[ ${1-} == update ]]; then
     shift
     parse_update_args "$@"
+    # A1/A3: the folder is validated after the arguments and before the first
+    # git call. An explicit --config gets the new error and exit 2; without the
+    # flag the invocation keeps its previous message and exit 1.
+    if [[ ! -f $cfg/shell.qml ]]; then
+        if ((update_config_given)); then
+            update_args_error "$cfg no es una instalación de Kisaru"
+        fi
+        echo "kisaru: no hay configuración en $cfg (ejecuta su install.sh)" >&2
+        exit 1
+    fi
     run_update
     exit $?
 fi

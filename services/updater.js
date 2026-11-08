@@ -111,6 +111,21 @@ function parseCheck(text) {
     return result
 }
 
+// The floating terminal is launched through Omarchy's presentation wrapper,
+// which joins its arguments with `$*` into one `bash -c` command. Every
+// argument therefore has to be quoted for that shell, or a config dir with a
+// space (or a quote) would split or break the command.
+function shellQuote(value) {
+    var text = String(value === undefined || value === null ? "" : value)
+    return "'" + text.replace(/'/g, "'\\''") + "'"
+}
+
+// The launcher's argv tail: `kisaru update --config <dir> --reopen <panel>`,
+// each argument single-quoted for the wrapper's shell (A4).
+function launchArguments(binPath, configDir, panel) {
+    return [binPath, "update", "--config", configDir, "--reopen", panel].map(shellQuote)
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         parseVersion: parseVersion,
@@ -120,6 +135,8 @@ if (typeof module !== "undefined" && module.exports) {
         highestVersion: highestVersion,
         updateAvailable: updateAvailable,
         versionFromManifest: versionFromManifest,
-        parseCheck: parseCheck
+        parseCheck: parseCheck,
+        shellQuote: shellQuote,
+        launchArguments: launchArguments
     }
 }

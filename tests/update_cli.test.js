@@ -140,6 +140,16 @@ function manifestVersion(box) {
         path.join(box.cfg, "omarchy", "pwnsxb.kisaru", "manifest.json"), "utf8")).version;
 }
 
+// A second valid Kisaru checkout in the same sandbox, at v1.0.0. The default
+// clone stays at $XDG_CONFIG_HOME/kisaru; `--config` must act only on this one.
+function addSecondClone(box) {
+    const other = path.join(box.dir, "second", "kisaru");
+    fs.mkdirSync(path.dirname(other), { recursive: true });
+    git(["clone", "-q", "--branch", "main", path.join(box.dir, "remote.git"), other], box.dir);
+    git(["checkout", "-q", "-B", "main", "v1.0.0"], other);
+    return other;
+}
+
 test("update fast-forwards, refreshes the venv and restarts with the panel", () => {
     const box = sandbox();
     fs.writeFileSync(box.env.QS_RUNNING, "");
@@ -320,4 +330,100 @@ test("an instance that refuses to stop is an error, not a restart", () => {
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /no se detuvo/);
     assert.doesNotMatch(result.stdout, /Listo\. Kisaru/);
+});
+
+// S1-S3: the update acts on the install named by --config, not on the default
+// $XDG_CONFIG_HOME/kisaru. Both the restart and the IPC reopen must use that
+// exact path, because qs identifies the running instance by it.
+test("--config updates and restarts the named install, not the default one", () => {
+    const box = sandbox();
+    const other = addSecondClone(box);
+    const defaultHead = git(["rev-parse", "HEAD"], box.cfg);
+
+    const result = run(["update", "--config", other, "--reopen", "manga"], box);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Listo\. Kisaru 1\.1\.0/);
+    assert.equal(git(["rev-parse", "HEAD"], other), git(["rev-parse", "v1.1.0"], other));
+    assert.equal(manifestVersion({ cfg: other }), "1.1.0");
+    assert.equal(git(["rev-parse", "HEAD"], box.cfg), defaultHead,
+        "the default install moved");
+    assert.equal(manifestVersion(box), "1.0.0");
+
+    const qs = read(box.env.QS_LOG).trim().split("\n");
+    const start = qs.find((line) => line.includes("--no-duplicate"));
+    const reopen = qs.find((line) => line.includes("ipc call mangaReader toggle"));
+    assert.ok(start && start.includes("-p " + other),
+        "the restart did not use --config: " + start);
+    assert.ok(reopen && reopen.includes("-p " + other),
+        "the reopen did not use --config: " + reopen);
+    assert.ok(!qs.some((line) => line.includes("-p " + box.cfg)),
+        "a qs call used the default install");
+});
+
+test("--config and --reopen work in either order", () => {
+    const box = sandbox();
+    const other = addSecondClone(box);
+
+    const result = run(["update", "--reopen", "novel", "--config", other], box);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Listo\. Kisaru 1\.1\.0/);
+    assert.ok(read(box.env.QS_LOG).includes("-p " + other + " ipc call novelReader toggle"),
+        "the reverse order lost the config dir or the panel");
+});
+
+test("--config without a folder exits 2 before touching anything", () => {
+    const box = sandbox();
+
+    const result = run(["update", "--config"], box);
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /--config necesita una carpeta/);
+    assert.equal(read(box.env.QS_LOG), "");
+    assert.equal(manifestVersion(box), "1.0.0");
+});
+
+test("--config with no shell.qml exits 2 and touches neither clone", () => {
+    const box = sandbox();
+    const other = addSecondClone(box);
+    const defaultHead = git(["rev-parse", "HEAD"], box.cfg);
+    const otherHead = git(["rev-parse", "HEAD"], other);
+    const bad = path.join(box.dir, "not-kisaru");
+    fs.mkdirSync(bad);
+
+    const result = run(["update", "--config", bad], box);
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, new RegExp(bad.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        + " no es una instalación de Kisaru"));
+    assert.equal(git(["rev-parse", "HEAD"], box.cfg), defaultHead);
+    assert.equal(git(["rev-parse", "HEAD"], other), otherHead);
+    assert.equal(read(box.env.QS_LOG), "", "a qs command ran for a bad config");
+});
+
+// Review correction R3-DefaultUpdateDiagnostic: skipping the pre-dispatch check
+// must not change the invocation that does not use --config. With no default
+// install it keeps its message and exit 1; only --config gets the new error.
+test("without --config, a missing default keeps its old message and exit", () => {
+    const box = sandbox();
+    const empty = path.join(box.dir, "empty-config");
+    fs.mkdirSync(empty);
+    box.env.XDG_CONFIG_HOME = empty;
+
+    const result = run(["update"], box);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /no hay configuración en .*kisaru \(ejecuta su install\.sh\)/);
+    assert.equal(read(box.env.QS_LOG), "");
+});
+
+// A1: the whole point of parsing --config before the check is that it works
+// even when the default install does not exist.
+test("--config works when the default install is missing", () => {
+    const box = sandbox();
+    const other = addSecondClone(box);
+    const empty = path.join(box.dir, "empty-config");
+    fs.mkdirSync(empty);
+    box.env.XDG_CONFIG_HOME = empty;
+
+    const result = run(["update", "--config", other], box);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Listo\. Kisaru 1\.1\.0/);
+    assert.equal(manifestVersion({ cfg: other }), "1.1.0");
 });
