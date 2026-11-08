@@ -27,7 +27,10 @@ Item {
     // behaviour of following the live width.
     property real contentWidth: width
     readonly property real _targetMeasure: ReaderMetrics.columnWidth(contentWidth)
-    property real _measure: ReaderMetrics.columnWidth(contentWidth)
+    // Set only by applyMeasure(). A binding here would follow contentWidth and
+    // jump straight to the wider measure, before the panel can hold it — the
+    // gate this whole change is about (review R3-MeasureBindingBypassesGate).
+    property real _measure: 0
 
     function reset() {
         headerVisible = true

@@ -71,6 +71,17 @@ test("an unchanged measure is never reapplied", () => {
     assert.equal(metrics.shownMeasure(502, 502, 550), 502);
 });
 
+// Review R3-MeasureBindingBypassesGate: while _measure was a binding on
+// contentWidth it took the wider value the moment the mode toggled, skipping
+// shownMeasure() and clipping the chapter inside the still-narrow panel.
+test("the shown measure is not a live binding on the content width", () => {
+    const reader = read("modules/novel/components/ReaderView.qml");
+    assert.ok(!/property real _measure: ReaderMetrics\.columnWidth/.test(reader),
+        "_measure is bound to contentWidth again, bypassing the widening gate");
+    assert.match(reader, /property real _measure: 0/);
+    assert.match(reader, /_measure = next/, "applyMeasure is the only writer");
+});
+
 test("the reader reads the target width, not the animated width", () => {
     const reader = read("modules/novel/components/ReaderView.qml");
     assert.match(reader, /property real contentWidth: width/,
