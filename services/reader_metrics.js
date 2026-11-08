@@ -46,11 +46,27 @@ function shownMeasure(current, wanted, liveWidth, targetWidth) {
     return wanted <= fits ? wanted : fits;
 }
 
+// Whether a measure change is hidden behind the fade (D4).
+//
+// Only a widening between two real measures fades: narrowing keeps its instant
+// path, the first measure (previous 0) is not a visible jump, and reduced
+// motion or a caller that forbids it (a view being shown, which already fades
+// in as a whole) skips the fade. The decision is computed before any
+// assignment so the caller never writes a measure it then has to undo.
+function fadesOnMeasureChange(previous, next, reduced, allowed) {
+    if (!allowed || reduced) return false;
+    var from = Number(previous);
+    var to = Number(next);
+    if (!isFinite(from) || !isFinite(to)) return false;
+    return from > 0 && to > from;
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         MAX_MEASURE: MAX_MEASURE,
         SIDE_GUTTER: SIDE_GUTTER,
         columnWidth: columnWidth,
-        shownMeasure: shownMeasure
+        shownMeasure: shownMeasure,
+        fadesOnMeasureChange: fadesOnMeasureChange
     };
 }

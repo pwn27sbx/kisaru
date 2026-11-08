@@ -151,13 +151,80 @@ test("both readers fill their page and get the panel target width", () => {
 });
 
 // Both readers hold the same chapter; the hidden one must not reflow it too,
-// or one toggle pays for the reflow twice.
+// or one toggle pays for the reflow twice. The call passes `false` (D2): the
+// view fades in as a whole, so its measure applies instantly.
 test("a reader that is not visible waits to reflow until it is shown", () => {
     const reader = read("modules/novel/components/ReaderView.qml");
     assert.match(reader, /if \(!readerView\.visible\) return/,
         "a hidden reader still reflows the chapter");
-    assert.match(reader, /onVisibleChanged: if \(readerView\.visible\) readerView\.applyMeasure\(\)/,
-        "showing the reader does not apply the pending measure");
+    assert.match(reader, /onVisibleChanged: if \(readerView\.visible\) readerView\.applyMeasure\(false\)/,
+        "showing the reader does not apply the pending measure instantly");
+});
+
+// D1/D2/D3: a widening reflows behind one fade-out -> reflow -> fade-in, and
+// every other path keeps the instant reflow and restores opacity 1.
+test("the widen reflow hides behind fade-out, reflow and fade-in", () => {
+    const reader = read("modules/novel/components/ReaderView.qml");
+    assert.match(reader, /id: measureFade/);
+    assert.match(reader, /target: textColumn/);
+    assert.match(reader, /property: "opacity"/);
+    assert.match(reader, /to: 1/);
+    assert.match(reader, /measureFade\.restart\(\)/);
+    assert.match(reader,
+        /ReaderMetrics\.fadesOnMeasureChange\(_measure, next, MotionPrefs\.reduced, allowed\)/,
+        "applyMeasure does not ask the rule with the desktop's reduced-motion switch");
+});
+
+test("_commitMeasure takes the anchor before it writes the measure", () => {
+    const reader = read("modules/novel/components/ReaderView.qml");
+    const start = reader.indexOf("function _commitMeasure()");
+    assert.ok(start >= 0, "_commitMeasure is gone");
+    const body = reader.slice(start, reader.indexOf("\n    }", start));
+    const capture = body.indexOf("captureAnchor()");
+    const write = body.indexOf("_measure = _pendingMeasure");
+    assert.ok(capture >= 0, "the fade does not capture the anchor");
+    assert.ok(write > capture, "the measure is written before the anchor is captured");
+});
+
+test("the instant path stops the fade, restores opacity and still reflows", () => {
+    const reader = read("modules/novel/components/ReaderView.qml");
+    const start = reader.indexOf("function applyMeasure");
+    const body = reader.slice(start, reader.indexOf("\n    }", start));
+    assert.match(body, /measureFade\.stop\(\)/);
+    assert.match(body, /textColumn\.opacity = 1/);
+    assert.match(body, /_measure = next/);
+});
+
+test("textColumn carries no opacity binding and no Behaviour", () => {
+    const reader = read("modules/novel/components/ReaderView.qml");
+    const start = reader.indexOf("id: textColumn");
+    assert.ok(start >= 0, "textColumn is gone");
+    // Only the Column's own property block: its children may fade on their own.
+    const body = reader.slice(start, reader.indexOf("StyledText {", start));
+    assert.ok(!/opacity\s*:/.test(body), "textColumn has an opacity binding");
+    assert.ok(!/Behavior on opacity/.test(body), "textColumn animates opacity implicitly");
+});
+
+// Review correction R3-001: a widening that arrives after the midpoint lands
+// while `measureFade` is still in its fade-in; it only retargets
+// `_pendingMeasure`, so the finished sequence must pick it up.
+test("a widening that arrives after the fade midpoint is not dropped", () => {
+    const reader = read("modules/novel/components/ReaderView.qml");
+    assert.match(reader,
+        /onFinished: if \(readerView\._pendingMeasure !== readerView\._measure\)/,
+        "the finished fade never commits a newer pending measure");
+    assert.match(reader, /readerView\.applyMeasure\(\)/,
+        "the finished fade does not start the newer target's fade");
+});
+
+test("a widening measure change fades, nothing else does", () => {
+    assert.equal(metrics.fadesOnMeasureChange(502, 720, false, true), true);
+    assert.equal(metrics.fadesOnMeasureChange(720, 502, false, true), false, "narrowing");
+    assert.equal(metrics.fadesOnMeasureChange(720, 720, false, true), false, "equal");
+    assert.equal(metrics.fadesOnMeasureChange(0, 720, false, true), false, "first measure");
+    assert.equal(metrics.fadesOnMeasureChange(502, 720, true, true), false, "reduced motion");
+    assert.equal(metrics.fadesOnMeasureChange(502, 720, false, false), false, "not allowed");
+    assert.equal(metrics.fadesOnMeasureChange(NaN, 720, false, true), false, "no previous measure");
 });
 
 test("a width change re-anchors the reading position", () => {

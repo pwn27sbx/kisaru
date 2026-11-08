@@ -31,6 +31,8 @@ Item {
     // jump straight to the wider measure, before the panel can hold it — the
     // gate this whole change is about (review R3-MeasureBindingBypassesGate).
     property real _measure: 0
+    // The widening target the fade commits at its midpoint (D1).
+    property real _pendingMeasure: 0
 
     function reset() {
         headerVisible = true
@@ -81,22 +83,71 @@ Item {
 
     // The target measure is already known when the mode toggles, but the panel
     // is still on its way there. Narrowing applies at once; widening waits for
-    // the animation to finish, so the single reflow lands on a still frame
-    // (owner, 2026-11-08: the widen hitch). A reader that is not visible (the
-    // other tab's reader holds the same chapter) defers its reflow until it is
-    // shown, so only one of them pays for it.
-    function applyMeasure() {
+    // the animation to finish, then fades out, reflows on the hidden frame and
+    // fades back in (owner, 2026-11-08: the text seemed to jump). A reader that
+    // is not visible defers until it is shown and never fades: that view
+    // already fades in as a whole. Reduced motion keeps the instant reflow.
+    function applyMeasure(allowed) {
         if (!readerView.visible) return
         var next = ReaderMetrics.shownMeasure(_measure, _targetMeasure, width, contentWidth)
         if (next === _measure) return
-        // Capture while the paragraphs are still where the reader left them.
+        if (allowed === undefined) allowed = true
+        if (ReaderMetrics.fadesOnMeasureChange(_measure, next, MotionPrefs.reduced, allowed)) {
+            _pendingMeasure = next
+            // A second widen while the fade runs only retargets it (D1).
+            if (!measureFade.running)
+                measureFade.restart()
+            return
+        }
+        // Everything else keeps the instant path, and it must never leave a
+        // running fade half-way (D2).
+        if (measureFade.running)
+            measureFade.stop()
+        textColumn.opacity = 1
         captureAnchor()
         _measure = next
     }
 
+    // The fade's midpoint and the instant path share this exact capture-then-set
+    // order; the anchor is taken while the text is still where the reader left
+    // it, then the column reflows.
+    function _commitMeasure() {
+        captureAnchor()
+        _measure = _pendingMeasure
+    }
+
+    // Fade-out -> reflow -> fade-in for a widening (D1). textColumn has no
+    // opacity binding and no Behaviour: the animation owns the value and always
+    // ends at 1 (D3).
+    SequentialAnimation {
+        id: measureFade
+        NumberAnimation {
+            target: textColumn
+            property: "opacity"
+            to: 0
+            duration: Motion.fast
+            easing.type: Motion.easeOut
+        }
+        ScriptAction { script: readerView._commitMeasure() }
+        NumberAnimation {
+            target: textColumn
+            property: "opacity"
+            to: 1
+            duration: Motion.base
+            easing.type: Motion.easeOut
+        }
+        // A widening that arrives after the midpoint (during the fade-in) is
+        // retargeted, never restarted (D1); once the text is fully back, the
+        // newest target gets its own fade so no measure is dropped.
+        onFinished: if (readerView._pendingMeasure !== readerView._measure)
+            readerView.applyMeasure()
+    }
+
     onContentWidthChanged: readerView.applyMeasure()
     onWidthChanged: readerView.applyMeasure()
-    onVisibleChanged: if (readerView.visible) readerView.applyMeasure()
+    // Showing the reader applies the pending measure instantly: the view fades
+    // in as a whole, so a second fade there would be invisible (D2).
+    onVisibleChanged: if (readerView.visible) readerView.applyMeasure(false)
 
     readonly property bool _hasPrev: Novel.hasPrevChapter
     readonly property bool _hasNext: Novel.hasNextChapter
