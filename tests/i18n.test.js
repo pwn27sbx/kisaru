@@ -28,6 +28,11 @@ test("t() interpolates %1 style placeholders", () => {
     assert.equal(i18n.t("en", "error.request", { 1: "HTTP 500" }), "Request failed: HTTP 500");
 });
 
+test("the folder note exists in both tables", () => {
+    assert.equal(i18n.t("en", "folder.hiddenBy", { 1: "HT" }), "Hidden by folder HT");
+    assert.equal(i18n.t("es", "folder.hiddenBy", { 1: "HT" }), "Oculta por la carpeta HT");
+});
+
 test("t() falls back to English for an unknown language", () => {
     assert.equal(i18n.t("fr", "tab.browse"), "Browse");
 });

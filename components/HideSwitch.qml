@@ -12,6 +12,9 @@ ClickableRect {
 
     property bool checked: false
     property string bodyFont: Style.font.family
+    // Why the switch is on when the title's own flag is not: its folder hides
+    // it. Empty for every other use of the switch.
+    property string note: ""
 
     implicitWidth: row.implicitWidth + 2 * Style.spacing.controlPaddingX
     implicitHeight: Style.space(26)
@@ -53,6 +56,15 @@ ClickableRect {
                 x: root.checked ? parent.width - width - Style.space(2) : Style.space(2)
                 color: root.checked ? Colors.on_primary : Colors.on_surface_variant
             }
+        }
+
+        StyledText {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: root.note !== ""
+            text: root.note
+            font.family: root.bodyFont
+            font.pixelSize: Style.font.caption
+            color: Colors.card_secondary
         }
     }
 }

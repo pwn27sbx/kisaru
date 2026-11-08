@@ -20,13 +20,35 @@ var ACTION = {
     UNHIDE_STAY: "unhide-stay"
 };
 
-// state: { configured, locked, hidden }
+// state: { configured, locked, hidden, folderHidden }
 function toggle(state) {
     var s = state || {};
     if (s.configured !== true) return ACTION.IGNORE;
+    // A title its folder already hides has nothing to press: the switch is
+    // locked on. Filing it elsewhere is the folder picker's job.
+    if (s.folderHidden === true) return ACTION.IGNORE;
     if (s.locked === true)
         return s.hidden === true ? ACTION.LEAVE : ACTION.HIDE_LEAVE;
     return s.hidden === true ? ACTION.UNHIDE_STAY : ACTION.HIDE_STAY;
+}
+
+// What the switch shows.
+//
+// Owner (2026-11-08): a title filed into a hidden folder read as "not hidden",
+// because the switch only looked at the title's own flag. The folder is what
+// hides it, so the switch shows on and locked and the note names the folder.
+// A title hidden by its own flag keeps today's rule: it reads as on while the
+// word is unlocked and as off once the word locks it away.
+//
+// state: { locked, hidden, folderHidden, folderName }
+function switchView(state) {
+    var s = state || {};
+    if (s.folderHidden === true)
+        return { checked: true, noteFolder: s.folderName || "" };
+    return {
+        checked: s.locked !== true && s.hidden === true,
+        noteFolder: ""
+    };
 }
 
 // The folder list: a title that is not hidden keeps the current rule (hidden
@@ -44,6 +66,7 @@ if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         ACTION: ACTION,
         toggle: toggle,
+        switchView: switchView,
         pickerShowsHidden: pickerShowsHidden
     };
 }

@@ -42,6 +42,40 @@ test("unlocked: the switch hides and stays, or unhides and stays", () => {
         hide.ACTION.UNHIDE_STAY);
 });
 
+// Owner (2026-11-08): a title filed into a hidden folder read as "not hidden"
+// in the Detail, because the switch only looked at the title's own flag. The
+// folder is what hides it, so the switch must say so and refuse the press.
+test("the switch reads the folder's hidden flag, not only the title's", () => {
+    // Neither: off, no note.
+    assert.deepEqual(hide.switchView({ locked: false, hidden: false, folderHidden: false, folderName: "" }),
+        { checked: false, noteFolder: "" });
+    // Own flag only: on, no note.
+    assert.deepEqual(hide.switchView({ locked: false, hidden: true, folderHidden: false, folderName: "" }),
+        { checked: true, noteFolder: "" });
+    // Hidden folder only: on and locked, named.
+    assert.deepEqual(hide.switchView({ locked: false, hidden: false, folderHidden: true, folderName: "HT" }),
+        { checked: true, noteFolder: "HT" });
+    // Both: the folder still names the reason.
+    assert.deepEqual(hide.switchView({ locked: false, hidden: true, folderHidden: true, folderName: "HT" }),
+        { checked: true, noteFolder: "HT" });
+});
+
+test("locked privacy keeps today's rule for the title's own flag", () => {
+    // A title hidden by itself reads as off while the word is locked.
+    assert.equal(hide.switchView({ locked: true, hidden: true, folderHidden: false }).checked, false);
+    assert.equal(hide.switchView({ locked: true, hidden: false, folderHidden: false }).checked, false);
+    // The folder is what hides it, so the switch stays on and named.
+    assert.deepEqual(hide.switchView({ locked: true, hidden: false, folderHidden: true, folderName: "HT" }),
+        { checked: true, noteFolder: "HT" });
+});
+
+test("a title hidden by its folder ignores the press", () => {
+    assert.equal(hide.toggle({ configured: true, locked: false, hidden: false, folderHidden: true }),
+        hide.ACTION.IGNORE);
+    assert.equal(hide.toggle({ configured: true, locked: true, hidden: true, folderHidden: true }),
+        hide.ACTION.IGNORE);
+});
+
 test("the picker lists hidden folders only for an already hidden title", () => {
     // Not hidden: the current rule. Locked hides them, unlocked shows them.
     assert.equal(hide.pickerShowsHidden({ locked: true, hidden: false }), false);
@@ -90,6 +124,26 @@ test("each Detail defers the lock to the leave, and the picker reads the rule", 
         assert.ok(from > -1 && toggleAt > from, `${file}: the hide path moved`);
         const hidePath = qml.slice(from, toggleEnd);
         assert.ok(!hidePath.includes("console."), `${file}: the hide path logs`);
+    }
+});
+
+test("each Detail explains a folder-hidden title and refuses the press", () => {
+    for (const [file, kind] of [
+        ["modules/manga/components/DetailView.qml", "manga"],
+        ["modules/novel/components/DetailView.qml", "novel"],
+        ["modules/anime/components/DetailView.qml", "anime"],
+    ]) {
+        const qml = read(file);
+        assert.match(qml, /DetailHide\.switchView\(/,
+            `${file}: the switch does not read the folder rule`);
+        assert.match(qml, new RegExp(`Organizer\\.isHidden\\("${kind}", detailView\\._rawFolderValue\\)`),
+            `${file}: the raw folder's hidden flag is not read`);
+        assert.match(qml, /I18n\.t\("folder\.hiddenBy"/,
+            `${file}: the folder note is not translated`);
+        assert.match(qml, /checked: detailView\._hideView\.checked/,
+            `${file}: the switch does not show the shared state`);
+        assert.match(qml, /note: detailView\._hideNote/,
+            `${file}: the switch does not show the folder note`);
     }
 });
 

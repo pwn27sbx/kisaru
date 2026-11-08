@@ -36,6 +36,26 @@ Item {
     readonly property var _rawEntry:
         Anime.currentAnime ? Anime.getLibraryEntry(Anime.currentAnime.id) : null
 
+    // The folder that decides the hide switch is the raw entry's, never the
+    // visible one: a title inside a hidden folder has no visible entry while
+    // the word is locked, and that is exactly the case the switch explains.
+    readonly property string _rawFolderValue: detailView._rawEntry !== null
+        ? (detailView._rawEntry.folder || "") : ""
+    readonly property string _rawFolderName: {
+        if (detailView._rawFolderValue === "") return ""
+        var folder = Organizer.folder("anime", detailView._rawFolderValue)
+        return folder ? folder.name : ""
+    }
+    readonly property bool _folderHidden: Organizer.isHidden("anime", detailView._rawFolderValue)
+    readonly property var _hideView: DetailHide.switchView({
+        locked: Privacy.locked,
+        hidden: detailView._rawEntry !== null && detailView._rawEntry.hidden === true,
+        folderHidden: detailView._folderHidden,
+        folderName: detailView._rawFolderName
+    })
+    readonly property string _hideNote: detailView._hideView.noteFolder === ""
+        ? "" : I18n.t("folder.hiddenBy", { 1: detailView._hideView.noteFolder })
+
     // Hiding from the Detail keeps the Detail open (owner, 2026-11-05): the
     // title is marked hidden and stays usable so it can be filed into a hidden
     // folder right here. The lock waits for the leave, which is when the title
@@ -60,7 +80,8 @@ Item {
         var action = DetailHide.toggle({
             configured: Privacy.configured,
             locked: Privacy.locked,
-            hidden: entry.hidden === true
+            hidden: entry.hidden === true,
+            folderHidden: detailView._folderHidden
         })
         if (action === DetailHide.ACTION.IGNORE) return
         var key = Anime.currentAnime.id
@@ -278,8 +299,9 @@ Item {
 
                 HideSwitch {
                     visible: Privacy.configured && detailView._rawEntry !== null
-                    checked: !Privacy.locked && detailView._rawEntry !== null
-                        && detailView._rawEntry.hidden === true
+                    checked: detailView._hideView.checked
+                    note: detailView._hideNote
+                    interactive: detailView._hideView.noteFolder === ""
                     bodyFont: detailView.fontBody
                     onClicked: detailView._toggleHiddenTitle()
                 }
