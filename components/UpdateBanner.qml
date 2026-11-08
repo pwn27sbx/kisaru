@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import qs.app
 import qs.services
 import qs.Commons
-import qs.Ui
+import QtQuick.Controls
 
 // Slim release banner at the top of a reader (S3, A4).
 //
