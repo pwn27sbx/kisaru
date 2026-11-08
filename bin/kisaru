@@ -7,6 +7,7 @@
 #   kisaru manga     abre/cierra el lector de manga
 #   kisaru novel     abre/cierra el lector de novelas
 #   kisaru stop      ciérralo
+#   kisaru update    actualiza a la última versión
 #   kisaru log       su registro
 set -euo pipefail
 
@@ -32,6 +33,167 @@ ensure_instance() {
     return 0
 }
 
+# ── kisaru update ────────────────────────────────────────────────────────────
+# The upgrade path for a git install (README, Actualizar): fetch the release
+# tags, fast-forward main to the newest one, refresh the venv when its pins
+# changed, then restart Kisaru so the new QML is loaded.
+#
+# The running copy of this file is safe to replace: git writes the new
+# bin/kisaru by unlink + create, so this shell keeps executing the code it
+# started with (A17) and the new file is what the restarted instance uses.
+#
+# Every message goes to the terminal the launcher opened (S5/A7), and the exit
+# status says whether anything changed: 0 done or already current, non-zero on
+# every refusal or failure (A12).
+
+reopen_target() {
+    case $1 in
+        anime) echo animePlayer ;;
+        manga) echo mangaReader ;;
+        novel) echo novelReader ;;
+        *) return 1 ;;
+    esac
+}
+
+update_args_error() {
+    echo "kisaru update: $1" >&2
+    exit 2
+}
+
+# A13: the panel is validated before any git command runs.
+parse_update_args() {
+    update_reopen=""
+    while (($#)); do
+        case $1 in
+            --reopen)
+                (($# >= 2)) || update_args_error "--reopen necesita anime, manga o novel"
+                case $2 in
+                    anime | manga | novel) update_reopen=$2 ;;
+                    *) update_args_error "--reopen solo acepta anime, manga o novel" ;;
+                esac
+                shift 2
+                ;;
+            *) update_args_error "opción desconocida: $1" ;;
+        esac
+    done
+}
+
+run_update() {
+    local branch old new tag version venv was_running target i
+    venv="${XDG_DATA_HOME:-$HOME/.local/share}/kisaru/venv"
+
+    # S6.1 / A8: refuse before touching anything.
+    if ! git -C "$cfg" rev-parse --git-dir >/dev/null 2>&1; then
+        echo "kisaru update: $cfg no es un checkout git (instalación --copy);" \
+            "reinstala desde git para actualizar." >&2
+        return 1
+    fi
+    branch=$(git -C "$cfg" symbolic-ref --short HEAD 2>/dev/null || true)
+    if [[ $branch != main ]]; then
+        echo "kisaru update: estás en ${branch:-un HEAD suelto}, no en main; no toco nada." >&2
+        return 1
+    fi
+    if [[ -n $(git -C "$cfg" status --porcelain 2>/dev/null) ]]; then
+        echo "kisaru update: hay cambios locales sin guardar; no toco nada." >&2
+        return 1
+    fi
+
+    # S6.2: fetch the tags, then only a fast-forward.
+    echo ":: Buscando versiones…"
+    if ! git -C "$cfg" fetch --tags --quiet origin; then
+        echo "kisaru update: no se pudo leer origin; no toco nada." >&2
+        return 1
+    fi
+
+    # `|| true`: no matching tag makes the pipeline exit 1, and that is data
+    # for the message below, not an errexit.
+    tag=$(git -C "$cfg" tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+        | sort -V | tail -n 1 || true)
+    if [[ -z $tag ]]; then
+        echo "kisaru update: todavía no hay ninguna versión publicada (tag vX.Y.Z)." >&2
+        return 1
+    fi
+    version=${tag#v}
+    old=$(git -C "$cfg" rev-parse HEAD)
+
+    # A9: contained in HEAD means current; HEAD not contained in the tag means
+    # a real divergence, which a --ff-only merge must never paper over.
+    if git -C "$cfg" merge-base --is-ancestor "$tag" HEAD; then
+        echo "kisaru update: ya estás en la última versión (Kisaru $version)."
+        return 0
+    fi
+    if ! git -C "$cfg" merge-base --is-ancestor HEAD "$tag"; then
+        echo "kisaru update: main tiene commits que no están en $tag; no toco nada." >&2
+        return 1
+    fi
+    if ! git -C "$cfg" merge --ff-only --quiet "$tag"; then
+        echo "kisaru update: no se pudo avanzar a $tag; no toco nada más." >&2
+        return 1
+    fi
+    new=$(git -C "$cfg" rev-parse HEAD)
+
+    # S6.3 / A10: only when the pins changed. A --no-venv install has no pip:
+    # say so and carry on.
+    if [[ -n $(git -C "$cfg" diff --name-only "$old" "$new" -- requirements.txt) ]]; then
+        if [[ ! -x $venv/bin/pip ]]; then
+            echo ":: requirements.txt cambió; no hay venv en $venv, no lo preparo" \
+                "(ejecuta ./install.sh si lo quieres)."
+        else
+            echo ":: Actualizando el venv…"
+            if ! "$venv/bin/pip" install --quiet --require-hashes -r "$cfg/requirements.txt"; then
+                echo "kisaru update: falló pip; vuelvo el checkout a $old." >&2
+                git -C "$cfg" reset --keep "$old"
+                if "$venv/bin/pip" install --quiet --require-hashes -r "$cfg/requirements.txt"; then
+                    echo "kisaru update: el venv quedó como estaba; la actualización no se aplicó." >&2
+                else
+                    echo "kisaru update: tampoco se pudo dejar el venv anterior; revisa $venv." >&2
+                fi
+                return 1
+            fi
+        fi
+    fi
+
+    # S6.4 / A11: restart only what was running (or what --reopen asks for).
+    was_running=0
+    if qs -p "$cfg" ipc show >/dev/null 2>&1; then
+        was_running=1
+        qs -p "$cfg" kill >/dev/null 2>&1 || true
+        for i in {1..50}; do
+            qs -p "$cfg" ipc show >/dev/null 2>&1 || break
+            sleep 0.1
+        done
+    fi
+
+    if ((was_running)) || [[ -n $update_reopen ]]; then
+        # Detached from this terminal (which is about to close) through the
+        # same session launcher the desktop uses.
+        setsid -f uwsm-app -- qs -p "$cfg" --no-duplicate >/dev/null 2>&1 || true
+    fi
+
+    if [[ -n $update_reopen ]]; then
+        ensure_instance
+        target=$(reopen_target "$update_reopen")
+        qs -p "$cfg" ipc call "$target" toggle >/dev/null 2>&1 \
+            || echo "kisaru update: no se pudo reabrir el panel $update_reopen." >&2
+    fi
+
+    # The bar widget is loaded by Omarchy's shell, not by Kisaru: a change
+    # under omarchy/ only takes effect after its shell reloads.
+    if [[ -n $(git -C "$cfg" diff --name-only "$old" "$new" -- omarchy/) ]]; then
+        echo ":: Cambió omarchy/: ejecuta 'omarchy restart shell' para recargar el widget de la barra."
+    fi
+
+    echo "Done. Kisaru $version"
+    return 0
+}
+
+if [[ ${1-} == update ]]; then
+    shift
+    parse_update_args "$@"
+    run_update
+    exit $?
+fi
+
 case ${1-start} in
     start) exec qs -p "$cfg" --no-duplicate ;;
     anime) ensure_instance; exec qs -p "$cfg" ipc call animePlayer toggle ;;
@@ -40,6 +202,6 @@ case ${1-start} in
     stop)  exec qs -p "$cfg" kill ;;
     log)   exec qs -p "$cfg" log ;;
     privado) exec python3 "$cfg/scripts/privado.py" ;;
-    -h|--help|help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//' ;;
-    *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 1 ;;
+    -h|--help|help) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 1 ;;
 esac

@@ -37,7 +37,7 @@ const ENGLISH_LEFTOVER = /\b(skip|download|copy the folder|don't ask|start it|qu
 test("the command --help prints and keeps the command tokens", () => {
     const result = run(BIN, ["--help"]);
     assert.equal(result.status, 0, result.stderr);
-    for (const token of ["anime", "manga", "novel", "stop", "log"])
+    for (const token of ["anime", "manga", "novel", "stop", "log", "update"])
         assert.match(result.stdout, new RegExp("\\b" + token + "\\b"), "missing token " + token);
     assert.match(result.stdout, /kisaru/);
 });
