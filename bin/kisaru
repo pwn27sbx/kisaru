@@ -79,7 +79,7 @@ parse_update_args() {
 }
 
 run_update() {
-    local branch old new tag version venv was_running target i
+    local branch old new tag version venv was_running stopped started target i
     venv="${XDG_DATA_HOME:-$HOME/.local/share}/kisaru/venv"
 
     # S6.1 / A8: refuse before touching anything.
@@ -154,20 +154,38 @@ run_update() {
     fi
 
     # S6.4 / A11: restart only what was running (or what --reopen asks for).
+    # The exit status must tell the truth (A12): a stopped instance that never
+    # comes back is a failure, not a "Done". `setsid -f` reports success
+    # before the child starts, so both directions are confirmed by polling
+    # the IPC target instead of trusting the launcher.
     was_running=0
     if qs -p "$cfg" ipc show >/dev/null 2>&1; then
         was_running=1
         qs -p "$cfg" kill >/dev/null 2>&1 || true
+        stopped=0
         for i in {1..50}; do
-            qs -p "$cfg" ipc show >/dev/null 2>&1 || break
+            if ! qs -p "$cfg" ipc show >/dev/null 2>&1; then stopped=1; break; fi
             sleep 0.1
         done
+        if ((stopped == 0)); then
+            echo "kisaru update: la instancia anterior no se detuvo; reiníciala a mano." >&2
+            return 1
+        fi
     fi
 
     if ((was_running)) || [[ -n $update_reopen ]]; then
         # Detached from this terminal (which is about to close) through the
         # same session launcher the desktop uses.
         setsid -f uwsm-app -- qs -p "$cfg" --no-duplicate >/dev/null 2>&1 || true
+        started=0
+        for i in {1..50}; do
+            if qs -p "$cfg" ipc show >/dev/null 2>&1; then started=1; break; fi
+            sleep 0.1
+        done
+        if ((started == 0)); then
+            echo "kisaru update: Kisaru no volvió a arrancar; ábrelo con 'kisaru' y revisa 'kisaru log'." >&2
+            return 1
+        fi
     fi
 
     if [[ -n $update_reopen ]]; then

@@ -95,10 +95,10 @@ function sandbox(options) {
         `printf '%s\\n' "$*" >> "\${QS_LOG:-/dev/null}"\n` +
         `if [[ $* == *"ipc show"* ]]; then [[ -e \${QS_RUNNING:-/nonexistent} ]] && exit 0 || exit 1; fi\n` +
         `if [[ $* == *"ipc call"* ]]; then exit 0; fi\n` +
-        `if [[ $* == *" kill" ]]; then rm -f "\${QS_RUNNING:-/nonexistent}"; exit 0; fi\n` +
-        'if [[ $* == *--no-duplicate* ]]; then : > "${QS_RUNNING:-/dev/null}"; exit 0; fi\n' +
+        `if [[ $* == *" kill" ]]; then [[ \${QS_KILL_FAIL:-0} == 1 ]] && exit 0; rm -f "\${QS_RUNNING:-/nonexistent}"; exit 0; fi\n` +
+        'if [[ $* == *--no-duplicate* ]]; then [[ ${QS_START_FAIL:-0} == 1 ]] && exit 1; : > "${QS_RUNNING:-/dev/null}"; exit 0; fi\n' +
         "exit 0\n");
-    stub(path.join(binDir, "setsid"), 'exec "$@"\n');
+    stub(path.join(binDir, "setsid"), 'while [[ ${1-} == -* ]]; do shift; done\nexec "$@"\n');
     stub(path.join(binDir, "uwsm-app"), '[[ ${1-} == -- ]] && shift\nexec "$@"\n');
 
     const log = (name) => path.join(dir, name + ".log");
@@ -274,4 +274,27 @@ test("nothing is started when Kisaru was not running and no panel is asked for",
     const qs = read(box.env.QS_LOG);
     assert.doesNotMatch(qs, /--no-duplicate/);
     assert.doesNotMatch(qs, / kill/);
+});
+
+// The restart must report the truth (A12): if the launcher loses the app, a
+// "Done" would leave the user with no Kisaru and no clue. Both directions are
+// polled, so both are pinned here.
+test("a relaunch that never comes back is an error, not a Done", () => {
+    const box = sandbox();
+    fs.writeFileSync(box.env.QS_RUNNING, "");
+
+    const result = run(["update"], box, { QS_START_FAIL: "1" });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /no volvió a arrancar/);
+    assert.doesNotMatch(result.stdout, /Done\. Kisaru/);
+});
+
+test("an instance that refuses to stop is an error, not a restart", () => {
+    const box = sandbox();
+    fs.writeFileSync(box.env.QS_RUNNING, "");
+
+    const result = run(["update"], box, { QS_KILL_FAIL: "1" });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /no se detuvo/);
+    assert.doesNotMatch(result.stdout, /Done\. Kisaru/);
 });
