@@ -175,6 +175,12 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
+        // ── Update banner (S3): only visible when a release exists. ─────────
+        UpdateBanner {
+            Layout.fillWidth: true
+            panel: "manga"
+        }
+
         // ── Header (brand · tabs · settings · minimize) ───────────────────────
         // The search field moved out of the header: it is always visible below
         // it now, so the header's own expanding search would only duplicate it.

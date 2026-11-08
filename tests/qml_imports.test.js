@@ -25,6 +25,7 @@ const OWNERS = {
     I18n: "import qs.services",
     Organizer: "import qs.services",
     Privacy: "import qs.services",
+    Updater: "import qs.services",
     Colors: "import qs.app",
     Style: "import qs.Commons",
 };

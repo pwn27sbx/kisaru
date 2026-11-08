@@ -130,6 +130,12 @@ Item {
         anchors.fill: parent
         spacing: Style.space(0)
 
+        // ── Update banner (S3): only visible when a release exists. ─────────
+        UpdateBanner {
+            Layout.fillWidth: true
+            panel: "novel"
+        }
+
         // ── Header (brand · tabs · provider · settings · minimize) ────────────
         PanelHeader {
             id: header

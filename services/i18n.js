@@ -45,6 +45,13 @@ var tables = {
         "state.loadingMore": "cargando más…",
         "state.notStarted": "Sin empezar",
         "action.cancel": "Cancelar",
+        // ── Update banner (S3, A4) ──────────────────────────────────────
+        "update.available": "Nueva versión %1 disponible",
+        "update.action": "Actualizar",
+        "update.later": "Después",
+        "update.reinstall": "Esta instalación es una copia: reinstala desde git para actualizar.",
+        "update.notMain": "No estás en main: vuelve a main para actualizar.",
+        "update.dirty": "Hay cambios locales: guárdalos o descártalos para actualizar.",
         // ── Folders and private mode ────────────────────────────────────
         "folder.all": "Todas",
         "folder.none": "Sin carpeta",
@@ -163,6 +170,13 @@ var tables = {
         "state.loadingMore": "more is on its way",
         "state.notStarted": "Not started",
         "action.cancel": "Cancel",
+        // ── Update banner (S3, A4) ──────────────────────────────────────
+        "update.available": "New version %1 available",
+        "update.action": "Update",
+        "update.later": "Later",
+        "update.reinstall": "This is a copy install: reinstall from git to update.",
+        "update.notMain": "Not on main: switch back to main to update.",
+        "update.dirty": "Local changes: commit or discard them to update.",
         // ── Folders and private mode ────────────────────────────────────
         "folder.all": "All",
         "folder.none": "No folder",

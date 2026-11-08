@@ -137,7 +137,10 @@ ShellRoot {
                     bottom: parent.bottom
                 }
                 sourceComponent: MangaReader {}
-                onOpened: root.closeOthers(mangaSlot)
+                onOpened: {
+                    root.closeOthers(mangaSlot)
+                    Updater.check()
+                }
                 opacity: Panels.opacityForSlot(mangaSlot)
                 Behavior on opacity { NumberAnimation { duration: Motion.fast } }
             }
@@ -150,7 +153,10 @@ ShellRoot {
                     bottom: parent.bottom
                 }
                 sourceComponent: NovelReader {}
-                onOpened: root.closeOthers(novelSlot)
+                onOpened: {
+                    root.closeOthers(novelSlot)
+                    Updater.check()
+                }
                 opacity: Panels.opacityForSlot(novelSlot)
                 Behavior on opacity { NumberAnimation { duration: Motion.fast } }
             }
@@ -163,7 +169,10 @@ ShellRoot {
                     bottom: parent.bottom
                 }
                 sourceComponent: AnimePanel {}
-                onOpened: root.closeOthers(animeSlot)
+                onOpened: {
+                    root.closeOthers(animeSlot)
+                    Updater.check()
+                }
                 opacity: Panels.opacityForSlot(animeSlot)
                 Behavior on opacity { NumberAnimation { duration: Motion.fast } }
             }
