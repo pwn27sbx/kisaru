@@ -6,6 +6,7 @@ import qs.Commons
 import qs.services
 import qs.components
 import "../../../components/wheel_scroll.js" as WheelScroll
+import "../../../components/reader_scroll.js" as ReaderScroll
 import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
@@ -29,9 +30,15 @@ Item {
     }
 
     // A new chapter starts at page 1, whatever the previous one left behind.
+    // It learns its own placeholder ratio (the last one stays as the first
+    // guess) and its pages get a fresh automatic retry.
     Connections {
         target: Manga
-        function onChapterPagesChanged() { readerView._lastPage = 0 }
+        function onChapterPagesChanged() {
+            readerView._lastPage = 0
+            readerView._ratioLearned = false
+            readerView._attempts = ({})
+        }
     }
 
     // Tapping hides the header (tap again to bring it back). Leaving the reader
@@ -184,19 +191,33 @@ Item {
     // Placeholder height ratio (height / width). The old fixed 1.42 was eight
     // times smaller than a real long-strip page (852 vs 6667 px), so every
     // page grew hugely when it loaded and the list's height estimate kept
-    // collapsing. The first loaded page teaches the real value.
+    // collapsing. The first loaded page of a chapter teaches the real value,
+    // ONCE: learning on every load resized every placeholder each time, and
+    // the list's contentHeight and originY swung by tens of thousands of
+    // pixels under the reader.
     property real _ratio: 1.42
+    property bool _ratioLearned: false
     function _learnRatio(value) {
-        if (value > 0.1 && value < 50)
+        if (ReaderScroll.shouldLearnRatio(readerView._ratioLearned, value)) {
             readerView._ratio = value
+            readerView._ratioLearned = true
+        }
     }
-    readonly property int visiblePage: {
-        const index = pageListView.indexAt(pageListView.width / 2, pageListView.contentY + 1)
-        // Clamped to the current chapter: the remembered page survives a
-        // chapter change, and a shorter chapter would otherwise report an
-        // out-of-range number and look like it is already at the end.
-        return index < 0 ? Math.max(0, Math.min(readerView._lastPage, pageListView.count - 1)) : index
+
+    // Retries per page index of this chapter. It lives here, not in the
+    // delegate, because delegates outside cacheBuffer are destroyed and would
+    // forget that a page already had its one automatic retry.
+    property var _attempts: ({})
+    function _retryPage(index) {
+        readerView._attempts = ReaderScroll.bumpAttempt(readerView._attempts, index)
     }
+
+    // Clamped to the current chapter: the remembered page survives a chapter
+    // change, and a shorter chapter would otherwise report an out-of-range
+    // number and look like it is already at the end.
+    readonly property int visiblePage: ReaderScroll.pageAt(
+        pageListView.indexAt(pageListView.width / 2, pageListView.contentY + 1),
+        readerView._lastPage, pageListView.count)
     onVisiblePageChanged: if (visiblePage !== _lastPage) _lastPage = visiblePage
 
     ListView {
@@ -211,10 +232,12 @@ Item {
         boundsBehavior: Flickable.StopAtBounds
         model: Manga.chapterPages
         // Pages load asynchronously and their real height differs from the
-        // placeholder ratio, so a page created above the viewport can change
-        // height after you scrolled past it — everything then shifts under the
-        // eye ("the scroll jumps back to something I already read"). A bigger
-        // cache preloads them, and the delegate compensates the shift.
+        // placeholder ratio, so a page above the viewport can change height
+        // after you scrolled past it. Qt already keeps the view still: it
+        // moves the pages above and changes originY, and contentY stays put.
+        // Do NOT shift contentY by hand on a height change; that moved the
+        // view twice and could leave it below every laid-out page. The bigger
+        // cache only preloads pages so fewer of them resize near the eye.
         cacheBuffer: Math.max(0, height * 2)
         spacing: Style.spacing.xs
         Behavior on anchors.topMargin { NumberAnimation { duration: Motion.slow; easing.type: Motion.easeOut } }
@@ -225,34 +248,19 @@ Item {
         WheelHandler {
             blocking: true
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+            // The range is [originY, originY + contentHeight - height], and
+            // a wheel at the estimated end with pages left steps by page:
+            // components/reader_scroll.js explains both.
             onWheel: function(event) {
-                const limit = Math.max(0, pageListView.contentHeight - pageListView.height)
-                // Still laying out (contentHeight not known yet). Swallowing the
-                // event made the reader look frozen; move without the upper
-                // clamp instead and let the list re-measure.
-                if (limit <= 0) {
-                    if (pageListView.count > 0) {
+                const plan = ReaderScroll.wheelPlan(WheelScroll, pageListView,
+                    event.angleDelta.y, event.pixelDelta.y, UiPrefs.scrollFactor, readerView.visiblePage)
+                if (plan.kind === "page") {
+                    pageListView.positionViewAtIndex(plan.index, ListView.Beginning)
+                } else if (plan.kind === "move") {
+                    if (plan.settling)
                         console.warn("[reader] no scrollable height yet (count=" + pageListView.count
                             + " contentH=" + pageListView.contentHeight + " h=" + pageListView.height + ")")
-                        pageListView.contentY = Math.max(0, pageListView.contentY
-                            - WheelScroll.stepOf(event.angleDelta.y, event.pixelDelta.y) * UiPrefs.scrollFactor)
-                    }
-                    event.accepted = true
-                    return
-                }
-                const target = WheelScroll.nextContentY(
-                    pageListView.contentY, event.angleDelta.y, event.pixelDelta.y,
-                    UiPrefs.scrollFactor, limit)
-                // The list's contentHeight is an ESTIMATE while pages are
-                // recycled, and it can fall well short of the real end: the
-                // pixel clamp then parks the reader on a fake bottom. When that
-                // happens and pages remain, move by page instead — this uses
-                // the laid-out items, not the estimate.
-                if (target >= limit && WheelScroll.stepOf(event.angleDelta.y, event.pixelDelta.y) < 0
-                        && readerView.visiblePage < pageListView.count - 1) {
-                    pageListView.positionViewAtIndex(readerView.visiblePage + 1, ListView.Beginning)
-                } else {
-                    pageListView.contentY = target
+                    pageListView.contentY = plan.y
                 }
                 event.accepted = true
             }
@@ -269,35 +277,38 @@ Item {
         }
 
         delegate: Item {
+            id: pageItem
+            readonly property int attempt: ReaderScroll.attemptOf(readerView._attempts, index)
+            readonly property bool failed: pageImg.status === Image.Error
+            // A click on an offline file keeps the same source: blank it for
+            // one turn so the Image loads it again.
+            property bool _reloading: false
             width: pageListView.width
             height: pageImg.status === Image.Ready && pageImg.implicitWidth > 0
                 ? pageImg.implicitHeight * (Math.max(1, pageListView.width) / pageImg.implicitWidth)
                 : Math.max(1, pageListView.width) * readerView._ratio
 
-            // While this page sits entirely above the viewport, its height
-            // change must move the content back by the same amount, or the
-            // reading position drifts.
-            property real _lastHeight: 0
-            onHeightChanged: {
-                // Judge with the height BEFORE the change: a page that was
-                // fully above the viewport and grew past it would fail a check
-                // against the new height and skip the compensation.
-                if (_lastHeight > 0 && y + _lastHeight <= pageListView.contentY) {
-                    const limit = pageListView.contentHeight - pageListView.height
-                    let next = pageListView.contentY + (height - _lastHeight)
-                    // Only clamp the top here: while the list's estimate is
-                    // short, a zero limit would otherwise jump to the start.
-                    if (limit > 0)
-                        next = Math.min(next, limit)
-                    pageListView.contentY = Math.max(0, next)
+            function retry() {
+                const before = pageImg.source.toString()
+                readerView._retryPage(index)
+                if (ReaderScroll.pageSource(modelData.url || "", pageItem.attempt) === before) {
+                    pageItem._reloading = true
+                    Qt.callLater(function() { pageItem._reloading = false })
                 }
-                _lastHeight = height
+            }
+
+            // A failed page tries once more by itself (a slow or flaky CDN
+            // often answers the second time); after that it waits for a click.
+            Timer {
+                id: autoRetry
+                interval: ReaderScroll.AUTO_RETRY_DELAY_MS
+                onTriggered: readerView._retryPage(index)
             }
 
             Image {
                 id: pageImg
                 anchors.fill: parent
-                source: modelData.url || ""
+                source: pageItem._reloading ? "" : ReaderScroll.pageSource(modelData.url || "", pageItem.attempt)
                 // A page is often 1080x3000; decoding it at full size costs
                 // ~12 MB each and several per screen with the preload, which
                 // is what made fast scrolling stutter. Scaling during decode
@@ -307,8 +318,12 @@ Item {
                 asynchronous: true
                 cache: true
                 opacity: status === Image.Ready ? 1 : 0
-                onStatusChanged: if (status === Image.Ready && implicitWidth > 0)
-                    readerView._learnRatio(implicitHeight / implicitWidth)
+                onStatusChanged: {
+                    if (status === Image.Ready && implicitWidth > 0)
+                        readerView._learnRatio(implicitHeight / implicitWidth)
+                    else if (status === Image.Error && ReaderScroll.canAutoRetry(modelData.url || "", pageItem.attempt))
+                        autoRetry.restart()
+                }
                 Behavior on opacity { NumberAnimation { duration: Motion.slow } }
 
             }
@@ -327,7 +342,7 @@ Item {
 
                     Spinner {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        visible: pageImg.status !== Image.Error
+                        visible: !pageItem.failed || autoRetry.running
                         width: 22
                         border.width: 2
                         border.color: Util.alpha(Colors.text, 0.08)
@@ -336,7 +351,7 @@ Item {
                     }
                     StyledText {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        visible: pageImg.status === Image.Error
+                        visible: pageItem.failed && !autoRetry.running
                         text: "⊘"
                         font.pixelSize: 22 // style-ignore — bespoke size
                         color: Util.alpha(Colors.text, 0.3)
@@ -344,7 +359,9 @@ Item {
                     StyledText {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: I18n.t("page", { 1: modelData.index + 1 })
-                            + (pageImg.status === Image.Error ? "  ·  " + I18n.t("manga.pageFailed") : "")
+                            + (pageItem.failed && !autoRetry.running
+                                ? "  ·  " + I18n.t("manga.pageFailed") + "  ·  " + I18n.t("manga.pageRetry")
+                                : "")
                         color: Util.alpha(Colors.text, 0.3)
                         font.pixelSize: Style.font.caption
                         font.family: readerView.fontBody
@@ -364,6 +381,18 @@ Item {
                             color: Colors.primary
                             Behavior on width { NumberAnimation { duration: Motion.base } }
                         }
+                    }
+                }
+
+                // «failed to load · click to retry». Accept the click so the
+                // header toggle under the list does not fire too.
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: pageItem.failed && !autoRetry.running
+                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: function(mouse) {
+                        mouse.accepted = true
+                        pageItem.retry()
                     }
                 }
             }
