@@ -106,7 +106,12 @@ ShellRoot {
                         console.log("UP-MOVE t=" + readerView.ts() + " by=" + readerView.tag
                             + " dy=" + Math.round(dy) + " " + readerView.st())
                     }
-                    if (readerView.driving && indexAt(width / 2, contentY + 1) < 0) {
+                    // A blank frame has no page anywhere at the top of the view.
+                    // The top can also sit in the `spacing` gap between two laid-out
+                    // pages, where indexAt answers -1 too; look one gap further down
+                    // before calling it blank.
+                    if (readerView.driving && indexAt(width / 2, contentY + 1) < 0
+                            && indexAt(width / 2, contentY + spacing + 2) < 0) {
                         readerView.blanks++
                         console.log("BLANK t=" + readerView.ts() + " " + readerView.st())
                     }
