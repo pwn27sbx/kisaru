@@ -80,6 +80,15 @@ class PathRule(unittest.TestCase):
         self.assertEqual(app_meta.data_home(env), "/d")
         self.assertEqual(app_meta.config_home(env), "/g")
 
+    def test_state_home_follows_xdg_and_falls_back_to_local_state(self):
+        # The image failure log lives here: state, not cache (it must survive a
+        # cache wipe) and not data (it is not the user's library).
+        self.assertEqual(app_meta.state_home({"XDG_STATE_HOME": "/s"}), "/s")
+        self.assertEqual(app_meta.state_home({}),
+                         os.path.join(os.path.expanduser("~"), ".local", "state"))
+        self.assertEqual(app_meta.state_home({"XDG_STATE_HOME": ""}),
+                         os.path.join(os.path.expanduser("~"), ".local", "state"))
+
 
 class CanarySecrets(unittest.TestCase):
     def test_the_secrets_file_prefers_the_new_folder_and_sits_outside_the_repo(self):

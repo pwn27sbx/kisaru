@@ -33,6 +33,7 @@ from concurrent.futures import ThreadPoolExecutor
 # Install: pip install curl_cffi --user
 try:
     from curl_cffi.requests import Session as CffiSession
+    from curl_cffi.const import CurlOpt
     _USE_CFFI = True
     print("[manga-server] Using curl_cffi (Firefox impersonation)")
 except ImportError:
@@ -324,10 +325,105 @@ def _plain_get(url, headers, timeout, follow=True):
                                     allow_redirects=follow)
 
 
-def _raw_get(url, timeout=30):
-    """Return raw bytes + content-type for image proxy."""
+# ── Image transfers: cut silence, not slowness ────────────────────────────
+# curl_cffi's `timeout` bounds the WHOLE transfer, so a page that was still
+# trickling in was cut at 30 s and the retry started from zero (2026-11-17: one
+# ZonaTMO page took 27 s in a single attempt). Page images and chapter
+# downloads use their own session instead: LOW_SPEED_LIMIT 1 byte/s for
+# LOW_SPEED_TIME seconds cuts only a transfer that went silent, before or after
+# the headers. curl_cffi 0.17 has no per-request curl options, but a Session's
+# `curl_options` are applied last on every request; the call's `(10, 110)`
+# timeout tuple (no stream) sets a 10 s connect limit and a 120 s total that
+# stays only as a backstop. Scraper sessions keep their own timeouts.
+IMAGE_CONNECT_SECONDS = 10
+IMAGE_STALL_SECONDS = 15
+IMAGE_TOTAL_SECONDS = 120
+
+_tls_image = threading.local()
+
+
+def _image_session():
+    sess = getattr(_tls_image, "session", None)
+    if sess is None:
+        if _USE_CFFI:
+            sess = CffiSession(impersonate="firefox", curl_options={
+                CurlOpt.LOW_SPEED_LIMIT: 1,
+                CurlOpt.LOW_SPEED_TIME: IMAGE_STALL_SECONDS,
+            })
+        else:
+            sess = _requests_mod.Session()
+            sess.headers.update(HEADERS)
+        _tls_image.session = sess
+    return sess
+
+
+def _image_timeout():
+    """curl_cffi: connect limit + total backstop. requests: its read timeout is
+    already per read, so the stall time is the read timeout."""
+    if _USE_CFFI:
+        return (IMAGE_CONNECT_SECONDS, IMAGE_TOTAL_SECONDS - IMAGE_CONNECT_SECONDS)
+    return (IMAGE_CONNECT_SECONDS, IMAGE_STALL_SECONDS)
+
+
+def _stall_timeout():
+    """The MangaDex path always uses requests: connect limit, then stall time."""
+    return (IMAGE_CONNECT_SECONDS, IMAGE_STALL_SECONDS)
+
+
+def _count_attempt():
+    _tls_image.attempts = getattr(_tls_image, "attempts", 0) + 1
+
+
+def _retry_once(session, drop, url, headers, timeout, follow):
+    """The retry rule of `_get`: one more request after a stall or a reset,
+    never after an error status. Every request is counted for the failure log."""
+    try:
+        _count_attempt()
+        return session().get(url, headers=headers, timeout=timeout,
+                             allow_redirects=follow)
+    except Exception as e:
+        if _upstream_answered(e):
+            raise
+        drop()
+        _count_attempt()
+        return session().get(url, headers=headers, timeout=timeout,
+                             allow_redirects=follow)
+
+
+def _drop_image_session():
+    _tls_image.session = None
+
+
+def _drop_plain_session():
+    _tls_plain.session = None
+
+
+def _image_get(url, headers, follow=True):
+    """GET one image on the image session, with the stall rule."""
+    return _retry_once(lambda: _image_session(), _drop_image_session,
+                       url, headers, _image_timeout(), follow)
+
+
+def _image_plain_get(url, headers, follow=True):
+    """The MangaDex image path: the honest requests session, per-read stall."""
+    return _retry_once(lambda: _plain_session(), _drop_plain_session,
+                       url, headers, _stall_timeout(), follow)
+
+
+def _raw_get(url, timeout=None):
+    """Return raw bytes + content-type for image proxy.
+
+    Without `timeout` (chapter download pages) the stall rule applies. A cover
+    passes its own `timeout` and keeps the whole-transfer cap on the scraper
+    session: it is small, and the panel would rather show a placeholder.
+    """
     if uses_mangadex_image_policy(url):
-        r = _plain_get(url, mangadex_image_headers(url), timeout)
+        if timeout is None:
+            r = _image_plain_get(url, mangadex_image_headers(url))
+        else:
+            r = _plain_get(url, mangadex_image_headers(url), timeout)
+    elif timeout is None:
+        r = _image_get(url, image_headers(url))
     else:
         r = _get(url, image_headers(url), timeout)
     r.raise_for_status()
@@ -1104,6 +1200,61 @@ def img_mark_host_down(host, now=None):
         _img_host_down[host] = now + IMG_HOST_TTL
 
 
+# ── Image failure log ─────────────────────────────────────────────────────
+# The backend's stdout is not captured, so a page that failed left no trace of
+# what the upstream answered. Every /image failure appends one line to
+# $XDG_STATE_HOME/kisaru/image-failures.log, keeping the last 200. A line holds
+# only the time, the image host, the failure path, the exception class with its
+# curl code or the HTTP status, the attempts and the elapsed time: never a URL,
+# a title, a chapter or a page, and never an exception's message (it carries
+# the URL). Writing it never raises.
+IMAGE_FAILURE_LOG_LINES = 200
+_failure_log_lock = threading.Lock()
+
+
+def image_failure_log_path():
+    return os.path.join(app_meta.state_home(), "kisaru", "image-failures.log")
+
+
+def _log_token(value, limit=100):
+    return re.sub(r"[^A-Za-z0-9._\-]", "", str(value))[:limit]
+
+
+def log_image_failure(host, path, error=None, status=None, attempts=0, elapsed=0.0):
+    try:
+        parts = [datetime.now().astimezone().isoformat(timespec="seconds"),
+                 "host=" + (_log_token(host) or "-"),
+                 "path=" + _log_token(path, 30)]
+        if error is not None:
+            parts.append("error=" + _log_token(type(error).__name__, 60))
+            code = getattr(error, "code", None)
+            if isinstance(code, int) and code:
+                parts.append("curl=%d" % code)
+            if status is None:
+                response = getattr(error, "response", None)
+                status = getattr(response, "status_code", None) if response is not None else None
+        if isinstance(status, int) and status:
+            parts.append("status=%d" % status)
+        parts.append("attempts=%d" % int(attempts))
+        parts.append("elapsed=%.2fs" % float(elapsed))
+        line = " ".join(parts)
+        target = image_failure_log_path()
+        with _failure_log_lock:
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            try:
+                with open(target, encoding="utf-8", errors="replace") as fh:
+                    lines = fh.read().splitlines()
+            except FileNotFoundError:
+                lines = []
+            lines = (lines + [line])[-IMAGE_FAILURE_LOG_LINES:]
+            tmp = target + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as fh:
+                fh.write("\n".join(lines) + "\n")
+            os.replace(tmp, target)
+    except Exception:  # noqa: BLE001 — the log must never break a response
+        pass
+
+
 def _img_put(url, body, ctype):
     _img_cache_store(url, (body, ctype))
     img_disk_put(url, body)
@@ -1231,7 +1382,7 @@ class ProxyBlocked(Exception):
     """The proxy refused a URL that is not a public image address."""
 
 
-def _proxy_fetch(url, timeout=30):
+def _proxy_fetch(url):
     """Fetch one image for /image, following only public redirects.
 
     A public URL can redirect to 127.0.0.1, so redirects are disabled here and
@@ -1246,9 +1397,9 @@ def _proxy_fetch(url, timeout=30):
                   % host, flush=True)
             raise ProxyBlocked(url)
         if uses_mangadex_image_policy(url):
-            r = _plain_get(url, mangadex_image_headers(url), timeout, follow=False)
+            r = _image_plain_get(url, mangadex_image_headers(url), follow=False)
         else:
-            r = _get(url, image_headers(url), timeout, follow=False)
+            r = _image_get(url, image_headers(url), follow=False)
         if r.status_code in (301, 302, 303, 307, 308):
             location = r.headers.get("Location")
             if not location:
@@ -1269,18 +1420,29 @@ def proxy_image(handler, img_url, chapter=None, page=None):
     if cached:
         _send_image(handler, *cached)
         return
-    if img_blocked(img_url):
-        handler.send_error(502)
-        return
     host = urlparse(img_url).hostname or ""
-    if img_host_down(host):
+    if img_blocked(img_url):
+        log_image_failure(host, "img_blocked-502")
         handler.send_error(502)
         return
+    if img_host_down(host):
+        log_image_failure(host, "host_down-502")
+        handler.send_error(502)
+        return
+
+    _tls_image.attempts = 0
+    started = time.monotonic()
+
+    def failed(path, error=None, status=None):
+        log_image_failure(host, path, error=error, status=status,
+                          attempts=getattr(_tls_image, "attempts", 0),
+                          elapsed=time.monotonic() - started)
 
     try:
         with _img_sem:
             body, ctype = _proxy_fetch(img_url)
-    except ProxyBlocked:
+    except ProxyBlocked as e:
+        failed("blocked-403", error=e)
         handler.send_error(403, "blocked image address")
         return
     except Exception as e:  # noqa: BLE001 — upstream 4xx/5xx or connection error
@@ -1295,8 +1457,9 @@ def proxy_image(handler, img_url, chapter=None, page=None):
                     _img_put(img_url, body, ctype)
                     _send_image(handler, body, ctype)
                     return
-                except Exception:  # noqa: BLE001 — fall through to the error
-                    pass
+                except Exception as retry_error:  # noqa: BLE001 — fall through to the error
+                    e = retry_error
+        failed("exception", error=e)
         handler.send_error(upstream if upstream and 400 <= upstream < 500 else 502)
         return
 
@@ -1305,6 +1468,7 @@ def proxy_image(handler, img_url, chapter=None, page=None):
         # shows its placeholder, which is the honest thing to show.
         print("[manga-server] upstream returned %s, not an image: %s"
               % (ctype or "no type", img_url[:90]), flush=True)
+        failed("not-an-image")
         img_mark_failed(img_url)
         # An HTML body where an image should be is a browser check, not a
         # one-off: give the host a rest instead of asking 31 more times.

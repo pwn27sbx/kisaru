@@ -332,9 +332,11 @@ class MangaDexFetchPolicyTest(unittest.TestCase):
 
     def setUp(self):
         self.orig_plain, self.orig_session = manga_server._plain_session, manga_server._session
+        self.orig_image_session = manga_server._image_session
 
     def tearDown(self):
         manga_server._plain_session, manga_server._session = self.orig_plain, self.orig_session
+        manga_server._image_session = self.orig_image_session
 
     def _forbid_plain(self):
         def never():
@@ -345,6 +347,8 @@ class MangaDexFetchPolicyTest(unittest.TestCase):
         def never():
             raise AssertionError("the impersonating session must not be used here")
         manga_server._session = never
+        # Page images and downloads impersonate through their own session.
+        manga_server._image_session = never
 
     def test_a_mangadex_cover_is_fetched_with_the_honest_user_agent(self):
         plain = FakeSession()
@@ -370,7 +374,8 @@ class MangaDexFetchPolicyTest(unittest.TestCase):
 
     def test_every_other_host_keeps_the_impersonating_session(self):
         imp = FakeSession()
-        manga_server._session = lambda: imp
+        # Downloads go through the image session (stall cut, not a 30 s cap).
+        manga_server._image_session = lambda: imp
         self._forbid_plain()
         manga_server._raw_get("https://img1mw.xyz/manhwas/x/001.jpg")
         sent = imp.calls[0]
@@ -504,9 +509,9 @@ class ImageHostAllowlistTest(unittest.TestCase):
             def raise_for_status(self):
                 pass
 
-        original_get = manga_server._get
+        original_get = manga_server._image_get
         original_policy = manga_server.proxy_target_allowed
-        manga_server._get = lambda *a, **k: Redirect()
+        manga_server._image_get = lambda *a, **k: Redirect()
         # The first hop is a known CDN and the second is public; only the
         # allowlist can refuse it, which is what this test is about.
         manga_server.proxy_target_allowed = lambda url: True
@@ -516,7 +521,7 @@ class ImageHostAllowlistTest(unittest.TestCase):
                 with self.assertRaises(manga_server.ProxyBlocked):
                     manga_server._proxy_fetch("https://img1mw.xyz/x.jpg")
         finally:
-            manga_server._get = original_get
+            manga_server._image_get = original_get
             manga_server.proxy_target_allowed = original_policy
         self.assertIn("evil.example", output.getvalue())
 

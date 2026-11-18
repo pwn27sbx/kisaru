@@ -113,3 +113,8 @@ def data_home(env=None):
 def config_home(env=None):
     env = os.environ if env is None else env
     return env.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
+
+
+def state_home(env=None):
+    env = os.environ if env is None else env
+    return env.get("XDG_STATE_HOME") or os.path.join(os.path.expanduser("~"), ".local", "state")

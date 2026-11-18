@@ -149,8 +149,8 @@ class MangaProxyGuardTest(unittest.TestCase):
     def setUp(self):
         self.original_policy = manga_server.proxy_target_allowed
         self.original_hosts = manga_server.image_host_allowed
-        self.original_get = manga_server._get
-        self.original_plain = manga_server._plain_get
+        self.original_get = manga_server._image_get
+        self.original_plain = manga_server._image_plain_get
         # These tests are about the loopback/private guard; the image-host
         # allowlist has its own tests (test_manga_proxy.ImageHostAllowlistTest),
         # so its predicate is satisfied here.
@@ -159,8 +159,8 @@ class MangaProxyGuardTest(unittest.TestCase):
     def tearDown(self):
         manga_server.proxy_target_allowed = self.original_policy
         manga_server.image_host_allowed = self.original_hosts
-        manga_server._get = self.original_get
-        manga_server._plain_get = self.original_plain
+        manga_server._image_get = self.original_get
+        manga_server._image_plain_get = self.original_plain
 
     def test_the_route_answers_403_for_a_private_target(self):
         manga_server.proxy_target_allowed = lambda url: False
@@ -176,12 +176,12 @@ class MangaProxyGuardTest(unittest.TestCase):
 
         manga_server.proxy_target_allowed = lambda url: urlparse(url).hostname != "127.0.0.1"
 
-        def fake_get(url, headers, timeout, follow=True):
+        def fake_get(url, headers, follow=True):
             seen.append(url)
             return _Response(302, {"Location": "http://127.0.0.1:5150/secret"})
 
-        manga_server._get = fake_get
-        manga_server._plain_get = fake_get
+        manga_server._image_get = fake_get
+        manga_server._image_plain_get = fake_get
 
         with self.assertRaises(manga_server.ProxyBlocked):
             manga_server._proxy_fetch("https://cdn.example/x.jpg")
@@ -190,15 +190,15 @@ class MangaProxyGuardTest(unittest.TestCase):
     def test_a_public_redirect_is_followed(self):
         calls = []
 
-        def fake_get(url, headers, timeout, follow=True):
+        def fake_get(url, headers, follow=True):
             calls.append((url, follow))
             if len(calls) == 1:
                 return _Response(301, {"Location": "https://cdn2.example/x.jpg"})
             return _Response(200)
 
         manga_server.proxy_target_allowed = lambda url: True
-        manga_server._get = fake_get
-        manga_server._plain_get = fake_get
+        manga_server._image_get = fake_get
+        manga_server._image_plain_get = fake_get
 
         body, ctype = manga_server._proxy_fetch("https://cdn.example/x.jpg")
         self.assertEqual(body, b"\xff\xd8\xff")

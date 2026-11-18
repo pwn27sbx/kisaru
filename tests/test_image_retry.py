@@ -95,7 +95,7 @@ class FakeSession:
         self.log = log
         self.answer = answer
 
-    def get(self, url, headers=None, timeout=None, allow_redirects=True):
+    def get(self, url, headers=None, timeout=None, allow_redirects=True, **kwargs):
         self.log.append(timeout)
         if self.errors:
             raise self.errors.pop(0)
@@ -106,15 +106,18 @@ class FakeSession:
 class RetryTest(unittest.TestCase):
     def setUp(self):
         self.calls = []
-        self.original = (manga_server._session, manga_server._plain_session)
+        self.original = (manga_server._session, manga_server._plain_session,
+                         manga_server._image_session)
 
     def tearDown(self):
-        manga_server._session, manga_server._plain_session = self.original
+        (manga_server._session, manga_server._plain_session,
+         manga_server._image_session) = self.original
 
     def use(self, errors, answer=None):
         session = FakeSession(list(errors), self.calls, answer)
         manga_server._session = lambda: session
         manga_server._plain_session = lambda: session
+        manga_server._image_session = lambda: session
 
     def test_a_stalled_request_is_retried_once(self):
         self.use([Stalled()])
@@ -173,18 +176,75 @@ class RetryTest(unittest.TestCase):
                     manga_server.image_host_allowed = original_allowed
                 self.assertEqual(len(self.calls), 1)
 
-    def test_page_images_keep_the_30_second_wait_per_attempt(self):
-        # The timeout bounds the whole transfer, so a slow page that keeps
-        # arriving needs the full 30 s; shortening it would fail such pages.
-        self.use([])
+    def proxy(self, url):
         original_allowed = manga_server.image_host_allowed
         manga_server.image_host_allowed = lambda url: True
         try:
-            body, ctype = manga_server._proxy_fetch("https://cdn.zonatmo.to/manga/x/p.webp")
+            return manga_server._proxy_fetch(url)
         finally:
             manga_server.image_host_allowed = original_allowed
+
+    @unittest.skipUnless(HAVE_SERVER and manga_server._USE_CFFI, "needs curl_cffi")
+    def test_page_images_are_cut_by_silence_not_by_a_whole_transfer_cap(self):
+        # A whole-transfer timeout cut a page that was still arriving (27 s for
+        # one page of chapter 106). The image session cuts only silence:
+        # LOW_SPEED_TIME on the session, a 10 s connect limit and a 120 s total
+        # backstop on the call.
+        self.use([])
+        body, ctype = self.proxy("https://cdn.zonatmo.to/manga/x/p.webp")
         self.assertEqual(body, Ok.content)
-        self.assertEqual(self.calls, [30])
+        self.assertEqual(self.calls, [(10, 110)])
+        manga_server._image_session = self.original[2]
+        manga_server._tls_image.session = None
+        options = manga_server._image_session().curl_options
+        from curl_cffi.const import CurlOpt
+        self.assertEqual(options[CurlOpt.LOW_SPEED_LIMIT], 1)
+        self.assertEqual(options[CurlOpt.LOW_SPEED_TIME], 15)
+        manga_server._tls_image.session = None
+
+    def test_mangadex_pages_wait_for_silence_per_read(self):
+        # requests' read timeout is already per read, so (10, 15) is the same
+        # rule: 10 s to connect, cut after 15 s without a byte.
+        self.use([])
+        self.proxy("https://uploads.mangadex.org/data/h/p.png")
+        self.assertEqual(self.calls, [(10, 15)])
+
+    def test_the_requests_fallback_uses_a_per_read_timeout(self):
+        saved = manga_server._USE_CFFI
+        manga_server._USE_CFFI = False
+        try:
+            self.assertEqual(manga_server._image_timeout(), (10, 15))
+        finally:
+            manga_server._USE_CFFI = saved
+
+    def test_an_image_stall_is_retried_once_and_a_refusal_never(self):
+        self.use([Stalled()])
+        self.assertEqual(manga_server._image_get("https://cdn.example/p.webp", {}).status_code, 200)
+        self.assertEqual(len(self.calls), 2)
+        self.calls.clear()
+        self.use([Stalled(), MidBody()])
+        with self.assertRaises(MidBody):
+            manga_server._image_get("https://cdn.example/p.webp", {})
+        self.assertEqual(len(self.calls), 2)
+        for status in (403, 429, 503):
+            with self.subTest(status=status):
+                self.calls.clear()
+                self.use([Refused(status)])
+                with self.assertRaises(Refused):
+                    manga_server._image_get("https://cdn.example/p.webp", {})
+                self.assertEqual(len(self.calls), 1)
+
+    def test_chapter_downloads_use_the_image_session_and_covers_keep_15_s(self):
+        # A downloaded page is the same transfer as a read page. A cover keeps
+        # its whole 15 s cap on the scraper session (amendment A8): it is small,
+        # and the panel would rather show a placeholder than wait.
+        scraper, image = [], []
+        manga_server._session = lambda: FakeSession([], scraper)
+        manga_server._image_session = lambda: FakeSession([], image)
+        manga_server._raw_get("https://cdn.zonatmo.to/manga/x/p.webp")
+        manga_server._raw_get("https://cdn.zonatmo.to/cover.jpg", timeout=15)
+        self.assertEqual(image, [manga_server._image_timeout()])
+        self.assertEqual(scraper, [15])
 
 
 if __name__ == "__main__":
