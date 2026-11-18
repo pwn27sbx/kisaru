@@ -104,13 +104,28 @@ def _session():
     return sess
 
 
+def _upstream_answered(error):
+    """True when the request failed with an error status from the upstream.
+
+    Only those are final: a 403, 429 or 5xx is the server's decision, and asking
+    again is what gets a scraper flagged. A stall or a reset is not a decision.
+    curl_cffi attaches a response to every error it raises: status 0 when the
+    request stalled before any answer, and the real status (often 200) when the
+    body stalled mid-transfer. Neither is a refusal, so only an error status
+    (400 and up) counts as an answer.
+    """
+    response = getattr(error, "response", None)
+    status = getattr(response, "status_code", 0) if response is not None else 0
+    return bool(status and status >= 400)
+
+
 def _get(url, headers, timeout, follow=True):
     """GET with one retry on connection-level errors (TLS resets, timeouts)."""
     try:
         return _session().get(url, headers=headers, timeout=timeout,
                               allow_redirects=follow)
     except Exception as e:
-        if getattr(e, "response", None) is not None:
+        if _upstream_answered(e):
             raise
         _tls.session = None
         return _session().get(url, headers=headers, timeout=timeout,
@@ -302,7 +317,7 @@ def _plain_get(url, headers, timeout, follow=True):
         return _plain_session().get(url, headers=headers, timeout=timeout,
                                     allow_redirects=follow)
     except Exception as e:
-        if getattr(e, "response", None) is not None:
+        if _upstream_answered(e):
             raise
         _tls_plain.session = None
         return _plain_session().get(url, headers=headers, timeout=timeout,
