@@ -169,3 +169,68 @@ test("Manga.downloadsList is a plain JS array property, not a QML list<var>", ()
     assert.match(manga, /property var downloadsList: \[\]/);
     assert.doesNotMatch(manga, /property list<var> downloadsList/);
 });
+
+// ── Accordion state (round 2 · E1/E2) ────────────────────────────────────────
+// Expanded state lives in a plain id → true map held by the view. Everything is
+// collapsed by default, ids are independent and a list refresh keeps the map.
+
+test("isExpanded defaults to collapsed for any id and any empty map", () => {
+    assert.equal(Downloads.isExpanded({}, "mangadex:a"), false);
+    assert.equal(Downloads.isExpanded(null, "mangadex:a"), false);
+    assert.equal(Downloads.isExpanded(undefined, ""), false);
+});
+
+test("toggleExpanded flips one id, leaves the others alone and never mutates its input", () => {
+    const empty = {};
+    const one = Downloads.toggleExpanded(empty, "mangadex:a");
+    assert.deepEqual(empty, {});
+    assert.equal(Downloads.isExpanded(one, "mangadex:a"), true);
+    assert.equal(Downloads.isExpanded(one, "mangadex:b"), false);
+
+    const two = Downloads.toggleExpanded(one, "mangadex:b");
+    assert.equal(Downloads.isExpanded(two, "mangadex:a"), true);
+    assert.equal(Downloads.isExpanded(two, "mangadex:b"), true);
+
+    const back = Downloads.toggleExpanded(two, "mangadex:a");
+    assert.equal(Downloads.isExpanded(back, "mangadex:a"), false);
+    assert.equal(Downloads.isExpanded(back, "mangadex:b"), true);
+    assert.equal(Downloads.isExpanded(two, "mangadex:a"), true);
+});
+
+test("toggleExpanded ignores an empty id and tolerates a missing map", () => {
+    assert.deepEqual(Downloads.toggleExpanded({ a: true }, ""), { a: true });
+    assert.equal(Downloads.isExpanded(Downloads.toggleExpanded(null, "x"), "x"), true);
+});
+
+test("expanded state survives a list refresh that keeps the series and drops a deleted one", () => {
+    const first = qmlSequence([
+        { id: "mangadex:a", chapters: [{ chapterId: "c1" }] },
+        { id: "mangadex:b", chapters: [{ chapterId: "c2" }] },
+    ]);
+    let state = Downloads.toggleExpanded({}, "mangadex:a");
+    assert.equal(Downloads.visibleSeries(first, () => false, { locked: false, loaded: true }).length, 2);
+    // refresh: a keeps its chapters, b disappears (its last chapter was deleted)
+    const refreshed = qmlSequence([{ id: "mangadex:a", chapters: [{ chapterId: "c1" }, { chapterId: "c3" }] }]);
+    const visible = Downloads.visibleSeries(refreshed, () => false, { locked: false, loaded: true });
+    assert.equal(visible.length, 1);
+    assert.equal(Downloads.isExpanded(state, visible[0].id), true);
+    assert.equal(Downloads.isExpanded(state, "mangadex:b"), false);
+});
+
+test("DownloadsView folds each series behind a header that toggles through downloads.js", () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const view = fs.readFileSync(path.join(__dirname, "..", "modules", "manga", "components", "DownloadsView.qml"), "utf8");
+    assert.match(view, /property var _expanded: \(\{\}\)/, "the view keeps the expanded map");
+    assert.match(view, /DownloadsJs\.toggleExpanded\(/, "the header toggles through the helper");
+    assert.match(view, /DownloadsJs\.isExpanded\(/, "the expanded flag reads through the helper");
+    assert.match(view, /readonly property bool expanded:/, "each series block exposes expanded");
+    assert.match(view, /model:\s*seriesBlock\.expanded\s*\?\s*\(seriesBlock\.modelData\.chapters \|\| \[\]\)\s*:\s*\[\]/,
+        "the chapters Repeater only has rows while expanded");
+    assert.match(view, /HeaderCell\.cellStyle\(/, "the header uses the status-bar cell style");
+    assert.match(view, /Style\.hoverFillFor\(/, "the header uses the hover tint");
+    assert.match(view, /Style\.pressedFillFor\(/, "the header uses the pressed tint");
+    assert.match(view, /cursorShape:\s*Qt\.PointingHandCursor/, "the header shows the pointing hand");
+    assert.match(view, /rotation:\s*seriesBlock\.expanded \? 90 : 0/, "the chevron rotates when expanded");
+    assert.match(view, /Behavior on rotation \{ NumberAnimation \{ duration: Motion\.fast \} \}/, "the chevron animates with Motion.fast");
+});

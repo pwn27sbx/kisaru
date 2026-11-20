@@ -7,6 +7,7 @@ import qs.services
 import qs.components
 import "../../../services/downloads.js" as DownloadsJs
 import "../../../services/chapters.js" as Chapters
+import "../../../services/header_cell.js" as HeaderCell
 
 Item {
     id: downloadsView
@@ -16,6 +17,10 @@ Item {
 
     readonly property var _seriesList: Manga.visibleDownloadsList
     readonly property var _summary: Manga.visibleDownloadsSummary
+
+    // Series ids the user has unfolded. In-memory only: it survives list
+    // refreshes and resets when the view is rebuilt.
+    property var _expanded: ({})
 
     signal backRequested()
     signal chapterSelected(var series, var chapter)
@@ -133,12 +138,27 @@ Item {
                     width: seriesListView.width
                     spacing: Style.spacing.xs
 
-                    // Series header
-                    Rectangle {
+                    readonly property bool expanded: DownloadsJs.isExpanded(downloadsView._expanded, seriesBlock.modelData.id)
+
+                    // Series header: click folds or unfolds its chapters
+                    ClickableRect {
+                        id: seriesHeader
                         width: parent.width
                         height: Style.space(62)
                         radius: Style.cornerRadius
-                        color: Colors.surface_container
+                        cursorShape: Qt.PointingHandCursor
+                        readonly property var _cell: HeaderCell.cellStyle({
+                            current: false,
+                            hovered: seriesHeader.hovered,
+                            pressed: seriesHeader.pressed
+                        })
+                        color: seriesHeader._cell.fill === HeaderCell.FILL.PRESSED
+                            ? Style.pressedFillFor(Colors.surface_container, Colors.primary)
+                            : seriesHeader._cell.fill === HeaderCell.FILL.HOVER
+                                ? Style.hoverFillFor(Colors.surface_container, Colors.primary)
+                                : Colors.surface_container
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        onClicked: downloadsView._expanded = DownloadsJs.toggleExpanded(downloadsView._expanded, seriesBlock.modelData.id)
 
                         RowLayout {
                             anchors {
@@ -187,12 +207,20 @@ Item {
                                     elide: Text.ElideRight
                                 }
                             }
+
+                            StyledText {
+                                text: "›"
+                                font.pixelSize: Style.font.iconLarge
+                                color: Colors.on_surface_variant
+                                rotation: seriesBlock.expanded ? 90 : 0
+                                Behavior on rotation { NumberAnimation { duration: Motion.fast } }
+                            }
                         }
                     }
 
-                    // Downloaded chapters for this series
+                    // Downloaded chapters for this series (rows exist only while unfolded)
                     Repeater {
-                        model: seriesBlock.modelData.chapters || []
+                        model: seriesBlock.expanded ? (seriesBlock.modelData.chapters || []) : []
 
                         delegate: ClickableRect {
                             id: dlChapterRow

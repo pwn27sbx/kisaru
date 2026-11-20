@@ -158,8 +158,25 @@ function offlineMangaObject(series) {
     };
 }
 
+// Accordion state for the Downloads screen: a plain id -> true map owned by the
+// view. Collapsed is the default; toggling returns a new map (QML only notices
+// a property that is replaced, never one that is mutated in place).
+function isExpanded(stateMap, id) {
+    return !!(stateMap && id && stateMap[id] === true);
+}
+
+function toggleExpanded(stateMap, id) {
+    var next = Object.assign({}, stateMap || {});
+    if (!id) return next;
+    if (next[id] === true) delete next[id];
+    else next[id] = true;
+    return next;
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
+        isExpanded: isExpanded,
+        toggleExpanded: toggleExpanded,
         visibleSeries: visibleSeries,
         downloadedChapterMap: downloadedChapterMap,
         summary: summary,
