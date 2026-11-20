@@ -44,6 +44,12 @@ Item {
     property int browseStack: 0
     property int libraryStack: 0
 
+    readonly property bool _readerNavVisible:
+        !root.settingsMode
+        && ((root.tabIndex === 0 && root.browseStack === 2)
+            || (root.tabIndex === 1 && root.libraryStack === 2))
+        && Manga.currentChapterId !== ""
+
     property string selectedMangaId: ""
 
     // Hidden but kept loaded: shell.qml skips the unload while this is set,
@@ -132,6 +138,24 @@ Item {
         enabled: root.visible && !root.settingsMode
                  && !(header && header.searchActiveFocus)
         onActivated: root.focusSearch()
+    }
+
+    Shortcut {
+        sequence: "Left"
+        context: Qt.WindowShortcut
+        enabled: root.visible && !root.settingsMode
+                 && !(header && header.searchActiveFocus)
+                 && root._readerNavVisible && Manga.hasPrevChapter
+        onActivated: Manga.openPrevChapter()
+    }
+
+    Shortcut {
+        sequence: "Right"
+        context: Qt.WindowShortcut
+        enabled: root.visible && !root.settingsMode
+                 && !(header && header.searchActiveFocus)
+                 && root._readerNavVisible && Manga.hasNextChapter
+        onActivated: Manga.openNextChapter()
     }
 
     // The one debounce the field goes through. It sits at the panel's root, not
@@ -356,6 +380,11 @@ Item {
                 translate: I18n.tn
             })
             fontFamily: root.fontBody
+            navVisible: root._readerNavVisible
+            prevEnabled: Manga.hasPrevChapter
+            nextEnabled: Manga.hasNextChapter
+            onPrevRequested: Manga.openPrevChapter()
+            onNextRequested: Manga.openNextChapter()
         }
     }
 

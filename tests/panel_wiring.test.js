@@ -645,7 +645,7 @@ test("leaving the Library tab locks through the shared header", () => {
     }
 });
 
-test("manga chapter navigation shares Manga.openChapter and wires the reader footer", () => {
+test("manga chapter navigation shares Manga.openChapter and lives in the status bar with arrow keys", () => {
     const detail = read("modules/manga/components/DetailView.qml");
     assert.match(detail, /Manga\.openChapter\(modelData\)/,
         "DetailView must open chapters through Manga.openChapter");
@@ -668,15 +668,50 @@ test("manga chapter navigation shares Manga.openChapter and wires the reader foo
     assert.match(manga, /function openNextChapter\(\)/,
         "Manga.qml must expose openNextChapter()");
 
+    const statusBar = read("components/StatusBar.qml");
+    assert.match(statusBar, /property bool navVisible:\s*false/,
+        "StatusBar must expose navVisible defaulting to false");
+    assert.match(statusBar, /property bool prevEnabled:\s*false/,
+        "StatusBar must expose prevEnabled defaulting to false");
+    assert.match(statusBar, /property bool nextEnabled:\s*false/,
+        "StatusBar must expose nextEnabled defaulting to false");
+    assert.match(statusBar, /signal prevRequested\(\)/,
+        "StatusBar must expose prevRequested()");
+    assert.match(statusBar, /signal nextRequested\(\)/,
+        "StatusBar must expose nextRequested()");
+    assert.match(statusBar, /I18n\.t\("action\.prev"\)/,
+        "StatusBar must reuse action.prev");
+    assert.match(statusBar, /I18n\.t\("action\.next"\)/,
+        "StatusBar must reuse action.next");
+
+    const mangaPanel = read("modules/manga/MangaReader.qml");
+    assert.match(mangaPanel, /prevEnabled:\s*Manga\.hasPrevChapter/,
+        "MangaReader StatusBar must bind prevEnabled to Manga.hasPrevChapter");
+    assert.match(mangaPanel, /nextEnabled:\s*Manga\.hasNextChapter/,
+        "MangaReader StatusBar must bind nextEnabled to Manga.hasNextChapter");
+    assert.match(mangaPanel, /onPrevRequested:\s*Manga\.openPrevChapter\(\)/,
+        "MangaReader StatusBar must call Manga.openPrevChapter()");
+    assert.match(mangaPanel, /onNextRequested:\s*Manga\.openNextChapter\(\)/,
+        "MangaReader StatusBar must call Manga.openNextChapter()");
+    assert.match(mangaPanel, /Shortcut\s*\{[\s\S]{0,300}sequence:\s*"Left"[\s\S]{0,300}header\.searchActiveFocus[\s\S]{0,300}Manga\.openPrevChapter\(\)/,
+        "MangaReader must bind Left shortcut with search-focus guard");
+    assert.match(mangaPanel, /Shortcut\s*\{[\s\S]{0,300}sequence:\s*"Right"[\s\S]{0,300}header\.searchActiveFocus[\s\S]{0,300}Manga\.openNextChapter\(\)/,
+        "MangaReader must bind Right shortcut with search-focus guard");
+
     const reader = read("modules/manga/components/ReaderView.qml");
-    assert.match(reader, /Manga\.openPrevChapter\(\)/,
-        "Manga ReaderView must wire openPrevChapter");
-    assert.match(reader, /Manga\.openNextChapter\(\)/,
-        "Manga ReaderView must wire openNextChapter");
+    assert.doesNotMatch(reader, /\bfooter:\s*Item\b/,
+        "Manga ReaderView ListView must no longer carry a footer");
     assert.match(reader, /pageListView\.positionViewAtBeginning\(\)/,
         "Manga ReaderView must scroll back to the top on chapter change");
-    assert.match(reader, /I18n\.t\("action\.prev"\)/,
-        "Manga ReaderView must reuse action.prev");
-    assert.match(reader, /I18n\.t\("action\.next"\)/,
-        "Manga ReaderView must reuse action.next");
+    assert.match(reader, /Manga\.openPrevChapter\(\)/,
+        "Manga ReaderView error overlay must keep openPrevChapter");
+    assert.match(reader, /Manga\.openNextChapter\(\)/,
+        "Manga ReaderView error overlay must keep openNextChapter");
+
+    for (const file of ["modules/novel/NovelReader.qml", "modules/anime/AnimePanel.qml"]) {
+        const panel = read(file);
+        for (const prop of ["navVisible", "prevEnabled", "nextEnabled", "onPrevRequested", "onNextRequested"]) {
+            assert.ok(!panel.includes(prop), `${file} must not set StatusBar ${prop}`);
+        }
+    }
 });

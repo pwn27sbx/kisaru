@@ -297,8 +297,9 @@ Los dos lectores siguen el tema, incluido el lector de novelas
 salen de los mismos roles `Colors.*` que el resto de la app. El texto va a plena intensidad
 sobre el fondo, así que el propio par del tema mantiene 4,5:1 o más de contraste en temas
 oscuros y claros. `tools/lint-style.js` falla si vuelve a aparecer un color literal.
-El lector de manga también incluye botones de capítulo anterior y siguiente al final de
-cada capítulo (y en la pantalla de error de carga), siguiendo el orden numérico completo.
+El lector de manga también incluye navegación de capítulo anterior y siguiente en la barra
+de estado inferior con atajos `←`/`→` (y en la pantalla de error de carga), siguiendo el
+orden numérico completo.
 
 ## Widget de barra de Omarchy
 

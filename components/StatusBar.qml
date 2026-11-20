@@ -34,6 +34,13 @@ Rectangle {
     property string modeText: ""
     property string fontFamily: Style.font.family
 
+    // Optional chapter navigation controls (manga reader only; off by default).
+    property bool navVisible: false
+    property bool prevEnabled: false
+    property bool nextEnabled: false
+    signal prevRequested()
+    signal nextRequested()
+
     // install_config copies the plugin folder next to the running config, so
     // the manifest ships with it. `UiPrefs.settingsDir` owns the config root;
     // the module folder below is the one segment this file adds, and it is the
@@ -169,6 +176,84 @@ Rectangle {
             verticalCenter: parent.verticalCenter
         }
         spacing: Style.spacing.md
+
+        Item {
+            Layout.alignment: Qt.AlignVCenter
+            visible: root.navVisible
+            implicitWidth: prevNavRow.implicitWidth
+            implicitHeight: prevNavRow.implicitHeight
+            opacity: root.prevEnabled ? 1.0 : 0.25
+            Behavior on opacity { NumberAnimation { duration: Motion.base } }
+
+            RowLayout {
+                id: prevNavRow
+                spacing: Style.spacing.sm
+
+                KeyCap {
+                    Layout.alignment: Qt.AlignVCenter
+                    key: "←"
+                    bodyFont: root.fontFamily
+                }
+
+                StyledText {
+                    Layout.alignment: Qt.AlignVCenter
+                    text: I18n.t("action.prev")
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    color: prevNavMouse.containsMouse && root.prevEnabled
+                        ? Colors.primary : Colors.on_surface_variant
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                }
+            }
+
+            MouseArea {
+                id: prevNavMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                enabled: root.prevEnabled
+                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: root.prevRequested()
+            }
+        }
+
+        Item {
+            Layout.alignment: Qt.AlignVCenter
+            visible: root.navVisible
+            implicitWidth: nextNavRow.implicitWidth
+            implicitHeight: nextNavRow.implicitHeight
+            opacity: root.nextEnabled ? 1.0 : 0.25
+            Behavior on opacity { NumberAnimation { duration: Motion.base } }
+
+            RowLayout {
+                id: nextNavRow
+                spacing: Style.spacing.sm
+
+                KeyCap {
+                    Layout.alignment: Qt.AlignVCenter
+                    key: "→"
+                    bodyFont: root.fontFamily
+                }
+
+                StyledText {
+                    Layout.alignment: Qt.AlignVCenter
+                    text: I18n.t("action.next")
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    color: nextNavMouse.containsMouse && root.nextEnabled
+                        ? Colors.primary : Colors.on_surface_variant
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                }
+            }
+
+            MouseArea {
+                id: nextNavMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                enabled: root.nextEnabled
+                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: root.nextRequested()
+            }
+        }
 
         StyledText {
             Layout.alignment: Qt.AlignVCenter
