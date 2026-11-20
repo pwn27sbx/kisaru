@@ -38,6 +38,8 @@ Item {
             readerView._lastPage = 0
             readerView._ratioLearned = false
             readerView._attempts = ({})
+            if (Manga.chapterPages.length > 0)
+                pageListView.positionViewAtBeginning()
         }
     }
 
@@ -174,6 +176,85 @@ Item {
                 width: 260
                 horizontalAlignment: Text.AlignHCenter
                 lineHeight: 1.4
+            }
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: Manga.hasPrevChapter || Manga.hasNextChapter
+                spacing: Style.spacing.md
+
+                Item {
+                    width: errPrevRow.implicitWidth + Style.space(28)
+                    height: Style.space(36)
+                    opacity: Manga.hasPrevChapter ? 1.0 : 0.25
+                    Behavior on opacity { NumberAnimation { duration: Motion.base } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Style.cornerRadius
+                        color: "transparent"
+                        border.width: 1
+                        border.color: errPrevArea.containsMouse && Manga.hasPrevChapter
+                            ? Colors.primary : Colors.outline_variant
+                        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+
+                        Row {
+                            id: errPrevRow
+                            anchors.centerIn: parent
+                            spacing: Style.space(5)
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: "‹"; font.pixelSize: Style.font.iconLarge; color: Colors.text }
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.t("action.prev"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
+                        }
+                    }
+
+                    MouseArea {
+                        id: errPrevArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        enabled: Manga.hasPrevChapter && !Manga.isFetchingPages
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: function(mouse) {
+                            mouse.accepted = true
+                            Manga.openPrevChapter()
+                        }
+                    }
+                }
+
+                Item {
+                    width: errNextRow.implicitWidth + Style.space(28)
+                    height: Style.space(36)
+                    opacity: Manga.hasNextChapter ? 1.0 : 0.25
+                    Behavior on opacity { NumberAnimation { duration: Motion.base } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Style.cornerRadius
+                        color: "transparent"
+                        border.width: 1
+                        border.color: errNextArea.containsMouse && Manga.hasNextChapter
+                            ? Colors.primary : Util.alpha(Colors.primary, 0.7)
+                        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+
+                        Row {
+                            id: errNextRow
+                            anchors.centerIn: parent
+                            spacing: Style.space(5)
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.t("action.next"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: "›"; font.pixelSize: Style.font.iconLarge; color: Colors.text }
+                        }
+                    }
+
+                    MouseArea {
+                        id: errNextArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        enabled: Manga.hasNextChapter && !Manga.isFetchingPages
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: function(mouse) {
+                            mouse.accepted = true
+                            Manga.openNextChapter()
+                        }
+                    }
+                }
             }
         }
     }
@@ -393,6 +474,100 @@ Item {
                     onClicked: function(mouse) {
                         mouse.accepted = true
                         pageItem.retry()
+                    }
+                }
+            }
+        }
+
+        // ── Chapter navigation footer ────────────────────────────────────────
+        footer: Item {
+            readonly property bool hasNav: (Manga.hasPrevChapter || Manga.hasNextChapter) && pageListView.count > 0
+            width: pageListView.width
+            height: visible ? Style.space(72) : 0
+            visible: hasNav
+
+            Rectangle {
+                anchors { top: parent.top; left: parent.left; right: parent.right }
+                height: 1
+                color: Util.alpha(Colors.text, 0.10)
+            }
+
+            Item {
+                anchors { fill: parent; leftMargin: Style.space(16); rightMargin: Style.space(16) }
+
+                Item {
+                    anchors { verticalCenter: parent.verticalCenter; left: parent.left }
+                    width: prevBtnRow.implicitWidth + Style.space(28)
+                    height: Style.space(36)
+                    opacity: Manga.hasPrevChapter ? 1.0 : 0.25
+                    Behavior on opacity { NumberAnimation { duration: Motion.base } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Style.cornerRadius
+                        color: "transparent"
+                        border.width: 1
+                        border.color: prevNavArea.containsMouse && Manga.hasPrevChapter
+                            ? Colors.primary : Colors.outline_variant
+                        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+
+                        Row {
+                            id: prevBtnRow
+                            anchors.centerIn: parent
+                            spacing: Style.space(5)
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: "‹"; font.pixelSize: Style.font.iconLarge; color: Colors.text }
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.t("action.prev"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
+                        }
+                    }
+
+                    MouseArea {
+                        id: prevNavArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        enabled: Manga.hasPrevChapter && !Manga.isFetchingPages
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: function(mouse) {
+                            mouse.accepted = true
+                            Manga.openPrevChapter()
+                        }
+                    }
+                }
+
+                Item {
+                    anchors { verticalCenter: parent.verticalCenter; right: parent.right }
+                    width: nextBtnRow.implicitWidth + Style.space(28)
+                    height: Style.space(36)
+                    opacity: Manga.hasNextChapter ? 1.0 : 0.25
+                    Behavior on opacity { NumberAnimation { duration: Motion.base } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Style.cornerRadius
+                        color: "transparent"
+                        border.width: 1
+                        border.color: nextNavArea.containsMouse && Manga.hasNextChapter
+                            ? Colors.primary : Util.alpha(Colors.primary, 0.7)
+                        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+
+                        Row {
+                            id: nextBtnRow
+                            anchors.centerIn: parent
+                            spacing: Style.space(5)
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.t("action.next"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: "›"; font.pixelSize: Style.font.iconLarge; color: Colors.text }
+                        }
+                    }
+
+                    MouseArea {
+                        id: nextNavArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        enabled: Manga.hasNextChapter && !Manga.isFetchingPages
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: function(mouse) {
+                            mouse.accepted = true
+                            Manga.openNextChapter()
+                        }
                     }
                 }
             }

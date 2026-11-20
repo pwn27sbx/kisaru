@@ -644,3 +644,39 @@ test("leaving the Library tab locks through the shared header", () => {
             `${file}: a hidden open title no longer returns to the Library on lock`);
     }
 });
+
+test("manga chapter navigation shares Manga.openChapter and wires the reader footer", () => {
+    const detail = read("modules/manga/components/DetailView.qml");
+    assert.match(detail, /Manga\.openChapter\(modelData\)/,
+        "DetailView must open chapters through Manga.openChapter");
+    assert.doesNotMatch(detail, /Manga\.fetchChapterPages\(/,
+        "DetailView must not call Manga.fetchChapterPages directly");
+    assert.doesNotMatch(detail, /Manga\.updateLastRead\(/,
+        "DetailView must not call Manga.updateLastRead directly");
+
+    const manga = read("services/Manga.qml");
+    assert.match(manga, /import "chapters\.js" as Chapters/,
+        "Manga.qml must import chapters.js");
+    assert.match(manga, /readonly property bool hasPrevChapter:/,
+        "Manga.qml must expose hasPrevChapter");
+    assert.match(manga, /readonly property bool hasNextChapter:/,
+        "Manga.qml must expose hasNextChapter");
+    assert.match(manga, /function openChapter\(ch\)/,
+        "Manga.qml must expose openChapter(ch)");
+    assert.match(manga, /function openPrevChapter\(\)/,
+        "Manga.qml must expose openPrevChapter()");
+    assert.match(manga, /function openNextChapter\(\)/,
+        "Manga.qml must expose openNextChapter()");
+
+    const reader = read("modules/manga/components/ReaderView.qml");
+    assert.match(reader, /Manga\.openPrevChapter\(\)/,
+        "Manga ReaderView must wire openPrevChapter");
+    assert.match(reader, /Manga\.openNextChapter\(\)/,
+        "Manga ReaderView must wire openNextChapter");
+    assert.match(reader, /pageListView\.positionViewAtBeginning\(\)/,
+        "Manga ReaderView must scroll back to the top on chapter change");
+    assert.match(reader, /I18n\.t\("action\.prev"\)/,
+        "Manga ReaderView must reuse action.prev");
+    assert.match(reader, /I18n\.t\("action\.next"\)/,
+        "Manga ReaderView must reuse action.next");
+});

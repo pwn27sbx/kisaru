@@ -164,6 +164,12 @@ ShellRoot {
                         }
                     }
                 }
+
+                // Mirrors ReaderView's ~72 px chapter-navigation footer.
+                footer: Item {
+                    width: pageListView.width
+                    height: pageListView.count > 0 ? 72 : 0
+                }
             }
 
             // ── Drivers ──────────────────────────────────────────────────────
