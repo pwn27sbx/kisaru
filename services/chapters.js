@@ -39,11 +39,61 @@ function chapterIndex(list, number) {
     return -1;
 }
 
+// Adjacent chapter one step away (-1 = previous, +1 = next) in ascending
+// chapter-number order on the full list, regardless of source order.
+// Chapters without a number sort as 0 (matching DetailView). Among entries
+// with the same number, the first in source order wins, and a duplicate number
+// never steps to itself. Returns null at either end or if currentId is absent.
+function adjacentChapter(chapters, currentId, step) {
+    if (!chapters || !chapters.length || !currentId) return null;
+    if (step !== -1 && step !== 1) return null;
+
+    var entries = [];
+    var currentNum = null;
+    for (var i = 0; i < chapters.length; i++) {
+        var ch = chapters[i];
+        if (!ch) continue;
+        var n = chapterNumber(ch.chapter);
+        var num = n === null ? 0 : n;
+        entries.push({ item: ch, num: num, idx: i });
+        if (currentNum === null && ch.id === currentId) {
+            currentNum = num;
+        }
+    }
+    if (currentNum === null) return null;
+
+    entries.sort(function(a, b) {
+        return a.num !== b.num ? a.num - b.num : a.idx - b.idx;
+    });
+
+    if (step > 0) {
+        for (var j = 0; j < entries.length; j++) {
+            if (entries[j].num > currentNum) return entries[j].item;
+        }
+        return null;
+    }
+
+    var prevNum = null;
+    var prevItem = null;
+    for (var k = 0; k < entries.length; k++) {
+        if (entries[k].num < currentNum) {
+            if (prevNum === null || entries[k].num > prevNum) {
+                prevNum = entries[k].num;
+                prevItem = entries[k].item;
+            }
+        } else {
+            break;
+        }
+    }
+    return prevItem;
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         formatChapter: formatChapter,
         chapterNumber: chapterNumber,
         sameChapter: sameChapter,
-        chapterIndex: chapterIndex
+        chapterIndex: chapterIndex,
+        adjacentChapter: adjacentChapter
     };
 }

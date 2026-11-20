@@ -45,3 +45,70 @@ test("the first matching row wins", () => {
     const list = [{ chapter: "7.00" }, { chapter: "7.0" }, { chapter: "8" }];
     assert.equal(chapters.chapterIndex(list, "7"), 0);
 });
+
+// ── adjacentChapter (N1 / A7) ────────────────────────────────────────────────
+
+test("adjacentChapter moves in ascending chapter-number order regardless of source order", () => {
+    const desc = [
+        { id: "c3", chapter: "3" },
+        { id: "c2", chapter: "2" },
+        { id: "c1", chapter: "1" },
+    ];
+    assert.equal(chapters.adjacentChapter(desc, "c2", 1).id, "c3");
+    assert.equal(chapters.adjacentChapter(desc, "c2", -1).id, "c1");
+});
+
+test("adjacentChapter returns null at the start and end of the list", () => {
+    const list = [
+        { id: "c1", chapter: "1" },
+        { id: "c2", chapter: "2" },
+    ];
+    assert.equal(chapters.adjacentChapter(list, "c1", -1), null);
+    assert.equal(chapters.adjacentChapter(list, "c2", 1), null);
+});
+
+test("adjacentChapter skips duplicate chapter numbers and picks the first in source order", () => {
+    const list = [
+        { id: "c11-a", chapter: "11" },
+        { id: "c11-b", chapter: "11.00" },
+        { id: "c10-a", chapter: "10" },
+        { id: "c10-b", chapter: "10.00" },
+        { id: "c9-a", chapter: "9" },
+        { id: "c9-b", chapter: "9.0" },
+    ];
+    assert.equal(chapters.adjacentChapter(list, "c10-a", 1).id, "c11-a");
+    assert.equal(chapters.adjacentChapter(list, "c10-b", 1).id, "c11-a");
+    assert.equal(chapters.adjacentChapter(list, "c10-a", -1).id, "c9-a");
+    assert.equal(chapters.adjacentChapter(list, "c10-b", -1).id, "c9-a");
+});
+
+test("adjacentChapter handles decimal chapters in numeric order", () => {
+    const list = [
+        { id: "c106", chapter: "106" },
+        { id: "c105", chapter: "105" },
+        { id: "c105_5", chapter: "105.5" },
+    ];
+    assert.equal(chapters.adjacentChapter(list, "c105", 1).id, "c105_5");
+    assert.equal(chapters.adjacentChapter(list, "c105_5", 1).id, "c106");
+    assert.equal(chapters.adjacentChapter(list, "c105_5", -1).id, "c105");
+    assert.equal(chapters.adjacentChapter(list, "c106", -1).id, "c105_5");
+});
+
+test("adjacentChapter sorts chapters without a number as 0, matching DetailView", () => {
+    const list = [
+        { id: "c2", chapter: "2" },
+        { id: "c1", chapter: "1" },
+        { id: "prologue", chapter: "Prólogo" },
+    ];
+    assert.equal(chapters.adjacentChapter(list, "prologue", -1), null);
+    assert.equal(chapters.adjacentChapter(list, "prologue", 1).id, "c1");
+    assert.equal(chapters.adjacentChapter(list, "c1", -1).id, "prologue");
+});
+
+test("adjacentChapter returns null when list is empty or currentId is missing", () => {
+    const list = [{ id: "c1", chapter: "1" }];
+    assert.equal(chapters.adjacentChapter([], "c1", 1), null);
+    assert.equal(chapters.adjacentChapter(null, "c1", 1), null);
+    assert.equal(chapters.adjacentChapter(list, "", 1), null);
+    assert.equal(chapters.adjacentChapter(list, "missing", 1), null);
+});
