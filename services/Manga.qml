@@ -8,6 +8,7 @@ import "app_paths.js" as Paths
 import "library_view.js" as LibraryViewJs
 import "search_paging.js" as SearchPaging
 import "chapters.js" as Chapters
+import "downloads.js" as DownloadsJs
 
 Singleton {
     id: root
@@ -76,6 +77,39 @@ Singleton {
     property int favNewCount: 0
 
     // ── Downloads ────────────────────────────────────────────────────────────
+    property list<var> downloadsList: []
+    property bool isFetchingDownloads: false
+    property var downloadJobs: ({})
+    property string activeDownloadId: ""
+
+    // Reactive private-mode-filtered views (Amendments A2 & A8): read every
+    // dependency unconditionally so QML subscribes even while locked or empty.
+    readonly property var visibleDownloadsList: {
+        var _dl = root.downloadsList
+        var _lib = root.libraryList
+        var _libLoaded = root.libraryLoaded
+        var _orgLoaded = Organizer.loaded
+        var _folders = Organizer.folders("manga")
+        var _locked = Privacy.locked
+        return DownloadsJs.visibleSeries(_dl, root.isHiddenLibraryEntry, {
+            locked: _locked,
+            loaded: _libLoaded && _orgLoaded
+        })
+    }
+    readonly property var downloadedChapterIndex: {
+        var _dl = root.downloadsList
+        var _lib = root.libraryList
+        var _libLoaded = root.libraryLoaded
+        var _orgLoaded = Organizer.loaded
+        var _folders = Organizer.folders("manga")
+        var _locked = Privacy.locked
+        return DownloadsJs.downloadedChapterMap(_dl, root.isHiddenLibraryEntry, {
+            locked: _locked,
+            loaded: _libLoaded && _orgLoaded
+        })
+    }
+    readonly property var visibleDownloadsSummary: DownloadsJs.summary(root.visibleDownloadsList)
+    readonly property bool isDownloadBusy: DownloadsJs.isBusy(root.downloadJobs)
 
     // ── Library ──────────────────────────────────────────────────────────────
     // Each entry: { id, title, coverUrl, lastReadChapterId, lastReadChapterNum, addedAt }
@@ -303,6 +337,29 @@ Singleton {
         onReady: {
             fetchByOrigin("", true)
             fetchFavorites()
+            fetchDownloads()
+        }
+    }
+
+    Timer {
+        id: dlPoller
+        interval: 600
+        repeat: true
+        running: root.activeDownloadId !== ""
+        onTriggered: root._pollActiveDownload()
+    }
+
+    // Amendment A3: locking scrubs hidden download jobs so a hidden title's
+    // active or errored job leaves no visible trace or busy lockout.
+    Connections {
+        target: Privacy
+        function onLockedChanged() {
+            if (!Privacy.locked) return
+            var cleaned = DownloadsJs.scrubHiddenJobs(root.downloadJobs, root.isHiddenLibraryEntry)
+            root.downloadJobs = cleaned
+            if (root.activeDownloadId !== "" && !cleaned[root.activeDownloadId]) {
+                root.activeDownloadId = ""
+            }
         }
     }
 
@@ -537,6 +594,10 @@ Singleton {
 
     function fetchChapterPages(chapterId) {
         if (isFetchingPages) return
+        if (isChapterDownloaded(chapterId)) {
+            fetchOfflineChapterPages(chapterId)
+            return
+        }
         isFetchingPages = true
         currentChapterId = chapterId
         chapterPages = []
@@ -635,6 +696,181 @@ Singleton {
                 if (data.updated && data.updated.length > 0) fetchFavorites()
             } catch (e) {}
         })
+    }
+
+    // ── Downloads ─────────────────────────────────────────────────────────────
+    function visibleDownloads() {
+        return root.visibleDownloadsList
+    }
+
+    function visibleDownloadSummary() {
+        return root.visibleDownloadsSummary
+    }
+
+    function isChapterDownloaded(chapterId) {
+        if (!chapterId) return false
+        return !!root.downloadedChapterIndex[chapterId]
+    }
+
+    function chapterDownloadState(chapterId) {
+        return DownloadsJs.chapterState(chapterId, root.downloadedChapterIndex, root.downloadJobs)
+    }
+
+    function _setDownloadJob(chapterId, job) {
+        var patch = {}
+        patch[chapterId] = job
+        root.downloadJobs = Object.assign({}, root.downloadJobs, patch)
+    }
+
+    function _dropDownloadJob(chapterId) {
+        var copy = Object.assign({}, root.downloadJobs)
+        delete copy[chapterId]
+        root.downloadJobs = copy
+    }
+
+    function fetchDownloads() {
+        if (isFetchingDownloads) return
+        isFetchingDownloads = true
+        Http.get(root.apiUrl + "/dl/list", function(err, body) {
+            isFetchingDownloads = false
+            if (err) { console.warn("[ServiceManga] downloads fetch failed:", err); return }
+            try {
+                const data = JSON.parse(body)
+                downloadsList = Array.isArray(data) ? data : []
+            } catch (e) {
+                console.error("[ServiceManga] downloads parse error:", e)
+            }
+        })
+    }
+
+    function startDownload(chapter) {
+        if (!currentManga || !chapter || !chapter.id) return false
+        if (Privacy.locked && isHiddenLibraryEntry(libraryEntryId())) return false
+        if (root.isDownloadBusy || isChapterDownloaded(chapter.id)) return false
+
+        const key = libraryWriteKey() || currentManga.id
+        const cid = chapter.id
+        const rawCover = _extractRawUrl(currentManga.coverUrl || "")
+        root._setDownloadJob(cid, {
+            mangaId: key,
+            status: "pending",
+            done: 0,
+            total: 0,
+            error: ""
+        })
+        root.activeDownloadId = cid
+
+        Http.post(root.apiUrl + "/dl/start", {
+            mangaId:      key,
+            chapterId:    cid,
+            chapterNum:   chapter.chapter || "",
+            chapterTitle: chapter.title || "",
+            mangaTitle:   currentManga.title || "",
+            rawCoverUrl:  rawCover
+        }, function(err, body) {
+            if (err) {
+                root._setDownloadJob(cid, {
+                    mangaId: key, status: "error", done: 0, total: 0, error: String(err)
+                })
+                if (root.activeDownloadId === cid) root.activeDownloadId = ""
+                return
+            }
+            try {
+                const res = JSON.parse(body)
+                if (res && res.ok) return
+                if (res && res.message === "done") {
+                    root._dropDownloadJob(cid)
+                    if (root.activeDownloadId === cid) root.activeDownloadId = ""
+                    fetchDownloads()
+                    return
+                }
+                root._setDownloadJob(cid, {
+                    mangaId: key,
+                    status: "error",
+                    done: 0,
+                    total: 0,
+                    error: (res && (res.error || res.message)) ? String(res.error || res.message) : "error"
+                })
+                if (root.activeDownloadId === cid) root.activeDownloadId = ""
+            } catch (e) {
+                root._setDownloadJob(cid, {
+                    mangaId: key, status: "error", done: 0, total: 0, error: String(e)
+                })
+                if (root.activeDownloadId === cid) root.activeDownloadId = ""
+            }
+        })
+        return true
+    }
+
+    function _pollActiveDownload() {
+        const cid = root.activeDownloadId
+        if (!cid) return
+        const prev = root.downloadJobs[cid] || { mangaId: "" }
+        const url = root.apiUrl + "/dl/progress?chapterId=" + encodeURIComponent(cid)
+        Http.get(url, function(err, body) {
+            if (root.activeDownloadId !== cid) return
+            if (err) {
+                root._setDownloadJob(cid, {
+                    mangaId: prev.mangaId || "", status: "error", done: 0, total: 0, error: String(err)
+                })
+                root.activeDownloadId = ""
+                return
+            }
+            try {
+                const data = JSON.parse(body)
+                const st = data && data.status ? String(data.status) : "not_started"
+                if (st === "done") {
+                    root._dropDownloadJob(cid)
+                    root.activeDownloadId = ""
+                    fetchDownloads()
+                } else if (st === "error") {
+                    root._setDownloadJob(cid, {
+                        mangaId: prev.mangaId || "",
+                        status: "error",
+                        done: Number(data.done) || 0,
+                        total: Number(data.total) || 0,
+                        error: String(data.error || "")
+                    })
+                    root.activeDownloadId = ""
+                } else if (st === "not_started") {
+                    root._dropDownloadJob(cid)
+                    root.activeDownloadId = ""
+                } else {
+                    root._setDownloadJob(cid, {
+                        mangaId: prev.mangaId || "",
+                        status: st,
+                        done: Number(data.done) || 0,
+                        total: Number(data.total) || 0,
+                        error: ""
+                    })
+                }
+            } catch (e) {
+                root._setDownloadJob(cid, {
+                    mangaId: prev.mangaId || "", status: "error", done: 0, total: 0, error: String(e)
+                })
+                root.activeDownloadId = ""
+            }
+        })
+    }
+
+    function deleteDownload(chapterId) {
+        if (!chapterId) return
+        Http.post(root.apiUrl + "/dl/delete", { chapterId: chapterId }, function(err, body) {
+            if (err) { console.warn("[ServiceManga] download delete failed:", err); return }
+            root._dropDownloadJob(chapterId)
+            if (root.activeDownloadId === chapterId) root.activeDownloadId = ""
+            fetchDownloads()
+        })
+    }
+
+    function openOfflineChapter(series, chapter) {
+        if (!series || !chapter || !chapter.chapterId || isFetchingPages) return false
+        currentManga = DownloadsJs.offlineMangaObject(series)
+        fetchOfflineChapterPages(chapter.chapterId)
+        if (currentManga && isInLibrary(libraryWriteKey())) {
+            updateLastRead(libraryWriteKey(), chapter.chapterId, chapter.chapterNum || "")
+        }
+        return true
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────
