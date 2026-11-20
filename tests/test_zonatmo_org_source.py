@@ -101,6 +101,48 @@ class ParseSeriesTest(unittest.TestCase):
         self.assertEqual(last["publishAt"], "27/05/2026")
 
 
+class ParseSeriesRedesignedTest(unittest.TestCase):
+    """2026-11-20 zonatmo.org series redesign (zt-hd__* markup)."""
+
+    def setUp(self):
+        self.info = zonatmo_org_source.parse_series(
+            load_text("series_2026-11-20.html"),
+            "library/manhwa/4482/desborde-de-agua",
+        )
+
+    def test_top_level_fields(self):
+        self.assertEqual(self.info["title"], "Desborde de Agua")
+        self.assertEqual(self.info["status"], "Finalizado")
+        self.assertEqual(self.info["type"], "MANHWA")
+        self.assertEqual(self.info["authors"], [])
+        self.assertIn("Horror", self.info["tags"])
+        self.assertIn("Ecchi", self.info["tags"])
+        self.assertIn("seinen", self.info["tags"])
+        self.assertIn("piscina", self.info["description"])
+        self.assertEqual(len(self.info["chapters"]), 142)
+
+    def test_redesigned_authors_from_facts_dl(self):
+        html = """
+        <h1 class="zt-hd__title">Solo Leveling</h1>
+        <dl class="zt-hd__facts">
+          <div>
+            <dt>Autores</dt>
+            <dd>
+              <a href="https://zonatmo.org/biblioteca?filter_by=author&amp;title=jang">jang</a>,
+              <a href="https://zonatmo.org/biblioteca?filter_by=author&amp;title=sung-rak">sung-rak</a>
+            </dd>
+          </div>
+        </dl>
+        """
+        info = zonatmo_org_source.parse_series(html, "library/manhwa/6426/solo-leveling")
+        self.assertEqual(info["authors"], ["jang", "sung-rak"])
+
+    def test_og_title_fallback_strips_site_wrapper(self):
+        html = '<meta property="og:title" content="Ver Desborde de Agua Online Gratis | ZonaTMO">'
+        info = zonatmo_org_source.parse_series(html, "library/manhwa/4482/desborde-de-agua")
+        self.assertEqual(info["title"], "Desborde de Agua")
+
+
 class ParseChapterTest(unittest.TestCase):
     def test_pages_deduped_and_ordered(self):
         pages = zonatmo_org_source.parse_chapter(load_text("chapter.html"), "969671")

@@ -221,29 +221,51 @@ def _meta(html, name):
     return _html_unescape(match.group(1)) if match else ""
 
 
+def _clean_og_title(raw):
+    text = str(raw or "").strip()
+    text = re.sub(r"\s*\|\s*ZonaTMO\s*$", "", text, flags=re.IGNORECASE).strip()
+    match = re.match(r"^Ver\s+(.+?)\s+Online(?:\s+Gratis)?$", text, flags=re.IGNORECASE)
+    return match.group(1).strip() if match else text
+
+
 def _genres(html):
-    section = re.search(r'element-subtitle">Géneros</h5>([\s\S]*?)(?:<h5 class="element-subtitle)', html or "")
+    text = html or ""
+    section = re.search(r'<div class="zt-hd__genres">([\s\S]*?)</div>', text)
+    if section:
+        names = re.findall(r'<a[^>]*>\s*([^<]+?)\s*</a>', section.group(1))
+        return [_html_unescape(name).strip() for name in names if name.strip()]
+    section = re.search(r'element-subtitle">Géneros</h5>([\s\S]*?)(?:<h5 class="element-subtitle)', text)
     if not section:
         return []
     names = re.findall(r'href="https://zonatmo\.org/tag/[^"]+">\s*([^<]+?)\s*</a>', section.group(1))
-    return [name.strip() for name in names if name.strip()]
+    return [_html_unescape(name).strip() for name in names if name.strip()]
 
 
 def _demography(html):
-    match = re.search(r'<div class="manga-meta-bar">[\s\S]*?<i class="fas fa-users"></i>\s*([^<]+?)\s*</span>', html or "")
-    return [match.group(1).strip()] if match and match.group(1).strip() else []
+    text = html or ""
+    kicker = re.search(r'<p class="zt-hd__kicker">([\s\S]*?)</p>', text)
+    if kicker:
+        match = re.search(r'<span>\s*([^<]+?)\s*</span>', kicker.group(1))
+        if match and match.group(1).strip():
+            return [_html_unescape(match.group(1)).strip()]
+    match = re.search(r'<div class="manga-meta-bar">[\s\S]*?<i class="fas fa-users"></i>\s*([^<]+?)\s*</span>', text)
+    return [_html_unescape(match.group(1)).strip()] if match and match.group(1).strip() else []
 
 
 def _series_status(html):
-    """The series status label, unwrapping the nested status-dot span."""
-    match = re.search(r'<span class="book-status[^"]*">([\s\S]*?)</span>', html or "")
+    """The series status label, supporting both redesigned and legacy markup."""
+    text = html or ""
+    new_match = re.search(r'<span class="zt-hd__state[^"]*">([\s\S]*?)</span>', text)
+    if new_match:
+        return _strip_tags(new_match.group(1))
+    match = re.search(r'<span class="book-status[^"]*">([\s\S]*?)</span>', text)
     if not match:
         return ""
     inner = match.group(1)
     if not _strip_tags(inner):
         # Real markup nests an empty <span class="status-dot ..."></span>; the
         # label follows it and closes the outer span.
-        rest = (html or "")[match.end():]
+        rest = text[match.end():]
         inner = rest[:300].split("</span>", 1)[0]
     return _strip_tags(inner)
 
@@ -277,28 +299,37 @@ def _chapters(html):
 
 def parse_series(html, series_path):
     """Build the contract info object from the series HTML page."""
-    title = re.search(r'<h1 class="element-title[^"]*"[^>]*>([\s\S]*?)</h1>', html or "")
-    description = re.search(r'id="manga-synopsis"[^>]*>([\s\S]*?)</p>', html or "")
-    cover = _meta(html, "og:image")
+    text = html or ""
+    title = (re.search(r'<h1 class="zt-hd__title[^"]*"[^>]*>([\s\S]*?)</h1>', text)
+             or re.search(r'<h1 class="element-title[^"]*"[^>]*>([\s\S]*?)</h1>', text))
+    description = re.search(r'id="manga-synopsis"[^>]*>([\s\S]*?)</p>', text)
+    cover = _meta(text, "og:image")
     if not cover:
-        thumb = re.search(r'<img class="book-thumbnail"[^>]*src="([^"]+)"', html or "")
+        thumb = re.search(r'<img class="book-thumbnail"[^>]*src="([^"]+)"', text)
         cover = _html_unescape(thumb.group(1)) if thumb else ""
     authors = []
-    for name in (_strip_tags(a) for a in re.findall(r'filter_by=author[^"]*">([\s\S]*?)</a>', html or "")):
+    for name in (_strip_tags(a) for a in re.findall(r'filter_by=author[^"]*">([\s\S]*?)</a>', text)):
         if name and name not in authors:
             authors.append(name)
-    tags = _genres(html) + _demography(html)
+    if not authors:
+        facts = re.search(r'<dt>\s*Autores?\s*</dt>\s*<dd[^>]*>([\s\S]*?)</dd>', text, flags=re.IGNORECASE)
+        if facts:
+            for part in _strip_tags(facts.group(1)).split(","):
+                name = part.strip()
+                if name and name not in authors:
+                    authors.append(name)
+    tags = _genres(text) + _demography(text)
     return {
         "id": series_path,
-        "title": _strip_tags(title.group(1)) if title else _meta(html, "og:title"),
+        "title": _strip_tags(title.group(1)) if title else _clean_og_title(_meta(text, "og:title")),
         "description": (_strip_tags(description.group(1)) if description else "")
-                       or _meta(html, "og:description") or _meta(html, "description"),
-        "status": _status(_series_status(html)),
+                       or _meta(text, "og:description") or _meta(text, "description"),
+        "status": _status(_series_status(text)),
         "image": proxy_url(cover),
         "authors": authors,
         "tags": tags,
         "type": _type_from_path(series_path),
-        "chapters": _chapters(html),
+        "chapters": _chapters(text),
     }
 
 
