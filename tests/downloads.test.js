@@ -129,3 +129,43 @@ test("offlineMangaObject maps downloaded series to ReaderView / chapter-nav sche
         publishAt: "2026-11-20T01:00:00Z",
     });
 });
+
+// Live bug 2026-11-20: Manga.downloadsList was a QML `list<var>`, which reaches
+// JS as a sequence that is NOT a JS Array. visibleSeries and
+// downloadedChapterMap rejected it with Array.isArray, so the Downloads screen
+// stayed empty and downloaded chapters kept their ↓ icon, while the backend
+// listed both chapters. The helpers must accept any array-like sequence.
+function qmlSequence(items) {
+    const seq = { length: items.length };
+    items.forEach((item, i) => { seq[i] = item; });
+    return seq;
+}
+
+test("visibleSeries and downloadedChapterMap accept a QML list sequence, not only a JS Array", () => {
+    const series = {
+        id: "mangadex:opm",
+        title: "El hombre de un solo golpe",
+        sizeBytes: 4673263,
+        chapters: [
+            { chapterId: "mangadex:c252", chapterNum: "252", sizeBytes: 2079277 },
+            { chapterId: "mangadex:c251", chapterNum: "251", sizeBytes: 2593986 },
+        ],
+    };
+    const seq = qmlSequence([series]);
+    assert.equal(Array.isArray(seq), false);
+    const opts = { locked: true, loaded: true };
+    const visible = Downloads.visibleSeries(seq, () => false, opts);
+    assert.equal(visible.length, 1);
+    assert.equal(visible[0].id, "mangadex:opm");
+    const map = Downloads.downloadedChapterMap(seq, () => false, opts);
+    assert.deepEqual(Object.keys(map).sort(), ["mangadex:c251", "mangadex:c252"]);
+    assert.equal(Downloads.summary(visible).chapterCount, 2);
+});
+
+test("Manga.downloadsList is a plain JS array property, not a QML list<var>", () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const manga = fs.readFileSync(path.join(__dirname, "..", "services", "Manga.qml"), "utf8");
+    assert.match(manga, /property var downloadsList: \[\]/);
+    assert.doesNotMatch(manga, /property list<var> downloadsList/);
+});

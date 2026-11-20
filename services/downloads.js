@@ -4,12 +4,22 @@
 // both the library and organizer files have loaded, matching library_view.js.
 // Hidden titles never appear in the downloads list, chapter map or total bytes.
 
+// A QML `list<var>` reaches JS as an array-like sequence, not an Array:
+// copy any sequence with a numeric length into a real Array, or null.
+function toArray(value) {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object" && typeof value.length === "number")
+        return Array.prototype.slice.call(value);
+    return null;
+}
+
 function visibleSeries(downloads, isHiddenFn, options) {
     var opts = options || {};
     var locked = opts.locked !== false;
     var loaded = opts.loaded === true;
     if (locked && !loaded) return [];
-    if (!Array.isArray(downloads)) return [];
+    downloads = toArray(downloads);
+    if (!downloads) return [];
 
     var checkHidden = typeof isHiddenFn === "function" ? isHiddenFn : function() { return false; };
     var out = [];
@@ -36,7 +46,8 @@ function downloadedChapterMap(downloads, isHiddenFn, options) {
 }
 
 function summary(visibleDownloads) {
-    if (!Array.isArray(visibleDownloads)) {
+    visibleDownloads = toArray(visibleDownloads);
+    if (!visibleDownloads) {
         return { seriesCount: 0, chapterCount: 0, totalBytes: 0 };
     }
     var chapterCount = 0;

@@ -77,7 +77,8 @@ Singleton {
     property int favNewCount: 0
 
     // ── Downloads ────────────────────────────────────────────────────────────
-    property list<var> downloadsList: []
+    // A plain JS array: services/downloads.js filters it (a list<var> is not an Array).
+    property var downloadsList: []
     property bool isFetchingDownloads: false
     property var downloadJobs: ({})
     property string activeDownloadId: ""
