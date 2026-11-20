@@ -83,6 +83,10 @@ class CheckSourceTest(unittest.TestCase):
         problems = self.check(FakeSource(), lambda url: WEBP[:64])
         self.assertTrue(any("small" in p for p in problems), problems)
 
+    def test_raw_site_wrapper_in_title_is_a_problem(self):
+        problems = self.check(FakeSource(title="Ver Desborde de Agua Online Gratis | ZonaTMO"))
+        self.assertTrue(any("title" in p for p in problems), problems)
+
 
 class ConfigTest(unittest.TestCase):
     def test_every_source_has_its_own_probe_query(self):

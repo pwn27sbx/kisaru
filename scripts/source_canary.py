@@ -211,8 +211,11 @@ def probe(module, fetch=fetch_bytes, query=QUERY):
     if not item_id:
         return (problems + [f"detail: no chapters in the first {PROBE_DETAIL_TRIES} results"],
                 stats, first_id)
-    if not data.get("title"):
+    title = str(data.get("title") or "").strip()
+    if not title:
         problems.append("detail: no title")
+    elif "| zonatmo" in title.lower():
+        problems.append("detail: raw site title")
     chapters = data.get("chapters") or []
     stats["chapters"] = len(chapters)
 
