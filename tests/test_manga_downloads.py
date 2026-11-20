@@ -55,6 +55,15 @@ class DownloadPagesTest(unittest.TestCase):
 
         self.assertEqual(manga_server._download_pages("zonatmo:x"), [{"page": 1, "img": "z"}])
 
+    def test_weebcentral_prefixed_id_strips_prefix_for_scraper(self):
+        manga_chain.pages = lambda cid: self.asked.append(("chain", cid)) or []
+        manga_server._pages = lambda cid: self.asked.append(("scraper", cid)) or [{"page": 1, "img": "w"}]
+
+        pages = manga_server._download_pages("weebcentral:01JABC")
+
+        self.assertEqual(pages, [{"page": 1, "img": "w"}])
+        self.assertEqual(self.asked, [("scraper", "01JABC")])
+
 
 if __name__ == "__main__":
     unittest.main()

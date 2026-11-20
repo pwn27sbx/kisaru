@@ -794,44 +794,152 @@ def chapter_number(value):
         return float("-inf")
 
 
+def _series_dir_id(manga_id):
+    """Safe, collision-free folder name for a manga id inside DOWNLOADS_DIR.
+
+    Prefixed ids like `zonatmo_org:library/manga/12345/slug` would collide on
+    `zonatmo_org:library` if split on "/"; flattening "/" to "__" after
+    `safe_relative_path` keeps every series distinct while leaving single-
+    segment ids (`mangadex:abc`) and legacy WeebCentral ids (`01J.../Slug`)
+    unchanged.
+    """
+    if safe_relative_path(manga_id) is None:
+        return None
+    text = str(manga_id)
+    if ":" in text:
+        return text.replace("/", "__")
+    return text.split("/")[0]
+
+
+def _chapter_dir_id(chapter_id):
+    """Safe, flat folder name for a chapter id inside a series folder."""
+    if safe_relative_path(chapter_id) is None:
+        return None
+    return str(chapter_id).replace("/", "__")
+
+
+def _write_json_atomic(path, payload):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh)
+    os.replace(tmp, path)
+
+
+def _dir_size_bytes(directory):
+    total = 0
+    for root_dir, _dirs, files in os.walk(directory):
+        for fn in files:
+            try:
+                total += os.path.getsize(os.path.join(root_dir, fn))
+            except OSError:
+                continue
+    return total
+
+
+def _prune_empty_dirs(start_dir, stop_at):
+    stop_real = os.path.realpath(stop_at)
+    cur = os.path.realpath(start_dir)
+    while cur != stop_real and cur.startswith(stop_real + os.sep):
+        try:
+            os.rmdir(cur)
+        except OSError:
+            break
+        cur = os.path.dirname(cur)
+
+
+def _series_has_chapters(series_dir):
+    for _root_dir, _dirs, files in os.walk(series_dir):
+        if "meta.json" in files:
+            return True
+    return False
+
+
+def _find_chapter_dir(chapter_id, require_meta=False):
+    """Return `(series_dir, ch_dir)` for `chapter_id`, checking both flat and
+    legacy nested paths, or `(None, None)` when not found."""
+    flat_cid = _chapter_dir_id(chapter_id)
+    if flat_cid is None or not os.path.isdir(DOWNLOADS_DIR):
+        return None, None
+    candidates = [flat_cid]
+    raw_cid = str(chapter_id)
+    if raw_cid != flat_cid:
+        candidates.append(raw_cid)
+    for sid in sorted(os.listdir(DOWNLOADS_DIR)):
+        series_dir = downloads_path(sid)
+        if not series_dir or not os.path.isdir(series_dir):
+            continue
+        for cand in candidates:
+            ch_dir = downloads_path(sid, cand)
+            if not ch_dir or not os.path.isdir(ch_dir):
+                continue
+            if require_meta and not os.path.isfile(os.path.join(ch_dir, "meta.json")):
+                continue
+            return series_dir, ch_dir
+    return None, None
+
+
 def dl_list():
     result = []
-    if not os.path.exists(DOWNLOADS_DIR):
+    if not os.path.isdir(DOWNLOADS_DIR):
         return result
     for sid in sorted(os.listdir(DOWNLOADS_DIR)):
         series_dir  = os.path.join(DOWNLOADS_DIR, sid)
         series_meta = os.path.join(series_dir, "series_meta.json")
         if not os.path.isdir(series_dir) or not os.path.exists(series_meta):
             continue
-        with open(series_meta) as f:
-            sm = json.load(f)
+        try:
+            with open(series_meta, encoding="utf-8") as f:
+                sm = json.load(f)
+        except (OSError, ValueError):
+            continue
         chapters = []
-        for cid in sorted(os.listdir(series_dir)):
-            ch_dir  = os.path.join(series_dir, cid)
-            ch_meta = os.path.join(ch_dir, "meta.json")
-            if not os.path.isdir(ch_dir) or not os.path.exists(ch_meta):
+        for root_dir, _dirs, files in os.walk(series_dir):
+            if root_dir == series_dir or "meta.json" not in files:
                 continue
-            with open(ch_meta) as f:
-                chapters.append(json.load(f))
+            ch_meta = os.path.join(root_dir, "meta.json")
+            try:
+                with open(ch_meta, encoding="utf-8") as f:
+                    meta = json.load(f)
+            except (OSError, ValueError):
+                continue
+            meta["sizeBytes"] = _dir_size_bytes(root_dir)
+            chapters.append(meta)
+        if not chapters:
+            continue
         chapters.sort(key=lambda c: chapter_number(c.get("chapterNum", "0")), reverse=True)
         cover_path      = os.path.join(series_dir, "cover.jpg")
         cover_url_local = f"file://{cover_path}" if os.path.exists(cover_path) else proxy_url(sm.get("rawCoverUrl", ""))
-        result.append({**sm, "image": cover_url_local, "chapters": chapters})
+        result.append({
+            **sm,
+            "image": cover_url_local,
+            "sizeBytes": _dir_size_bytes(series_dir),
+            "chapters": chapters,
+        })
     return result
 
 
 def dl_progress(chapter_id):
     with _dl_lock:
-        return _dl_jobs.get(chapter_id, {"status": "not_started"})
+        return dict(_dl_jobs.get(chapter_id, {"status": "not_started"}))
 
 
 def dl_start(manga_id, chapter_id, chapter_num, chapter_title, manga_title, raw_cover_url):
-    if downloads_path(str(manga_id or "").split("/")[0], chapter_id) is None:
+    sid = _series_dir_id(manga_id)
+    cid_dir = _chapter_dir_id(chapter_id)
+    if sid is None or cid_dir is None or downloads_path(sid, cid_dir) is None:
         return {"ok": False, "error": "invalid chapter id"}
     with _dl_lock:
         job = _dl_jobs.get(chapter_id, {})
-        if job.get("status") in ("downloading", "done"):
+        if job.get("status") in ("pending", "downloading", "done"):
             return {"ok": False, "message": job["status"]}
+        if any(
+            cid != chapter_id and j.get("status") in ("pending", "downloading")
+            for cid, j in _dl_jobs.items()
+        ):
+            return {"ok": False, "error": "busy"}
+        _, existing = _find_chapter_dir(chapter_id, require_meta=True)
+        if existing is not None:
+            return {"ok": False, "message": "done"}
         _dl_jobs[chapter_id] = {"status": "pending", "total": 0, "done": 0, "error": None}
     threading.Thread(
         target=_dl_worker,
@@ -846,22 +954,55 @@ def _download_pages(chapter_id):
 
     The worker used to call the WeebCentral scraper for every chapter, so a
     Spanish chapter downloaded English pages, or nothing. A prefixed id goes
-    through the chain; an unprefixed legacy id keeps the old path.
+    through the chain (or strips `weebcentral:` for the local scraper); an
+    unprefixed legacy id keeps the old path.
     """
-    if ":" in str(chapter_id or ""):
+    cid = str(chapter_id or "")
+    if cid.startswith("weebcentral:"):
+        return _pages(cid.split(":", 1)[1])
+    if ":" in cid:
         try:
             import manga_chain
-            pages = manga_chain.pages(chapter_id) or []
+            pages = manga_chain.pages(cid) or []
             if pages:
                 return pages
         except Exception:  # noqa: BLE001 — fall back rather than fail the job
             pass
-    return _pages(chapter_id)
+    return _pages(cid)
+
+
+def _dl_fetch_image(real_url, chapter=None, page=None):
+    """Fetch one page image using the same SSRF/allowlist/MangaDex-404 policy as /image."""
+    cached = _img_get(real_url)
+    if cached:
+        return cached[0]
+    try:
+        with _img_sem:
+            body, ctype = _proxy_fetch(real_url)
+    except Exception as e:
+        upstream = getattr(getattr(e, "response", None), "status_code", None)
+        if upstream == 404 and chapter and page:
+            retry_url = _retry_mangadex_page(chapter, page, real_url)
+            if retry_url and retry_url != real_url:
+                with _img_sem:
+                    body, ctype = _proxy_fetch(retry_url)
+            else:
+                raise
+        else:
+            raise
+    if not is_image_response(ctype, body):
+        # A bot check served as a page must fail the job, not land on disk as 001.jpg.
+        raise RuntimeError(
+            "upstream returned %s, not a page: %s" % (ctype or "no type", real_url[:90])
+        )
+    _img_put(real_url, body, ctype)
+    return body
 
 
 def _dl_worker(manga_id, chapter_id, chapter_num, chapter_title, manga_title, raw_cover_url):
-    sid    = str(manga_id or "").split("/")[0]
-    ch_dir = downloads_path(sid, chapter_id)
+    sid = _series_dir_id(manga_id)
+    cid_dir = _chapter_dir_id(chapter_id)
+    ch_dir = downloads_path(sid, cid_dir) if (sid and cid_dir) else None
     if ch_dir is None:
         # An id that leaves DOWNLOADS_DIR is not a chapter: fail the job here,
         # before anything is created on disk (audit 2026-11-06, C2).
@@ -869,65 +1010,79 @@ def _dl_worker(manga_id, chapter_id, chapter_num, chapter_title, manga_title, ra
             _dl_jobs[chapter_id] = {"status": "error", "total": 0, "done": 0,
                                     "error": "invalid chapter id"}
         return
-    os.makedirs(ch_dir, exist_ok=True)
 
+    created_dir = False
+    meta_written = False
     try:
         page_list = _download_pages(chapter_id)
         total     = len(page_list)
+        if total == 0:
+            raise RuntimeError("no pages found")
         with _dl_lock:
             _dl_jobs[chapter_id].update({"status": "downloading", "total": total})
 
+        os.makedirs(ch_dir, exist_ok=True)
+        created_dir = True
+
+        written = 0
         for pg in page_list:
             qs       = parse_qs(urlparse(pg["img"]).query)
             real_url = unquote(qs.get("url", [""])[0])
             if not real_url:
                 continue
+            md_chapter = qs.get("chapter", [None])[0]
+            md_page    = qs.get("page", [None])[0]
             ext   = real_url.split("?")[0].rsplit(".", 1)[-1].lower()
             ext   = ext if ext in ("jpg", "jpeg", "png", "webp") else "jpg"
             fname = os.path.join(ch_dir, f"{pg['page']:03d}.{ext}")
             if not os.path.exists(fname):
-                cached = _img_get(real_url)
-                if cached:
-                    body = cached[0]
-                else:
-                    body, ctype = _raw_get(real_url)
-                    if not is_image_response(ctype, body):
-                        # A bot check served as a page must fail the job, not
-                        # land on disk as 001.jpg.
-                        raise RuntimeError(
-                            "upstream returned %s, not a page: %s"
-                            % (ctype or "no type", real_url[:90]))
-                    _img_put(real_url, body, ctype)
-                with open(fname, "wb") as f:
+                body = _dl_fetch_image(real_url, chapter=md_chapter, page=md_page)
+                tmp = fname + ".tmp"
+                with open(tmp, "wb") as f:
                     f.write(body)
+                os.replace(tmp, fname)
+            written += 1
             with _dl_lock:
-                _dl_jobs[chapter_id]["done"] += 1
+                _dl_jobs[chapter_id]["done"] = written
 
-        with open(os.path.join(ch_dir, "meta.json"), "w") as f:
-            json.dump({
-                "chapterId":    chapter_id,
-                "chapterNum":   chapter_num,
-                "title":        chapter_title,
-                "mangaId":      manga_id,
-                "mangaTitle":   manga_title,
-                "pages":        total,
-                "downloadedAt": datetime.now(timezone.utc).isoformat(),
-            }, f)
+        if written == 0:
+            raise RuntimeError("no pages downloaded")
+
+        _write_json_atomic(os.path.join(ch_dir, "meta.json"), {
+            "chapterId":    chapter_id,
+            "chapterNum":   chapter_num,
+            "title":        chapter_title,
+            "mangaId":      manga_id,
+            "mangaTitle":   manga_title,
+            "pages":        written,
+            "downloadedAt": datetime.now(timezone.utc).isoformat(),
+        })
+        meta_written = True
 
         series_dir  = downloads_path(sid)
         series_meta = os.path.join(series_dir, "series_meta.json")
-        with open(series_meta, "w") as f:
-            json.dump({"id": manga_id, "title": manga_title,
-                       "localId": sid, "rawCoverUrl": raw_cover_url}, f)
+        _write_json_atomic(series_meta, {
+            "id": manga_id,
+            "title": manga_title,
+            "localId": sid,
+            "rawCoverUrl": raw_cover_url,
+        })
 
         cover_path = os.path.join(series_dir, "cover.jpg")
         if not os.path.exists(cover_path) and raw_cover_url:
             try:
-                body, ctype = _raw_get(raw_cover_url, timeout=15)
+                cached_cover = _img_get(raw_cover_url)
+                if cached_cover:
+                    body, ctype = cached_cover
+                else:
+                    with _img_sem:
+                        body, ctype = _proxy_fetch(raw_cover_url)
                 # Same rule as the pages: an HTML challenge is not a cover.
                 if is_image_response(ctype, body):
-                    with open(cover_path, "wb") as f:
+                    tmp_cover = cover_path + ".tmp"
+                    with open(tmp_cover, "wb") as f:
                         f.write(body)
+                    os.replace(tmp_cover, cover_path)
             except Exception:
                 pass
 
@@ -936,41 +1091,38 @@ def _dl_worker(manga_id, chapter_id, chapter_num, chapter_title, manga_title, ra
 
     except Exception as e:
         import traceback; traceback.print_exc()
+        if created_dir and not meta_written:
+            shutil.rmtree(ch_dir, ignore_errors=True)
+            _prune_empty_dirs(os.path.dirname(ch_dir), DOWNLOADS_DIR)
         with _dl_lock:
             _dl_jobs[chapter_id] = {"status": "error", "total": 0, "done": 0, "error": str(e)}
 
 
 def dl_pages(chapter_id):
-    if safe_relative_path(chapter_id) is None:
+    _series_dir, ch_dir = _find_chapter_dir(chapter_id, require_meta=True)
+    if not ch_dir:
         return []
-    for sid in os.listdir(DOWNLOADS_DIR):
-        ch_dir = downloads_path(sid, chapter_id)
-        if ch_dir and os.path.isdir(ch_dir):
-            files = sorted(f for f in os.listdir(ch_dir)
-                           if f[0].isdigit() and f.rsplit(".", 1)[-1].lower()
-                           in ("jpg", "jpeg", "png", "webp"))
-            return [{"page": i + 1, "img": f"file://{os.path.join(ch_dir, fn)}"}
-                    for i, fn in enumerate(files)]
-    return []
+    files = sorted(f for f in os.listdir(ch_dir)
+                   if f[0].isdigit() and f.rsplit(".", 1)[-1].lower()
+                   in ("jpg", "jpeg", "png", "webp"))
+    return [{"page": i + 1, "img": f"file://{os.path.join(ch_dir, fn)}"}
+            for i, fn in enumerate(files)]
 
 
 def dl_remove(chapter_id):
     if safe_relative_path(chapter_id) is None:
         return {"ok": False, "error": "invalid chapter id"}
-    for sid in os.listdir(DOWNLOADS_DIR):
-        ch_dir = downloads_path(sid, chapter_id)
-        if ch_dir and os.path.isdir(ch_dir):
-            shutil.rmtree(ch_dir)
-            series_dir = downloads_path(sid)
-            if series_dir:
-                remaining = [d for d in os.listdir(series_dir)
-                             if os.path.isdir(os.path.join(series_dir, d))]
-                if not remaining:
-                    shutil.rmtree(series_dir)
-            with _dl_lock:
-                _dl_jobs.pop(chapter_id, None)
-            return {"ok": True}
-    return {"ok": False, "error": "not found"}
+    series_dir, ch_dir = _find_chapter_dir(chapter_id, require_meta=False)
+    if not ch_dir:
+        return {"ok": False, "error": "not found"}
+    shutil.rmtree(ch_dir)
+    if series_dir:
+        _prune_empty_dirs(os.path.dirname(ch_dir), series_dir)
+        if not _series_has_chapters(series_dir):
+            shutil.rmtree(series_dir, ignore_errors=True)
+    with _dl_lock:
+        _dl_jobs.pop(chapter_id, None)
+    return {"ok": True}
 
 
 # ── Image byte cache ───────────────────────────────────────────────────────
