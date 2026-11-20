@@ -56,7 +56,7 @@ Rectangle {
     // Small status bar text must reach >= 4.5:1 against its background (and
     // against the hover tint) across every Omarchy theme while keeping its hue.
     readonly property color _hoverSurface:
-        Contrast.mix(Colors.surface_container, Colors.primary, Style.hoverFillAlpha)
+        Contrast.mix(Colors.surface_container, Colors.primary, Style.selectedFillAlpha)
     readonly property color _labelColor:
         Contrast.statusText(
             Contrast.statusText(Colors.on_surface_variant, Colors.surface_container, Colors.on_surface),
@@ -185,7 +185,7 @@ Rectangle {
             color: _style.fill === HeaderCell.FILL.PRESSED
                 ? Style.pressedFillFor(Colors.muted, Colors.primary)
                 : _style.fill === HeaderCell.FILL.HOVER
-                    ? Style.hoverFillFor(Colors.muted, Colors.primary)
+                    ? Style.selectedFillFor(Colors.muted, Colors.primary)
                     : "transparent"
             opacity: root.prevEnabled ? 1.0 : 0.25
             Behavior on color { ColorAnimation { duration: Motion.fast } }
@@ -245,7 +245,7 @@ Rectangle {
             color: _style.fill === HeaderCell.FILL.PRESSED
                 ? Style.pressedFillFor(Colors.muted, Colors.primary)
                 : _style.fill === HeaderCell.FILL.HOVER
-                    ? Style.hoverFillFor(Colors.muted, Colors.primary)
+                    ? Style.selectedFillFor(Colors.muted, Colors.primary)
                     : "transparent"
             opacity: root.nextEnabled ? 1.0 : 0.25
             Behavior on color { ColorAnimation { duration: Motion.fast } }

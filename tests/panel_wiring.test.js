@@ -718,8 +718,8 @@ test("manga chapter navigation shares Manga.openChapter and lives in the status 
         "StatusBar must reuse services/header_cell.js");
     assert.match(statusBar, /HeaderCell\.cellStyle\(/,
         "StatusBar nav items must resolve state through HeaderCell.cellStyle");
-    assert.match(statusBar, /Style\.hoverFillFor\(Colors\.muted,\s*Colors\.primary\)/,
-        "StatusBar nav items must reuse Style.hoverFillFor(Colors.muted, Colors.primary)");
+    assert.match(statusBar, /Style\.selectedFillFor\(Colors\.muted,\s*Colors\.primary\)/,
+        "StatusBar nav hover must use the stronger Style.selectedFillFor(Colors.muted, Colors.primary) (owner: more noticeable)");
     assert.match(statusBar, /Style\.pressedFillFor\(Colors\.muted,\s*Colors\.primary\)/,
         "StatusBar nav items must reuse Style.pressedFillFor(Colors.muted, Colors.primary)");
     assert.match(leftGroup, /hovered:\s*root\.prevEnabled\s*&&/,

@@ -120,7 +120,7 @@ test("statusText works on a light theme", () => {
 test("status bar label clears 4.5:1 on the hover fill too (Round 4 / D2)", () => {
     const ownerBg = "#1b2128";
     const ownerAccent = "#e69875";
-    const hoverBg = contrast.mix(ownerBg, ownerAccent, 0.08);
+    const hoverBg = contrast.mix(ownerBg, ownerAccent, 0.18);
     const label = contrast.statusText(
         contrast.statusText(MUTED, ownerBg, FOREGROUND),
         hoverBg, FOREGROUND);
@@ -130,6 +130,6 @@ test("status bar label clears 4.5:1 on the hover fill too (Round 4 / D2)", () =>
         `label on hover fill is ${contrast.ratio(label, hoverBg).toFixed(2)}:1`);
 
     const statusBar = read("components/StatusBar.qml");
-    assert.match(statusBar, /Style\.hoverFillAlpha/,
-        "StatusBar must account for hoverFillAlpha when computing readable label contrast");
+    assert.match(statusBar, /Style\.selectedFillAlpha/,
+        "StatusBar must account for selectedFillAlpha (the hover tint) when computing readable label contrast");
 });
