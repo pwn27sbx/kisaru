@@ -6,6 +6,7 @@ import qs.Commons
 import qs.app
 import qs.services
 import "../services/contrast.js" as Contrast
+import "../services/header_cell.js" as HeaderCell
 
 // Bottom strip of the manga panel: connection state on the left, the installed
 // version and the shortcuts that actually work on the right.
@@ -52,10 +53,14 @@ Rectangle {
     // "" until the manifest is read; the version label hides itself then.
     property string version: ""
 
-    // Small status bar text must reach >= 4.5:1 against its background across
-    // every Omarchy theme while keeping the theme's hue.
+    // Small status bar text must reach >= 4.5:1 against its background (and
+    // against the hover tint) across every Omarchy theme while keeping its hue.
+    readonly property color _hoverSurface:
+        Contrast.mix(Colors.surface_container, Colors.primary, Style.hoverFillAlpha)
     readonly property color _labelColor:
-        Contrast.statusText(Colors.on_surface_variant, Colors.surface_container, Colors.on_surface)
+        Contrast.statusText(
+            Contrast.statusText(Colors.on_surface_variant, Colors.surface_container, Colors.on_surface),
+            root._hoverSurface, Colors.on_surface)
     readonly property color _versionColor:
         Contrast.statusText(Colors.primary, Colors.surface_container, Colors.on_surface)
     readonly property color _keyCapTextColor:
@@ -165,16 +170,30 @@ Rectangle {
             color: Colors.muted
         }
 
-        Item {
+        Rectangle {
+            id: prevNavChip
+            readonly property var _style: HeaderCell.cellStyle({
+                current: false,
+                hovered: root.prevEnabled && prevNavMouse.containsMouse,
+                pressed: root.prevEnabled && prevNavMouse.pressed
+            })
             Layout.alignment: Qt.AlignVCenter
             visible: root.navVisible
-            implicitWidth: prevNavRow.implicitWidth
-            implicitHeight: prevNavRow.implicitHeight
+            implicitWidth: prevNavRow.implicitWidth + Style.spacing.sm * 2
+            implicitHeight: prevNavRow.implicitHeight + Style.spacing.xxs * 2
+            radius: Style.cornerRadius
+            color: _style.fill === HeaderCell.FILL.PRESSED
+                ? Style.pressedFillFor(Colors.muted, Colors.primary)
+                : _style.fill === HeaderCell.FILL.HOVER
+                    ? Style.hoverFillFor(Colors.muted, Colors.primary)
+                    : "transparent"
             opacity: root.prevEnabled ? 1.0 : 0.25
+            Behavior on color { ColorAnimation { duration: Motion.fast } }
             Behavior on opacity { NumberAnimation { duration: Motion.base } }
 
             RowLayout {
                 id: prevNavRow
+                anchors.centerIn: parent
                 spacing: Style.spacing.sm
 
                 KeyCap {
@@ -188,9 +207,7 @@ Rectangle {
                     text: I18n.t("action.prev")
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
-                    color: prevNavMouse.containsMouse && root.prevEnabled
-                        ? root._versionColor : root._labelColor
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    color: root._labelColor
                 }
             }
 
@@ -204,32 +221,53 @@ Rectangle {
             }
         }
 
-        Item {
+        StyledText {
             Layout.alignment: Qt.AlignVCenter
             visible: root.navVisible
-            implicitWidth: nextNavRow.implicitWidth
-            implicitHeight: nextNavRow.implicitHeight
+            text: "·"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            color: Colors.muted
+        }
+
+        Rectangle {
+            id: nextNavChip
+            readonly property var _style: HeaderCell.cellStyle({
+                current: false,
+                hovered: root.nextEnabled && nextNavMouse.containsMouse,
+                pressed: root.nextEnabled && nextNavMouse.pressed
+            })
+            Layout.alignment: Qt.AlignVCenter
+            visible: root.navVisible
+            implicitWidth: nextNavRow.implicitWidth + Style.spacing.sm * 2
+            implicitHeight: nextNavRow.implicitHeight + Style.spacing.xxs * 2
+            radius: Style.cornerRadius
+            color: _style.fill === HeaderCell.FILL.PRESSED
+                ? Style.pressedFillFor(Colors.muted, Colors.primary)
+                : _style.fill === HeaderCell.FILL.HOVER
+                    ? Style.hoverFillFor(Colors.muted, Colors.primary)
+                    : "transparent"
             opacity: root.nextEnabled ? 1.0 : 0.25
+            Behavior on color { ColorAnimation { duration: Motion.fast } }
             Behavior on opacity { NumberAnimation { duration: Motion.base } }
 
             RowLayout {
                 id: nextNavRow
+                anchors.centerIn: parent
                 spacing: Style.spacing.sm
-
-                KeyCap {
-                    Layout.alignment: Qt.AlignVCenter
-                    key: "→"
-                    bodyFont: root.fontFamily
-                }
 
                 StyledText {
                     Layout.alignment: Qt.AlignVCenter
                     text: I18n.t("action.next")
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
-                    color: nextNavMouse.containsMouse && root.nextEnabled
-                        ? root._versionColor : root._labelColor
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    color: root._labelColor
+                }
+
+                KeyCap {
+                    Layout.alignment: Qt.AlignVCenter
+                    key: "→"
+                    bodyFont: root.fontFamily
                 }
             }
 

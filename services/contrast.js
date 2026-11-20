@@ -23,8 +23,11 @@ function ratio(a, b) {
 }
 
 function mix(a, b, t) {
-    var left = String(a).replace("#", "");
-    var right = String(b).replace("#", "");
+    var aHex = normalizeHex(a);
+    var bHex = normalizeHex(b);
+    if (!aHex || !bHex) return a;
+    var left = aHex.slice(1);
+    var right = bHex.slice(1);
     var out = "";
     for (var i = 0; i < 6; i += 2) {
         var value = Math.round(parseInt(left.slice(i, i + 2), 16)

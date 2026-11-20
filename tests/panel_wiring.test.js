@@ -702,6 +702,31 @@ test("manga chapter navigation shares Manga.openChapter and lives in the status 
     assert.ok(!rightGroup.includes("root.navVisible"),
         "StatusBar chapter nav must no longer live in the right shortcutsRow");
 
+    // Round 4 (D1-D3): arrow order `← Prev · Next →` and header-style hover/pressed fills.
+    const idxLeftArrow = leftGroup.indexOf('key: "←"');
+    const idxPrevLabel = leftGroup.indexOf('I18n.t("action.prev")');
+    const idxNextLabel = leftGroup.indexOf('I18n.t("action.next")');
+    const idxRightArrow = leftGroup.indexOf('key: "→"');
+    assert.ok(idxLeftArrow >= 0 && idxPrevLabel > idxLeftArrow,
+        "StatusBar prev must read ← then action.prev");
+    assert.ok(idxNextLabel > idxPrevLabel && idxRightArrow > idxNextLabel,
+        "StatusBar next must read action.next then →");
+    const betweenPrevNext = leftGroup.slice(idxPrevLabel, idxNextLabel);
+    assert.match(betweenPrevNext, /text:\s*"·"/,
+        "StatusBar must place a · separator between Prev and Next");
+    assert.match(statusBar, /import "\.\.\/services\/header_cell\.js" as HeaderCell/,
+        "StatusBar must reuse services/header_cell.js");
+    assert.match(statusBar, /HeaderCell\.cellStyle\(/,
+        "StatusBar nav items must resolve state through HeaderCell.cellStyle");
+    assert.match(statusBar, /Style\.hoverFillFor\(Colors\.muted,\s*Colors\.primary\)/,
+        "StatusBar nav items must reuse Style.hoverFillFor(Colors.muted, Colors.primary)");
+    assert.match(statusBar, /Style\.pressedFillFor\(Colors\.muted,\s*Colors\.primary\)/,
+        "StatusBar nav items must reuse Style.pressedFillFor(Colors.muted, Colors.primary)");
+    assert.match(leftGroup, /hovered:\s*root\.prevEnabled\s*&&/,
+        "Disabled prev item must never show hover fill");
+    assert.match(leftGroup, /hovered:\s*root\.nextEnabled\s*&&/,
+        "Disabled next item must never show hover fill");
+
     const mangaPanel = read("modules/manga/MangaReader.qml");
     assert.match(mangaPanel, /prevEnabled:\s*Manga\.hasPrevChapter/,
         "MangaReader StatusBar must bind prevEnabled to Manga.hasPrevChapter");
