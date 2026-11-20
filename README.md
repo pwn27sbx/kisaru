@@ -341,9 +341,9 @@ node tools/lint-style.js     # números crudos de radio/espaciado/tipografía
 # Los backends necesitan Flask, requests y curl_cffi. Están fijados, con hashes,
 # en requirements.txt (las mismas versiones que instala install.sh). Sin ese
 # venv la suite no falla: se salta las pruebas de los backends.
-python3 -m venv /var/tmp/kisaru-venv
-/var/tmp/kisaru-venv/bin/pip install -r requirements-dev.txt
-/var/tmp/kisaru-venv/bin/python -m unittest discover -s tests -p "test_*.py"
+python3 -m venv ~/.local/share/kisaru/venv
+~/.local/share/kisaru/venv/bin/pip install -r requirements-dev.txt
+~/.local/share/kisaru/venv/bin/python -m unittest discover -s tests -p "test_*.py"
 ```
 
 Las pruebas de los backends usan fixtures grabadas y `HOME`/`XDG_DATA_HOME` temporales:
