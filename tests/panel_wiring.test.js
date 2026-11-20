@@ -645,6 +645,24 @@ test("leaving the Library tab locks through the shared header", () => {
     }
 });
 
+test("manga chapter downloads are wired with private-mode guards and no ScrollBar", () => {
+    const downloadsView = read("modules/manga/components/DownloadsView.qml");
+    assert.ok(!/ScrollBar/.test(downloadsView), "DownloadsView must not place a ScrollBar");
+    assert.match(downloadsView, /Manga\.visibleDownloadsList/, "DownloadsView must read the visible downloads list");
+    assert.match(downloadsView, /Manga\.visibleDownloadsSummary/, "DownloadsView must read the visible summary");
+    assert.match(downloadsView, /Manga\.deleteDownload\(/, "DownloadsView must wire delete");
+
+    const mangaService = read("services/Manga.qml");
+    assert.match(mangaService, /DownloadsJs\.visibleSeries\(/, "Manga.qml must filter downloads through downloads.js");
+    assert.match(mangaService, /DownloadsJs\.scrubHiddenJobs\(/, "Manga.qml must scrub hidden jobs on lock");
+    assert.match(mangaService, /loaded:\s*_libLoaded && _orgLoaded/, "Manga.qml must fail closed before library+organizer load");
+
+    const mangaPanel = read("modules/manga/MangaReader.qml");
+    assert.match(mangaPanel, /DownloadsView\s*\{/, "MangaReader must host DownloadsView");
+    assert.match(mangaPanel, /if \(root\.libraryStack === 3\)/, "MangaReader must leave DownloadsView on lock");
+    assert.match(mangaPanel, /libraryReader\.reset\(\)/, "MangaReader must reset libraryReader on lock");
+});
+
 test("manga chapter navigation shares Manga.openChapter and lives in the status bar with arrow keys", () => {
     const detail = read("modules/manga/components/DetailView.qml");
     assert.match(detail, /Manga\.openChapter\(modelData\)/,

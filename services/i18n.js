@@ -124,6 +124,15 @@ var tables = {
         "manga.noSpanishNotice": "No se encontraron capítulos en español para este título",
         "manga.sourcesTried": "Fuentes consultadas: %1",
         "manga.searchOtherSources": "Buscar en otras fuentes",
+        "manga.downloads": "Descargas",
+        "manga.downloads.empty": "No hay capítulos descargados",
+        "manga.downloads.hint": "Descarga un capítulo desde cualquier manga para leerlo sin conexión",
+        "manga.download": "Descargar capítulo",
+        "manga.downloading": "Descargando %1/%2",
+        "manga.downloaded": "Descargado",
+        "manga.downloadBusy": "Otra descarga en curso",
+        "manga.downloadDelete": "Borrar descarga",
+        "manga.downloadError": "Error al descargar · clic para reintentar",
 
         // ── Novel ───────────────────────────────────────────────────────
         "panel.novel": "novelas",
@@ -250,6 +259,15 @@ var tables = {
         "manga.noSpanishNotice": "No Spanish chapters found for this title",
         "manga.sourcesTried": "Sources checked: %1",
         "manga.searchOtherSources": "Search other sources",
+        "manga.downloads": "Downloads",
+        "manga.downloads.empty": "No downloaded chapters",
+        "manga.downloads.hint": "Download a chapter from any manga to read it offline",
+        "manga.download": "Download chapter",
+        "manga.downloading": "Downloading %1/%2",
+        "manga.downloaded": "Downloaded",
+        "manga.downloadBusy": "Another download in progress",
+        "manga.downloadDelete": "Delete download",
+        "manga.downloadError": "Download failed · click to retry",
 
         // ── Novel ───────────────────────────────────────────────────────
         "panel.novel": "novels",

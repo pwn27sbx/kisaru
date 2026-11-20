@@ -195,3 +195,14 @@ test("tSource() falls back to the raw id when unknown", () => {
     assert.equal(i18n.tSource(""), "");
     assert.equal(i18n.tSource(undefined), "");
 });
+
+test("t() translates manga chapter download keys in es and en", () => {
+    assert.equal(i18n.t("es", "manga.downloads"), "Descargas");
+    assert.equal(i18n.t("en", "manga.downloads"), "Downloads");
+    assert.equal(i18n.t("es", "manga.downloaded"), "Descargado");
+    assert.equal(i18n.t("en", "manga.downloaded"), "Downloaded");
+    assert.equal(i18n.t("es", "manga.downloading", { 1: 3, 2: 12 }), "Descargando 3/12");
+    assert.equal(i18n.t("en", "manga.downloading", { 1: 3, 2: 12 }), "Downloading 3/12");
+    assert.equal(i18n.t("es", "manga.downloadDelete"), "Borrar descarga");
+    assert.equal(i18n.t("en", "manga.downloadDelete"), "Delete download");
+});
