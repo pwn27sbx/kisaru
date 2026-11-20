@@ -43,6 +43,7 @@ Item {
 
     property int browseStack: 0
     property int libraryStack: 0
+    property int _readerReturnStack: 1
 
     readonly property bool _readerNavVisible:
         !root.settingsMode
@@ -315,6 +316,10 @@ Item {
                         root.selectedMangaId = mangaId
                         root.libraryStack = 1
                     }
+                    onDownloadsRequested: {
+                        Manga.fetchDownloads()
+                        root.libraryStack = 3
+                    }
                 }
 
                 DetailView {
@@ -332,7 +337,10 @@ Item {
                         Manga.clearDetail()
                     }
 
-                    onChapterSelected: { root.libraryStack = 2 }
+                    onChapterSelected: {
+                        root._readerReturnStack = 1
+                        root.libraryStack = 2
+                    }
                     onSearchOtherSourcesRequested: root.searchOtherSources()
                 }
 
@@ -344,8 +352,24 @@ Item {
                     Behavior on opacity { NumberAnimation { duration: Motion.slow; easing.type: Motion.easeOut } }
 
                     onBackRequested: {
-                        root.libraryStack = 1
+                        root.libraryStack = root._readerReturnStack
                         libraryReader.reset()
+                    }
+                }
+
+                DownloadsView {
+                    id: downloadsView
+                    anchors.fill: parent
+                    visible: root.libraryStack === 3
+                    opacity: visible ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: Motion.slow; easing.type: Motion.easeOut } }
+
+                    onBackRequested: { root.libraryStack = 0 }
+                    onChapterSelected: function(series, chapter) {
+                        if (Manga.openOfflineChapter(series, chapter)) {
+                            root._readerReturnStack = 3
+                            root.libraryStack = 2
+                        }
                     }
                 }
             }
@@ -392,18 +416,25 @@ Item {
         title: I18n.t("panel.manga")
     }
 
-    // One hook: when the mode locks, a hidden title leaves no reader behind.
+    // One hook: when the mode locks, a hidden title leaves no reader behind,
+    // and DownloadsView returns to Library root (Amendment A7).
     Connections {
         target: Privacy
         function onLockedChanged() {
             if (!Privacy.locked) return
             root.collapseSearch()
+            if (root.libraryStack === 3) {
+                root.libraryStack = 0
+            }
             if (Manga.isHiddenLibraryEntry(Manga.currentLibraryId)) {
                 root.tabIndex = 1
                 root.browseStack = 0
                 root.libraryStack = 0
+                root._readerReturnStack = 1
                 browseDetail.reset()
                 libraryDetail.reset()
+                browseReader.reset()
+                libraryReader.reset()
                 Manga.clearDetail()
             }
         }

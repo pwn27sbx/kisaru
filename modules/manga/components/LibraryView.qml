@@ -11,6 +11,7 @@ import "../../../services/folder_cards.js" as FolderCards
 import "../../../services/toolbar.js" as Toolbar
 import "../../../services/manga_card.js" as MangaCard
 import "../../../services/list_metrics.js" as ListMetrics
+import "../../../services/downloads.js" as DownloadsJs
 
 Item {
     id: libraryView
@@ -80,6 +81,8 @@ Item {
 
     // Emitted when the user taps an entry — parent handles navigation
     signal mangaSelected(string mangaId)
+    // Emitted when the user opens the Downloads screen from Library root
+    signal downloadsRequested()
     // The panel answers by putting the search field away.
     signal secretEntered()
 
@@ -165,6 +168,68 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         spacing: Style.space(0)
+
+        // ── Downloads entry bar (root of Library only, zero trace while locked)
+        ClickableRect {
+            id: downloadsEntryBar
+            readonly property var _dlSummary: Manga.visibleDownloadsSummary
+            Layout.fillWidth: true
+            Layout.preferredHeight: Style.space(40)
+            Layout.topMargin: Style.spacing.md
+            Layout.leftMargin: Gutter.left + Gutter.ink
+            Layout.rightMargin: Gutter.right + Gutter.ink
+            visible: !libraryView.folderOpen && !libraryView._searching
+            radius: Style.cornerRadius
+            color: hovered ? Colors.surface_container_high : Colors.surface_container
+            border.color: Colors.outline_variant
+            border.width: Style.spacing.hairline
+            Behavior on color { ColorAnimation { duration: Motion.fast } }
+
+            RowLayout {
+                anchors {
+                    fill: parent
+                    leftMargin: Style.spacing.lg
+                    rightMargin: Style.spacing.lg
+                }
+                spacing: Style.spacing.sm
+
+                StyledText {
+                    text: "↓"
+                    font.family: libraryView.fontBody
+                    font.pixelSize: Style.font.body
+                    font.bold: true
+                    color: Colors.primary
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: I18n.t("manga.downloads")
+                    font.family: libraryView.fontBody
+                    font.pixelSize: Style.font.bodySmall
+                    font.bold: true
+                    color: Colors.on_surface
+                    elide: Text.ElideRight
+                }
+
+                StyledText {
+                    visible: downloadsEntryBar._dlSummary.chapterCount > 0
+                    text: I18n.tn("count.chapter", downloadsEntryBar._dlSummary.chapterCount)
+                        + " · " + DownloadsJs.formatBytes(downloadsEntryBar._dlSummary.totalBytes)
+                    font.family: libraryView.fontBody
+                    font.pixelSize: Style.font.caption
+                    color: Colors.card_secondary
+                }
+
+                StyledText {
+                    text: "›"
+                    font.family: libraryView.fontBody
+                    font.pixelSize: Style.font.title
+                    color: Colors.outline
+                }
+            }
+
+            onClicked: libraryView.downloadsRequested()
+        }
 
         // ── Open folder: back, name, count, and the folder's own actions ─────
         RowLayout {
