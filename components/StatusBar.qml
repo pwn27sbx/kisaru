@@ -5,6 +5,7 @@ import Quickshell.Io
 import qs.Commons
 import qs.app
 import qs.services
+import "../services/contrast.js" as Contrast
 
 // Bottom strip of the manga panel: connection state on the left, the installed
 // version and the shortcuts that actually work on the right.
@@ -50,6 +51,15 @@ Rectangle {
 
     // "" until the manifest is read; the version label hides itself then.
     property string version: ""
+
+    // Small status bar text must reach >= 4.5:1 against its background across
+    // every Omarchy theme while keeping the theme's hue.
+    readonly property color _labelColor:
+        Contrast.statusText(Colors.on_surface_variant, Colors.surface_container, Colors.on_surface)
+    readonly property color _versionColor:
+        Contrast.statusText(Colors.primary, Colors.surface_container, Colors.on_surface)
+    readonly property color _keyCapTextColor:
+        Contrast.statusText(Colors.on_surface_variant, Colors.surface_container_high, Colors.on_surface)
 
     implicitHeight: Style.space(28)
     color: Colors.surface_container
@@ -104,7 +114,7 @@ Rectangle {
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             font.letterSpacing: 0.4
-            color: Colors.on_surface_variant
+            color: root._labelColor
         }
 
         // The same separator the card's meta row uses, so the bar reads as one
@@ -124,7 +134,7 @@ Rectangle {
             text: root.countText
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
-            color: Colors.on_surface_variant
+            color: root._labelColor
         }
 
         StyledText {
@@ -142,40 +152,18 @@ Rectangle {
             text: root.modeText
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
-            color: Colors.on_surface_variant
+            color: root._labelColor
             font.letterSpacing: 0.4
         }
-    }
-
-    // A key cap and its label, one per shortcut. The key names are not UI copy:
-    // they read the same in both languages.
-    component KeyCap: Rectangle {
-        property string key: ""
-        property string bodyFont: ""
-
-        implicitWidth: keyLabel.implicitWidth + Style.spacing.lg * 2
-        implicitHeight: keyLabel.implicitHeight + Style.spacing.xxs * 2
-        radius: Style.cornerRadius
-        color: Colors.surface_container_high
 
         StyledText {
-            id: keyLabel
-            anchors.centerIn: parent
-            text: parent.key
-            font.family: parent.bodyFont
+            Layout.alignment: Qt.AlignVCenter
+            visible: root.navVisible
+            text: "·"
+            font.family: root.fontFamily
             font.pixelSize: Style.font.caption
-            color: Colors.on_surface_variant
+            color: Colors.muted
         }
-    }
-
-    RowLayout {
-        id: shortcutsRow
-        anchors {
-            right: parent.right
-            rightMargin: Style.spacing.xl
-            verticalCenter: parent.verticalCenter
-        }
-        spacing: Style.spacing.md
 
         Item {
             Layout.alignment: Qt.AlignVCenter
@@ -201,7 +189,7 @@ Rectangle {
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
                     color: prevNavMouse.containsMouse && root.prevEnabled
-                        ? Colors.primary : Colors.on_surface_variant
+                        ? root._versionColor : root._labelColor
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                 }
             }
@@ -240,7 +228,7 @@ Rectangle {
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
                     color: nextNavMouse.containsMouse && root.nextEnabled
-                        ? Colors.primary : Colors.on_surface_variant
+                        ? root._versionColor : root._labelColor
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                 }
             }
@@ -254,6 +242,37 @@ Rectangle {
                 onClicked: root.nextRequested()
             }
         }
+    }
+
+    // A key cap and its label, one per shortcut. The key names are not UI copy:
+    // they read the same in both languages.
+    component KeyCap: Rectangle {
+        property string key: ""
+        property string bodyFont: ""
+
+        implicitWidth: keyLabel.implicitWidth + Style.spacing.lg * 2
+        implicitHeight: keyLabel.implicitHeight + Style.spacing.xxs * 2
+        radius: Style.cornerRadius
+        color: Colors.surface_container_high
+
+        StyledText {
+            id: keyLabel
+            anchors.centerIn: parent
+            text: parent.key
+            font.family: parent.bodyFont
+            font.pixelSize: Style.font.caption
+            color: root._keyCapTextColor
+        }
+    }
+
+    RowLayout {
+        id: shortcutsRow
+        anchors {
+            right: parent.right
+            rightMargin: Style.spacing.xl
+            verticalCenter: parent.verticalCenter
+        }
+        spacing: Style.spacing.md
 
         StyledText {
             Layout.alignment: Qt.AlignVCenter
@@ -262,7 +281,7 @@ Rectangle {
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             font.bold: true
-            color: Colors.primary
+            color: root._versionColor
         }
 
         KeyCap {
@@ -276,7 +295,7 @@ Rectangle {
             text: I18n.t("status.search")
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
-            color: Colors.on_surface_variant
+            color: root._labelColor
         }
 
         KeyCap {
@@ -290,7 +309,7 @@ Rectangle {
             text: I18n.t("status.close")
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
-            color: Colors.on_surface_variant
+            color: root._labelColor
         }
     }
 }

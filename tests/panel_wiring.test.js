@@ -683,6 +683,24 @@ test("manga chapter navigation shares Manga.openChapter and lives in the status 
         "StatusBar must reuse action.prev");
     assert.match(statusBar, /I18n\.t\("action\.next"\)/,
         "StatusBar must reuse action.next");
+    // Round 3 (C1-C2): readable text via contrast.js, and nav in left stateRow.
+    assert.match(statusBar, /import "\.\.\/services\/contrast\.js" as Contrast/,
+        "StatusBar must import services/contrast.js");
+    assert.match(statusBar, /Contrast\.statusText\(/,
+        "StatusBar text colors must go through Contrast.statusText");
+    const stateRowStart = statusBar.indexOf("id: stateRow");
+    const shortcutsRowStart = statusBar.indexOf("id: shortcutsRow");
+    assert.ok(stateRowStart >= 0 && shortcutsRowStart > stateRowStart);
+    const leftGroup = statusBar.slice(stateRowStart, shortcutsRowStart);
+    const rightGroup = statusBar.slice(shortcutsRowStart);
+    assert.match(leftGroup, /root\.navVisible/,
+        "StatusBar chapter nav must live in the left stateRow");
+    assert.match(leftGroup, /root\.prevRequested\(\)/,
+        "StatusBar prev button must live in the left stateRow");
+    assert.match(leftGroup, /root\.nextRequested\(\)/,
+        "StatusBar next button must live in the left stateRow");
+    assert.ok(!rightGroup.includes("root.navVisible"),
+        "StatusBar chapter nav must no longer live in the right shortcutsRow");
 
     const mangaPanel = read("modules/manga/MangaReader.qml");
     assert.match(mangaPanel, /prevEnabled:\s*Manga\.hasPrevChapter/,

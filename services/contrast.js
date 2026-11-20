@@ -39,11 +39,47 @@ function cardSecondary(muted, onSurface) {
     return mix(muted, onSurface, 0.9);
 }
 
+function normalizeHex(value) {
+    if (value === null || value === undefined) return null;
+    var text = String(value).trim().replace(/^#/, "");
+    if (/^[0-9a-fA-F]{6}$/.test(text)) return "#" + text.toLowerCase();
+    if (/^[0-9a-fA-F]{8}$/.test(text)) return "#" + text.slice(2).toLowerCase();
+    return null;
+}
+
+// Nearest mix of `color` toward `onSurface` that reaches `minRatio` (default
+// 4.5:1) against `bg`, keeping the theme's hue. Returns `color` unchanged when
+// it already passes or when an input has not loaded yet.
+function statusText(color, bg, onSurface, minRatio) {
+    var targetRatio = minRatio || 4.5;
+    var cHex = normalizeHex(color);
+    var bgHex = normalizeHex(bg);
+    if (!cHex || !bgHex) return color;
+    if (ratio(cHex, bgHex) >= targetRatio) return color;
+
+    var tHex = normalizeHex(onSurface);
+    if (!tHex) tHex = luminance(bgHex) < 0.5 ? "#ffffff" : "#000000";
+    if (ratio(tHex, bgHex) < targetRatio) {
+        var extreme = luminance(bgHex) < 0.5 ? "#ffffff" : "#000000";
+        tHex = ratio(extreme, bgHex) > ratio(tHex, bgHex) ? extreme : tHex;
+    }
+
+    var lo = 0;
+    var hi = 1;
+    for (var i = 0; i < 14; i++) {
+        var mid = (lo + hi) / 2;
+        if (ratio(mix(cHex, tHex, mid), bgHex) >= targetRatio) hi = mid;
+        else lo = mid;
+    }
+    return mix(cHex, tHex, hi);
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         luminance: luminance,
         ratio: ratio,
         mix: mix,
-        cardSecondary: cardSecondary
+        cardSecondary: cardSecondary,
+        statusText: statusText
     };
 }

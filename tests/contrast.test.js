@@ -89,3 +89,30 @@ test("the shared hide switch is readable, borderless and state-labelled", () => 
     // The label is the title tone on the panel: 6.63:1.
     assert.ok(contrast.ratio(FOREGROUND, CONTAINER) >= 4.5);
 });
+
+// ── statusText (Round 3 / C2-C3) ─────────────────────────────────────────────
+
+test("statusText raises the owner's muted status bar text to >= 4.5:1", () => {
+    const ownerBg = "#1b2128";
+    const raised = contrast.statusText(MUTED, ownerBg, FOREGROUND);
+    assert.ok(contrast.ratio(raised, ownerBg) >= 4.5,
+        `raised status text is ${contrast.ratio(raised, ownerBg).toFixed(2)}:1`);
+    // Also check a low-contrast accent (version) on the same background.
+    const raisedAccent = contrast.statusText("#4a6b82", ownerBg, FOREGROUND);
+    assert.ok(contrast.ratio(raisedAccent, ownerBg) >= 4.5,
+        `raised accent is ${contrast.ratio(raisedAccent, ownerBg).toFixed(2)}:1`);
+});
+
+test("statusText returns a color unchanged when it already passes 4.5:1", () => {
+    const ownerBg = "#1b2128";
+    assert.equal(contrast.statusText(FOREGROUND, ownerBg, FOREGROUND), FOREGROUND);
+});
+
+test("statusText works on a light theme", () => {
+    const lightBg = "#f5efe6";
+    const lightMuted = "#b0a89f";
+    const lightFg = "#4a4038";
+    const raised = contrast.statusText(lightMuted, lightBg, lightFg);
+    assert.ok(contrast.ratio(raised, lightBg) >= 4.5,
+        `light theme status text is ${contrast.ratio(raised, lightBg).toFixed(2)}:1`);
+});
