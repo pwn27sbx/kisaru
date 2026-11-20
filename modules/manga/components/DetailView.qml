@@ -703,6 +703,11 @@ Item {
                         _libEntry !== null && _libEntry !== undefined
                         && (_libEntry.lastReadChapterId === modelData.id
                             || Chapters.sameChapter(modelData.chapter, _libEntry.lastReadChapterNum))
+                    readonly property bool _hideDownloads:
+                        Privacy.locked && Manga.isHiddenLibraryEntry(Manga.libraryEntryId())
+                    readonly property var _dlState: _hideDownloads
+                        ? ({ kind: "idle", done: 0, total: 0, error: "" })
+                        : Manga.chapterDownloadState(modelData.id)
 
                     color: isLastRead
                         ? Style.selectedFillFor(Colors.primary)
@@ -755,6 +760,99 @@ Item {
                                 font.family: detailView.fontBody
                                 font.pixelSize: Style.font.caption; color: Colors.on_surface_variant
                                 opacity: 0.55; font.letterSpacing: 0.3
+                            }
+                        }
+
+                        // Download button / progress / downloaded mark
+                        Item {
+                            id: dlControl
+                            visible: !chapterRowAreaRect._hideDownloads
+                            readonly property string kind: chapterRowAreaRect._dlState.kind
+                            readonly property bool busyOther: kind === "idle" && Manga.isDownloadBusy
+                            readonly property string glyph: kind === "downloaded"
+                                ? "✓"
+                                : (kind === "error" ? "!" : "↓")
+                            implicitWidth: kind === "downloading" && chapterRowAreaRect._dlState.total > 0
+                                ? Math.max(Style.space(34), dlProgressLabel.implicitWidth + Style.space(12))
+                                : Style.space(32)
+                            implicitHeight: Style.space(32)
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: Style.cornerRadius
+                                color: dlControl.kind === "downloaded"
+                                    ? Colors.withAlpha(Colors.primary, 0.14)
+                                    : (dlControl.kind === "error"
+                                        ? Colors.withAlpha(Colors.error, 0.14)
+                                        : (dlArea.containsMouse && !dlControl.busyOther
+                                            ? Colors.surface_container_high : "transparent"))
+                                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            }
+
+                            Spinner {
+                                anchors.centerIn: parent
+                                visible: dlControl.kind === "downloading" && chapterRowAreaRect._dlState.total === 0
+                                width: Style.space(16)
+                                border.width: 2
+                                border.color: Colors.withAlpha(Colors.primary, 0.2)
+                                arcColor: Colors.primary
+                                duration: Motion.loop
+                            }
+
+                            StyledText {
+                                id: dlProgressLabel
+                                anchors.centerIn: parent
+                                visible: dlControl.kind === "downloading" && chapterRowAreaRect._dlState.total > 0
+                                text: chapterRowAreaRect._dlState.done + "/" + chapterRowAreaRect._dlState.total
+                                font.family: detailView.fontBody
+                                font.pixelSize: Style.font.caption
+                                font.bold: true
+                                color: Colors.primary
+                            }
+
+                            StyledText {
+                                anchors.centerIn: parent
+                                visible: dlControl.kind !== "downloading"
+                                text: dlControl.glyph
+                                font.family: detailView.fontBody
+                                font.pixelSize: Style.font.body
+                                font.bold: true
+                                color: dlControl.kind === "downloaded"
+                                    ? Colors.primary
+                                    : (dlControl.kind === "error"
+                                        ? Colors.error
+                                        : Colors.on_surface_variant)
+                                opacity: dlControl.busyOther ? 0.35 : 0.9
+                            }
+
+                            MouseArea {
+                                id: dlArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: (dlControl.kind === "idle" || dlControl.kind === "error") && !dlControl.busyOther
+                                    ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onClicked: function(mouse) {
+                                    mouse.accepted = true
+                                    if ((dlControl.kind === "idle" || dlControl.kind === "error") && !dlControl.busyOther)
+                                        Manga.startDownload(modelData)
+                                }
+
+                                ToolTip.visible: containsMouse
+                                ToolTip.delay: 500
+                                ToolTip.text: {
+                                    if (dlControl.kind === "downloaded") return I18n.t("manga.downloaded")
+                                    if (dlControl.kind === "downloading") {
+                                        return chapterRowAreaRect._dlState.total > 0
+                                            ? I18n.t("manga.downloading", {
+                                                1: chapterRowAreaRect._dlState.done,
+                                                2: chapterRowAreaRect._dlState.total
+                                            })
+                                            : I18n.t("manga.download")
+                                    }
+                                    if (dlControl.kind === "error") return I18n.t("manga.downloadError")
+                                    if (dlControl.busyOther) return I18n.t("manga.downloadBusy")
+                                    return I18n.t("manga.download")
+                                }
                             }
                         }
 
