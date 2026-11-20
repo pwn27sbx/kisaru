@@ -39,6 +39,7 @@ function run(args, input, env) {
     return spawnSync(PYTHON, [SCRIPT, ...args], {
         encoding: "utf8",
         timeout: 60000,
+        detached: true,
         input: input === undefined ? "" : input,
         env: { ...process.env, ...env }
     });
@@ -156,6 +157,7 @@ test("kisaru privado runs the helper from the config folder, out of --help", () 
     const result = spawnSync("bash", [BIN, "privado"], {
         encoding: "utf8",
         timeout: 60000,
+        detached: true,
         input: WORD + "\n" + WORD + "\n",
         env: { ...process.env, HOME: box.home, XDG_CONFIG_HOME: path.join(box.home, "cfg"),
             XDG_DATA_HOME: box.data }
