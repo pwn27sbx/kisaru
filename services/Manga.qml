@@ -7,6 +7,7 @@ import qs.services
 import "app_paths.js" as Paths
 import "library_view.js" as LibraryViewJs
 import "search_paging.js" as SearchPaging
+import "chapters.js" as Chapters
 
 Singleton {
     id: root
@@ -64,6 +65,10 @@ Singleton {
     property string pagesError: ""
     property string currentChapterId: ""
     property bool dataSaverMode: false
+    readonly property bool hasPrevChapter:
+        Chapters.adjacentChapter(currentManga ? currentManga.chapters : [], currentChapterId, -1) !== null
+    readonly property bool hasNextChapter:
+        Chapters.adjacentChapter(currentManga ? currentManga.chapters : [], currentChapterId, 1) !== null
 
     // ── Favorites ────────────────────────────────────────────────────────────
     property list<var> favoritesList: []
@@ -511,6 +516,25 @@ Singleton {
     }
 
     // ── Chapter pages ─────────────────────────────────────────────────────────
+    function openChapter(ch) {
+        if (!ch || !ch.id || isFetchingPages) return false
+        fetchChapterPages(ch.id)
+        if (currentManga && isInLibrary(libraryWriteKey())) {
+            updateLastRead(libraryWriteKey(), ch.id, ch.chapter)
+        }
+        return true
+    }
+
+    function openPrevChapter() {
+        const ch = Chapters.adjacentChapter(currentManga ? currentManga.chapters : [], currentChapterId, -1)
+        return ch ? openChapter(ch) : false
+    }
+
+    function openNextChapter() {
+        const ch = Chapters.adjacentChapter(currentManga ? currentManga.chapters : [], currentChapterId, 1)
+        return ch ? openChapter(ch) : false
+    }
+
     function fetchChapterPages(chapterId) {
         if (isFetchingPages) return
         isFetchingPages = true

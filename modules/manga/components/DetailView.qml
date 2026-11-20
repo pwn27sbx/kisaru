@@ -766,16 +766,9 @@ Item {
                     }
 
                     onClicked: {
-                            Manga.fetchChapterPages(modelData.id)
+                        if (Manga.openChapter(modelData))
                             detailView.chapterSelected(modelData.id)
-                            if (Manga.currentManga && Manga.isInLibrary(Manga.libraryWriteKey())) {
-                                Manga.updateLastRead(
-                                    Manga.libraryWriteKey(),
-                                    modelData.id,
-                                    modelData.chapter
-                                )
-                            }
-                        }
+                    }
                 }
             }
         }
