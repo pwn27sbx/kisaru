@@ -421,7 +421,7 @@ class DownloadImageGuardTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
         self.orig = (manga_server.DOWNLOADS_DIR, manga_server._download_pages,
-                     manga_server._raw_get, manga_server._img_get,
+                     manga_server._proxy_fetch, manga_server._img_get,
                      manga_server._img_put)
         manga_server.DOWNLOADS_DIR = self.tmp
         manga_server._download_pages = lambda cid: [{
@@ -434,7 +434,7 @@ class DownloadImageGuardTest(unittest.TestCase):
 
     def tearDown(self):
         (manga_server.DOWNLOADS_DIR, manga_server._download_pages,
-         manga_server._raw_get, manga_server._img_get,
+         manga_server._proxy_fetch, manga_server._img_get,
          manga_server._img_put) = self.orig
         manga_server._dl_jobs.pop("ch1", None)
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -443,14 +443,14 @@ class DownloadImageGuardTest(unittest.TestCase):
         return os.path.join(self.tmp, "s1", "ch1")
 
     def test_a_challenge_page_is_never_saved_as_a_page(self):
-        manga_server._raw_get = lambda url, timeout=30: (CHALLENGE, "text/html")
+        manga_server._proxy_fetch = lambda url: (CHALLENGE, "text/html")
         manga_server._dl_worker("s1/Title", "ch1", "1", "Chapter 1", "Title", "")
         self.assertEqual(manga_server._dl_jobs["ch1"]["status"], "error")
-        self.assertEqual(os.listdir(self._chapter_dir()), [])
+        self.assertFalse(os.path.exists(self._chapter_dir()))
 
     def test_a_challenge_page_is_never_saved_as_the_series_cover(self):
         jpeg = b"\xff\xd8\xff\xe0page"
-        manga_server._raw_get = lambda url, timeout=30: (
+        manga_server._proxy_fetch = lambda url: (
             (jpeg, "image/jpeg") if url == self.CHAPTER_URL else (CHALLENGE, "text/html"))
         manga_server._dl_worker("s1/Title", "ch1", "1", "Chapter 1", "Title", self.COVER_URL)
         self.assertEqual(manga_server._dl_jobs["ch1"]["status"], "done")
