@@ -326,18 +326,20 @@ def _plain_get(url, headers, timeout, follow=True):
                                     allow_redirects=follow)
 
 
-# ── Image transfers: cut silence, not slowness ────────────────────────────
+# ── Image transfers: cut silence and zombie trickles ───────────────────────
 # curl_cffi's `timeout` bounds the WHOLE transfer, so a page that was still
 # trickling in was cut at 30 s and the retry started from zero (2026-11-17: one
-# ZonaTMO page took 27 s in a single attempt). Page images and chapter
-# downloads use their own session instead: LOW_SPEED_LIMIT 1 byte/s for
-# LOW_SPEED_TIME seconds cuts only a transfer that went silent, before or after
-# the headers. curl_cffi 0.17 has no per-request curl options, but a Session's
-# `curl_options` are applied last on every request; the call's `(10, 110)`
-# timeout tuple (no stream) sets a 10 s connect limit and a 120 s total that
-# stays only as a backstop. Scraper sessions keep their own timeouts.
+# ZonaTMO page took 27 s in a single attempt, ~20 KB/s). On the other hand, a
+# 1 byte/s floor let a single throttled CDN connection linger for >60 s while
+# sibling connections finished in <1 s. Page images and chapter downloads use
+# their own curl_cffi session with LOW_SPEED_LIMIT = IMAGE_LOW_SPEED_LIMIT
+# (8 KB/s) for IMAGE_STALL_SECONDS (15 s): legitimately slow pages finish,
+# while silent or throttled zombie connections are cut and retried once on a
+# fresh session. The `requests` fallback and MangaDex `_plain_session` keep
+# their per-read silence timeout `(10, 15)`.
 IMAGE_CONNECT_SECONDS = 10
 IMAGE_STALL_SECONDS = 15
+IMAGE_LOW_SPEED_LIMIT = 8192
 IMAGE_TOTAL_SECONDS = 120
 
 _tls_image = threading.local()
@@ -348,7 +350,7 @@ def _image_session():
     if sess is None:
         if _USE_CFFI:
             sess = CffiSession(impersonate="firefox", curl_options={
-                CurlOpt.LOW_SPEED_LIMIT: 1,
+                CurlOpt.LOW_SPEED_LIMIT: IMAGE_LOW_SPEED_LIMIT,
                 CurlOpt.LOW_SPEED_TIME: IMAGE_STALL_SECONDS,
             })
         else:
@@ -1535,6 +1537,178 @@ class ProxyBlocked(Exception):
     """The proxy refused a URL that is not a public image address."""
 
 
+class _NotAnImageError(Exception):
+    """The upstream answered 200 with non-image bytes (e.g. a bot challenge)."""
+
+    def __init__(self, ctype=""):
+        super().__init__(ctype or "no type")
+        self.ctype = ctype
+
+
+class _InflightFetch:
+    """Shared completion state for concurrent requests to the same image URL."""
+
+    def __init__(self):
+        self.event = threading.Event()
+        self.result = None
+        self.error = None
+        self.attempts = 0
+
+
+_img_inflight = {}
+_img_inflight_lock = threading.Lock()
+
+
+def _fetch_image_coalesced(img_url):
+    """Fetch, validate, and cache `img_url`, deduplicating concurrent requests.
+
+    Calls `_img_get`, `_proxy_fetch`, and `_img_put` via module globals so
+    existing test monkeypatches continue to intercept them cleanly.
+    """
+    cached = _img_get(img_url)
+    if cached:
+        return cached
+
+    leader = False
+    with _img_inflight_lock:
+        entry = _img_inflight.get(img_url)
+        if entry is None:
+            entry = _InflightFetch()
+            _img_inflight[img_url] = entry
+            leader = True
+
+    if not leader:
+        entry.event.wait()
+        _tls_image.attempts = entry.attempts
+        if entry.error is not None:
+            raise entry.error
+        return entry.result
+
+    host = urlparse(img_url).hostname or ""
+    _tls_image.attempts = 0
+    try:
+        with _img_sem:
+            body, ctype = _proxy_fetch(img_url)
+        if not is_image_response(ctype, body):
+            print("[manga-server] upstream returned %s, not an image: %s"
+                  % (ctype or "no type", img_url[:90]), flush=True)
+            img_mark_failed(img_url)
+            if "html" in (ctype or "").lower() or bytes(body[:6]).lower().startswith(b"<html") \
+                    or bytes(body[:15]).lower().startswith(b"<!doctype html"):
+                img_mark_host_down(host)
+            raise _NotAnImageError(ctype)
+        _img_put(img_url, body, ctype)
+        entry.result = (body, ctype)
+        return entry.result
+    except BaseException as exc:
+        entry.error = exc
+        raise
+    finally:
+        entry.attempts = getattr(_tls_image, "attempts", 0)
+        with _img_inflight_lock:
+            if _img_inflight.get(img_url) is entry:
+                _img_inflight.pop(img_url, None)
+        entry.event.set()
+
+
+# ── Background chapter page prefetch ───────────────────────────────────────
+# Fixed pool of persistent daemon workers so rapid chapter flips never leak
+# threads or curl_cffi sessions, and never consume more than PREFETCH_WORKERS
+# slots of `_img_sem`.
+PREFETCH_WORKERS = 2
+PREFETCH_MAX_PAGES = 20
+_PREFETCH_ABORT_STATUSES = frozenset({403, 429, 503})
+_PREFETCH_MAX_CONSECUTIVE_ERRORS = 2
+
+_prefetch_cond = threading.Condition()
+_prefetch_gen = 0
+_prefetch_urls = []
+_prefetch_idx = 0
+_prefetch_errors = 0
+_prefetch_started = False
+
+
+def _extract_prefetch_urls(page_items):
+    """Extract ordered, deduplicated upstream image URLs from `/pages` items."""
+    out = []
+    seen = set()
+    for item in (page_items or [])[:PREFETCH_MAX_PAGES]:
+        if not isinstance(item, dict):
+            continue
+        raw = item.get("img") or item.get("url") or ""
+        if not raw:
+            continue
+        parsed = urlparse(raw)
+        if parsed.path != "/image":
+            continue
+        target = unquote((parse_qs(parsed.query).get("url") or [""])[0])
+        if target and target not in seen:
+            seen.add(target)
+            out.append(target)
+    return out
+
+
+def _abort_prefetch_gen(gen):
+    global _prefetch_idx
+    with _prefetch_cond:
+        if _prefetch_gen == gen:
+            _prefetch_idx = len(_prefetch_urls)
+
+
+def _prefetch_worker():
+    global _prefetch_idx, _prefetch_errors
+    while True:
+        with _prefetch_cond:
+            while _prefetch_idx >= len(_prefetch_urls):
+                _prefetch_cond.wait()
+            gen = _prefetch_gen
+            url = _prefetch_urls[_prefetch_idx]
+            _prefetch_idx += 1
+
+        try:
+            host = urlparse(url).hostname or ""
+            if (not proxy_target_allowed(url) or not image_host_allowed(url)
+                    or _img_get(url) or img_blocked(url) or img_host_down(host)):
+                continue
+            _fetch_image_coalesced(url)
+            with _prefetch_cond:
+                if _prefetch_gen == gen:
+                    _prefetch_errors = 0
+        except _NotAnImageError:
+            _abort_prefetch_gen(gen)
+        except Exception as exc:  # noqa: BLE001 — prefetch must never crash
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            if status in _PREFETCH_ABORT_STATUSES:
+                _abort_prefetch_gen(gen)
+            else:
+                with _prefetch_cond:
+                    if _prefetch_gen == gen:
+                        _prefetch_errors += 1
+                        if _prefetch_errors >= _PREFETCH_MAX_CONSECUTIVE_ERRORS:
+                            _prefetch_idx = len(_prefetch_urls)
+
+
+def _schedule_chapter_prefetch(page_items):
+    """Start or replace background prefetch for a chapter's `/pages` list."""
+    global _prefetch_gen, _prefetch_urls, _prefetch_idx, _prefetch_errors, _prefetch_started
+    urls = _extract_prefetch_urls(page_items)
+    with _prefetch_cond:
+        _prefetch_gen += 1
+        _prefetch_urls = urls
+        _prefetch_idx = 0
+        _prefetch_errors = 0
+        if urls and not _prefetch_started:
+            _prefetch_started = True
+            for i in range(PREFETCH_WORKERS):
+                threading.Thread(
+                    target=_prefetch_worker,
+                    name=f"kisaru-prefetch-{i}",
+                    daemon=True,
+                ).start()
+        if urls:
+            _prefetch_cond.notify_all()
+
+
 def _proxy_fetch(url):
     """Fetch one image for /image, following only public redirects.
 
@@ -1592,11 +1766,14 @@ def proxy_image(handler, img_url, chapter=None, page=None):
                           elapsed=time.monotonic() - started)
 
     try:
-        with _img_sem:
-            body, ctype = _proxy_fetch(img_url)
+        body, ctype = _fetch_image_coalesced(img_url)
     except ProxyBlocked as e:
         failed("blocked-403", error=e)
         handler.send_error(403, "blocked image address")
+        return
+    except _NotAnImageError:
+        failed("not-an-image")
+        handler.send_error(502, "upstream is not an image")
         return
     except Exception as e:  # noqa: BLE001 — upstream 4xx/5xx or connection error
         upstream = getattr(getattr(e, "response", None), "status_code", None)
@@ -1605,10 +1782,13 @@ def proxy_image(handler, img_url, chapter=None, page=None):
             retry_url = _retry_mangadex_page(chapter, page, img_url)
             if retry_url and retry_url != img_url:
                 try:
-                    with _img_sem:
-                        body, ctype = _proxy_fetch(retry_url)
+                    body, ctype = _fetch_image_coalesced(retry_url)
                     _img_put(img_url, body, ctype)
                     _send_image(handler, body, ctype)
+                    return
+                except _NotAnImageError:
+                    failed("not-an-image")
+                    handler.send_error(502, "upstream is not an image")
                     return
                 except Exception as retry_error:  # noqa: BLE001 — fall through to the error
                     e = retry_error
@@ -1616,22 +1796,6 @@ def proxy_image(handler, img_url, chapter=None, page=None):
         handler.send_error(upstream if upstream and 400 <= upstream < 500 else 502)
         return
 
-    if not is_image_response(ctype, body):
-        # Not a cover: say so, and keep the page out of the cache. The panel
-        # shows its placeholder, which is the honest thing to show.
-        print("[manga-server] upstream returned %s, not an image: %s"
-              % (ctype or "no type", img_url[:90]), flush=True)
-        failed("not-an-image")
-        img_mark_failed(img_url)
-        # An HTML body where an image should be is a browser check, not a
-        # one-off: give the host a rest instead of asking 31 more times.
-        if "html" in (ctype or "").lower() or bytes(body[:6]).lower().startswith(b"<html") \
-                or bytes(body[:15]).lower().startswith(b"<!doctype html"):
-            img_mark_host_down(host)
-        handler.send_error(502, "upstream is not an image")
-        return
-
-    _img_put(img_url, body, ctype)
     _send_image(handler, body, ctype)
 
 
@@ -1743,11 +1907,14 @@ class Handler(BaseHTTPRequestHandler):
                 if not cid:
                     return self._error("missing chapterId", 400)
                 if cid.startswith("weebcentral:"):
-                    self._json(pages(cid.split(":", 1)[1]))
+                    result = pages(cid.split(":", 1)[1])
                 elif use_chain:
-                    self._json(manga_chain.pages(cid))
+                    result = manga_chain.pages(cid)
                 else:
-                    self._json(pages(cid))
+                    result = pages(cid)
+                self._json(result)
+                if isinstance(result, list) and result:
+                    _schedule_chapter_prefetch(result)
             elif p == "/image":
                 img_url = unquote(param("url"))
                 if not img_url:

@@ -198,7 +198,8 @@ class RetryTest(unittest.TestCase):
         manga_server._tls_image.session = None
         options = manga_server._image_session().curl_options
         from curl_cffi.const import CurlOpt
-        self.assertEqual(options[CurlOpt.LOW_SPEED_LIMIT], 1)
+        self.assertEqual(manga_server.IMAGE_LOW_SPEED_LIMIT, 8192)
+        self.assertEqual(options[CurlOpt.LOW_SPEED_LIMIT], manga_server.IMAGE_LOW_SPEED_LIMIT)
         self.assertEqual(options[CurlOpt.LOW_SPEED_TIME], 15)
         manga_server._tls_image.session = None
 

@@ -94,8 +94,12 @@ def answer(conn):
     conn.close()
 
 
-def trickle(seconds, every=0.25, chunk=256):
-    """Send a WEBP body a little at a time for about `seconds`."""
+def trickle(seconds, every=0.25, chunk=4096):
+    """Send a WEBP body a little at a time for about `seconds`.
+
+    Default rate is 16 KB/s (above IMAGE_LOW_SPEED_LIMIT = 8 KB/s) so a
+    genuinely slow transfer is never cut.
+    """
     count = int(seconds / every)
     body = WEBP + b"x" * (count * chunk)
 
@@ -158,6 +162,17 @@ class StallTest(unittest.TestCase):
         self.assertEqual(server.hits, 1)
         # It lasted longer than the stall window: only silence is cut.
         self.assertGreater(elapsed, STALL * 2)
+
+    def test_a_zombie_trickle_below_low_speed_limit_is_cut_and_retried_once(self):
+        zombie = trickle(STALL * 5, every=0.25, chunk=256)  # 1 KB/s < 8 KB/s
+        server = self.upstream(zombie, answer)
+        start = time.monotonic()
+        body, _ = manga_server._proxy_fetch(server.url())
+        elapsed = time.monotonic() - start
+        self.assertEqual(body, WEBP)
+        self.assertEqual(server.hits, 2)
+        self.assertGreaterEqual(elapsed, STALL - 0.5)
+        self.assertLess(elapsed, STALL * 4)
 
     def test_a_body_that_goes_silent_is_cut_and_retried_once(self):
         server = self.upstream(silent_after_headers, answer)
