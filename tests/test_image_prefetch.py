@@ -211,6 +211,40 @@ class InflightCoalescingTest(unittest.TestCase):
         for line in lines:
             self.assertIn("path=not-an-image", line)
 
+    def test_concurrent_requests_to_same_host_respect_per_host_limit(self):
+        lock = threading.Lock()
+        active = [0]
+        peak = [0]
+
+        def slow_fetch(url):
+            with lock:
+                active[0] += 1
+                if active[0] > peak[0]:
+                    peak[0] = active[0]
+            time.sleep(0.05)
+            with lock:
+                active[0] -= 1
+            return WEBP, "image/webp"
+
+        manga_server._proxy_fetch = slow_fetch
+        handlers = [RecordingHandler() for _ in range(5)]
+        threads = [
+            threading.Thread(
+                target=manga_server.proxy_image,
+                args=(handlers[i], f"https://cdn.zonatmo.to/manga/ch113/{i}.webp"),
+            )
+            for i in range(5)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(3.0)
+
+        for h in handlers:
+            self.assertEqual(h.responses, [200])
+        self.assertLessEqual(peak[0], manga_server.IMAGE_HOST_CONCURRENCY)
+        self.assertEqual(peak[0], manga_server.IMAGE_HOST_CONCURRENCY)
+
 
 @unittest.skipUnless(HAVE_SERVER, "manga_server needs curl_cffi/requests")
 class ChapterPrefetchTest(unittest.TestCase):

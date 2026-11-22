@@ -1139,6 +1139,22 @@ _img_cache_bytes = 0
 # is served but never kept.
 IMG_CACHE_MAX_BYTES = 64 * 1024 * 1024
 _img_sem         = threading.Semaphore(10)
+# Origins behind Cloudflare (e.g. cdn.zonatmo.to) silently tarpit/hang the
+# 4th+ simultaneous cold-cache request until timeout. Cap concurrent upstream
+# image fetches per host while keeping `_img_sem` global across hosts.
+IMAGE_HOST_CONCURRENCY = 2
+_img_host_sems      = {}
+_img_host_sems_lock = threading.Lock()
+
+
+def _img_host_sem(host):
+    key = (host or "").lower()
+    with _img_host_sems_lock:
+        sem = _img_host_sems.get(key)
+        if sem is None:
+            sem = threading.Semaphore(IMAGE_HOST_CONCURRENCY)
+            _img_host_sems[key] = sem
+        return sem
 
 # Covers also live on disk. An image that was fetched once must never disappear
 # again: the panel re-asks for the same 32 URLs on every restart, and when the
@@ -1587,7 +1603,7 @@ def _fetch_image_coalesced(img_url):
     host = urlparse(img_url).hostname or ""
     _tls_image.attempts = 0
     try:
-        with _img_sem:
+        with _img_host_sem(host), _img_sem:
             body, ctype = _proxy_fetch(img_url)
         if not is_image_response(ctype, body):
             print("[manga-server] upstream returned %s, not an image: %s"
