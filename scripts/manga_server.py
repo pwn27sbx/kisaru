@@ -326,20 +326,19 @@ def _plain_get(url, headers, timeout, follow=True):
                                     allow_redirects=follow)
 
 
-# ── Image transfers: cut silence and zombie trickles ───────────────────────
+# ── Image transfers: cut silence, not slowness ────────────────────────────
 # curl_cffi's `timeout` bounds the WHOLE transfer, so a page that was still
 # trickling in was cut at 30 s and the retry started from zero (2026-11-17: one
-# ZonaTMO page took 27 s in a single attempt, ~20 KB/s). On the other hand, a
-# 1 byte/s floor let a single throttled CDN connection linger for >60 s while
-# sibling connections finished in <1 s. Page images and chapter downloads use
-# their own curl_cffi session with LOW_SPEED_LIMIT = IMAGE_LOW_SPEED_LIMIT
-# (8 KB/s) for IMAGE_STALL_SECONDS (15 s): legitimately slow pages finish,
-# while silent or throttled zombie connections are cut and retried once on a
-# fresh session. The `requests` fallback and MangaDex `_plain_session` keep
-# their per-read silence timeout `(10, 15)`.
+# ZonaTMO page took 27 s in a single attempt). Raising LOW_SPEED_LIMIT above
+# 1 byte/s (tested at 8 KB/s on 2026-11-21) also looped cold Cloudflare misses
+# on cdn.zonatmo.to by aborting slow trickles before edge caching completed.
+# Keep LOW_SPEED_LIMIT = 1 byte/s for IMAGE_STALL_SECONDS (15 s): a body that
+# keeps sending finishes in one request, while true silence is cut and retried
+# once. The `requests` fallback and MangaDex `_plain_session` keep their
+# per-read silence timeout `(10, 15)`.
 IMAGE_CONNECT_SECONDS = 10
 IMAGE_STALL_SECONDS = 15
-IMAGE_LOW_SPEED_LIMIT = 8192
+IMAGE_LOW_SPEED_LIMIT = 1
 IMAGE_TOTAL_SECONDS = 120
 
 _tls_image = threading.local()
