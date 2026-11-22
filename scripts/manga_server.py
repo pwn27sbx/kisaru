@@ -216,7 +216,8 @@ IMAGE_HOSTS = frozenset({
     # MangaFire's covers; the reader hosts are matched by is_mangafire_cdn()
     "static.mfcdn.nl",
     # ZonaTMO
-    "cdn.zonatmo.to", "storage.zonatmo.org", "storage2.zonatmo.org", "zonatmo.org",
+    "cdn.zonatmo.to", "storage.zonatmo.org", "storage2.zonatmo.org",
+    "zonatmo.org", "zonatmo.net",
     # InManga
     "cdn1.intomanga.com", "assets.intomanga.com",
     # WeebCentral's covers and the anime cover host

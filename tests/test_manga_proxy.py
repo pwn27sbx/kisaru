@@ -480,7 +480,8 @@ class ImageHostAllowlistTest(unittest.TestCase):
                 "https://temp.compsci88.com/cover/small/x.jpg",
                 "https://uploads.mangadex.org/covers/x.jpg",
                 "https://storage.zonatmo.org/chapters/1/2.webp",
-                "https://cdn.zonatmo.to/manga/x/1.jpg"):
+                "https://cdn.zonatmo.to/manga/x/1.jpg",
+                "https://zonatmo.net/wp-content/uploads/2025/01/cover.jpg"):
             self.assertTrue(manga_server.image_host_allowed(url), url)
 
     def test_the_mangadex_and_mangafire_families_rotate(self):
