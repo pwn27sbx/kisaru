@@ -17,6 +17,7 @@ import requests
 from flask import Flask, jsonify, request
 
 import anicli_fallback
+import aniskip
 import jkanime_source
 import titles
 
@@ -691,6 +692,7 @@ def index():
                 "allow_adult (bool, default false), allow_unknown (bool, default false)"
             ),
             "GET /nextep":  "Next episode countdown. Params: q (required)",
+            "GET /skip-times": "Get AniSkip OP/ED/recap intervals. Params: id, ep (required); title, duration (optional)",
             "GET /health":  "Health check",
         },
         "examples": {
@@ -928,6 +930,56 @@ def nextep_route():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     return jsonify({"query": q, "results": results})
+
+
+@app.route("/skip-times")
+def skip_times_route():
+    """
+    GET /skip-times?id=<show_id>&ep=<episode>&title=<optional>&duration=<seconds>
+    Returns sanitized AniSkip intervals. Never returns 500 on upstream failures
+    so external mpv playback is never disrupted.
+    """
+    show_id = request.args.get("id", "").strip()
+    ep_no = request.args.get("ep", "").strip()
+    title = request.args.get("title", "").strip()
+    raw_duration = request.args.get("duration", "0").strip()
+
+    if not show_id:
+        return jsonify({"error": "Missing required param: id"}), 400
+    if not ep_no:
+        return jsonify({"error": "Missing required param: ep"}), 400
+
+    try:
+        duration = float(raw_duration) if raw_duration else 0.0
+        if duration < 0:
+            duration = 0.0
+    except ValueError:
+        duration = 0.0
+
+    try:
+        if show_id.startswith("jkanime:"):
+            meta = {"name": title, "englishName": title, "malId": ""}
+        else:
+            meta = dict(_show_meta(show_id))
+            if title and not meta.get("name"):
+                meta["name"] = title
+        result = aniskip.get_skip_times(
+            show_id=show_id,
+            episode=ep_no,
+            meta=meta,
+            duration=duration,
+        )
+        return jsonify(result)
+    except Exception:  # noqa: BLE001 — never disrupt playback on skip errors
+        return jsonify({
+            "found": False,
+            "mal_id": None,
+            "source": "",
+            "intervals": [],
+            "cached": False,
+            "stale": False,
+            "reason": "upstream_unavailable",
+        })
 
 
 
