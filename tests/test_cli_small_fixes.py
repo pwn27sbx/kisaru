@@ -65,8 +65,10 @@ exit 0
 
 class MpvTest(unittest.TestCase):
     def test_the_url_is_passed_after_a_double_dash(self):
-        text = read("modules/anime/components/DetailView.qml")
-        self.assertRegex(text, r'args\.push\("--"\)\s*\n\s*args\.push\(url\)')
+        detail = read("modules/anime/components/DetailView.qml")
+        self.assertIn("MpvArgs.buildMpvArgs(", detail)
+        builder = read("services/mpv_args.js")
+        self.assertRegex(builder, r'args\.push\("--"\);\s*\n\s*args\.push\(url\);')
 
 
 class AnimeDebugTest(unittest.TestCase):

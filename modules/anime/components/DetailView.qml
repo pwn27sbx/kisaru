@@ -7,6 +7,7 @@ import qs.services
 import Quickshell.Io
 import qs.components
 import "../../../services/detail_hide.js" as DetailHide
+import "../../../services/mpv_args.js" as MpvArgs
 import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
@@ -100,11 +101,30 @@ Item {
     }
 
     // ── MPV launcher ──────────────────────────────────────────────────────────
+    property string _playingShowId: ""
+    property string _playingEpId: ""
+    property string _playingEpNum: ""
+
     Process {
         id: mpvProcess
+        onExited: function(exitCode) {
+            // Confirm watched progress on clean exit (e.g. near-EOF ED skip),
+            // including when the user bookmarked the show mid-episode.
+            if (exitCode === 0 && detailView._playingShowId !== ""
+                    && Anime.isInLibrary(detailView._playingShowId)) {
+                Anime.updateLastWatched(
+                    detailView._playingShowId,
+                    detailView._playingEpId,
+                    detailView._playingEpNum
+                )
+            }
+            detailView._playingShowId = ""
+            detailView._playingEpId = ""
+            detailView._playingEpNum = ""
+        }
     }
 
-    function _playWithMpv(url, referer, subtitle, title) {
+    function _playWithMpv(url, referer, subtitle, title, showId, epNum, showTitle) {
         if (!url || url.length === 0) {
             console.warn("[AnimeDetail] _playWithMpv called with empty URL, aborting")
             return
@@ -112,23 +132,26 @@ Item {
 
         mpvProcess.running = false
 
-        var args = [
-            "mpv",
-            "--fs",
-            "--force-window=yes",
-            "--title=" + (title || I18n.t("anime.mpvTitle")),
-            "--no-terminal"
-        ]
+        var args = MpvArgs.buildMpvArgs({
+            url: url,
+            referer: referer,
+            subtitle: subtitle,
+            title: title || I18n.t("anime.mpvTitle"),
+            skipScriptPath: ReaderEnv.scripts + "/mpv_aniskip.lua",
+            apiUrl: Anime.apiUrl,
+            showId: showId || "",
+            episode: epNum || "",
+            showTitle: showTitle || "",
+            skipMode: UiPrefs.animeSkipMode,
+            skipRecap: UiPrefs.animeSkipRecap,
+            lang: I18n.lang,
+            showSkipDisabled: UiPrefs.isAnimeSkipDisabled(showId || "")
+        })
+        if (args.length === 0) return
 
-        if (referer && referer.length > 0)
-            args.push("--referrer=" + referer)
-        if (subtitle && subtitle.length > 0)
-            args.push("--sub-file=" + subtitle)
-
-        // `--` keeps a URL that starts with "-" from being read as an option
-        // (audit 2026-11-06, finding 22).
-        args.push("--")
-        args.push(url)
+        detailView._playingShowId = showId || ""
+        detailView._playingEpId = (showId && epNum) ? (showId + "-" + epNum) : ""
+        detailView._playingEpNum = String(epNum || "")
         mpvProcess.command = args
         mpvProcess.running = true
     }
@@ -267,6 +290,41 @@ Item {
                 }
 
                 Item { Layout.fillWidth: true }
+
+                Rectangle {
+                    id: skipToggleButton
+                    readonly property bool _skipDisabled:
+                        Anime.currentAnime ? UiPrefs.isAnimeSkipDisabled(Anime.currentAnime.id) : false
+                    visible: Anime.currentAnime !== null && UiPrefs.animeSkipMode !== "off"
+                    width: skipToggleLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
+                    height: Style.space(22)
+                    radius: Style.cornerRadius
+                    color: skipToggleArea.containsMouse
+                        ? Colors.surface_container_high : Colors.surface_container
+                    border.color: _skipDisabled ? Colors.outline_variant : Colors.primary
+                    border.width: Style.spacing.hairline
+
+                    StyledText {
+                        id: skipToggleLabel
+                        anchors.centerIn: parent
+                        text: skipToggleButton._skipDisabled
+                            ? I18n.t("anime.skip.off")
+                            : I18n.t("anime.skip.on")
+                        font.family: detailView.fontBody
+                        font.pixelSize: Style.font.caption
+                        color: skipToggleButton._skipDisabled ? Colors.on_surface_variant : Colors.primary
+                    }
+                    MouseArea {
+                        id: skipToggleArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (Anime.currentAnime)
+                                UiPrefs.toggleAnimeSkipShow(Anime.currentAnime.id)
+                        }
+                    }
+                }
 
                 Rectangle {
                     id: folderButton
@@ -483,11 +541,17 @@ Item {
                 return
             }
 
-            var title = Anime.currentAnime
-                ? (Anime.currentAnime.englishName || Anime.currentAnime.name)
-                + " — " + I18n.t("ep", { 1: Anime.currentEpisode })
+            var showId = Anime.currentAnime ? Anime.currentAnime.id : ""
+            var showTitle = Anime.currentAnime
+                ? (Anime.currentAnime.englishName || Anime.currentAnime.name || "")
                 : ""
-            detailView._playWithMpv(lnk.url, lnk.referer, lnk.subtitle, title)
+            var title = showTitle !== ""
+                ? showTitle + " — " + I18n.t("ep", { 1: Anime.currentEpisode })
+                : ""
+            detailView._playWithMpv(
+                lnk.url, lnk.referer, lnk.subtitle, title,
+                showId, Anime.currentEpisode, showTitle
+            )
             Anime.clearStreamLinks()
         }
     }

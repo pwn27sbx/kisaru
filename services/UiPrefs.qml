@@ -71,6 +71,16 @@ Singleton {
     // one preference, one key — so a DUB choice survives a restart.
     readonly property string animeMode: Core.normalizeAnimeMode(Core.parseSettings(root.raw).animeMode)
 
+    // Anime intro/outro skip preferences ("auto" | "prompt" | "off", recap bool,
+    // and per-show disable list).
+    readonly property string animeSkipMode: Core.normalizeAnimeSkipMode(Core.parseSettings(root.raw).animeSkipMode)
+    readonly property bool animeSkipRecap: Core.normalizeAnimeSkipRecap(Core.parseSettings(root.raw).animeSkipRecap)
+    readonly property var animeSkipDisabledShows: Core.normalizeDisabledShows(Core.parseSettings(root.raw).animeSkipDisabledShows)
+
+    function isAnimeSkipDisabled(showId) {
+        return Core.isShowSkipDisabled(root.animeSkipDisabledShows, showId)
+    }
+
     function setSetting(key, value) {
         if (!root._loaded) {
             root._pending[key] = value
@@ -109,6 +119,19 @@ Singleton {
 
     function setAnimeMode(value) {
         root.setSetting("animeMode", Core.normalizeAnimeMode(value))
+    }
+
+    function setAnimeSkipMode(value) {
+        root.setSetting("animeSkipMode", Core.normalizeAnimeSkipMode(value))
+    }
+
+    function setAnimeSkipRecap(value) {
+        root.setSetting("animeSkipRecap", Core.normalizeAnimeSkipRecap(value))
+    }
+
+    function toggleAnimeSkipShow(showId) {
+        root.setSetting("animeSkipDisabledShows",
+                        Core.toggleDisabledShow(root.animeSkipDisabledShows, showId))
     }
 
     FileView {

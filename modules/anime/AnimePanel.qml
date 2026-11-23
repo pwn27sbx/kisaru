@@ -292,6 +292,14 @@ Item {
                 modes: Prefs.ANIME_MODE_OPTIONS
                 mode: Anime.currentMode
                 onModeSelected: function(id) { Anime.setMode(id) }
+                skipModes: [ { id: "auto",   label: I18n.t("settings.skipMode.auto") },
+                             { id: "prompt", label: I18n.t("settings.skipMode.prompt") },
+                             { id: "off",    label: I18n.t("settings.skipMode.off") } ]
+                skipMode: UiPrefs.animeSkipMode
+                onSkipModeSelected: function(id) { UiPrefs.setAnimeSkipMode(id) }
+                showSkipRecap: UiPrefs.animeSkipMode !== "off"
+                skipRecap: UiPrefs.animeSkipRecap
+                onSkipRecapToggled: function(enabled) { UiPrefs.setAnimeSkipRecap(enabled) }
                 onCloseRequested: root.settingsMode = false
             }
         }

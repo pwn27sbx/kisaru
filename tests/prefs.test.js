@@ -155,3 +155,39 @@ test("each panel keeps its own layout, and manga inherits the old key", () => {
     assert.equal(prefs.viewModeFor({ "viewMode.manga": "list" }, "anmie"), "grid");
     assert.equal(prefs.viewModeFor({ "viewMode.manga": "list" }, undefined), "grid");
 });
+
+test("normalizeAnimeSkipMode() defaults to auto and accepts auto/prompt/off", () => {
+    assert.equal(prefs.DEFAULT_ANIME_SKIP_MODE, "auto");
+    assert.deepEqual(prefs.ANIME_SKIP_MODES, ["auto", "prompt", "off"]);
+    assert.equal(prefs.normalizeAnimeSkipMode(undefined), "auto");
+    assert.equal(prefs.normalizeAnimeSkipMode("garbage"), "auto");
+    assert.equal(prefs.normalizeAnimeSkipMode("auto"), "auto");
+    assert.equal(prefs.normalizeAnimeSkipMode(" PROMPT "), "prompt");
+    assert.equal(prefs.normalizeAnimeSkipMode("off"), "off");
+});
+
+test("normalizeAnimeSkipRecap() defaults to false and accepts strict booleans", () => {
+    assert.equal(prefs.DEFAULT_ANIME_SKIP_RECAP, false);
+    assert.equal(prefs.normalizeAnimeSkipRecap(undefined), false);
+    assert.equal(prefs.normalizeAnimeSkipRecap("yes"), false);
+    assert.equal(prefs.normalizeAnimeSkipRecap(true), true);
+    assert.equal(prefs.normalizeAnimeSkipRecap(false), false);
+});
+
+test("disabled-show skip helpers deduplicate, toggle, and preserve other keys", () => {
+    assert.deepEqual(prefs.normalizeDisabledShows(undefined), []);
+    assert.deepEqual(prefs.normalizeDisabledShows(["a", "", "a", "b", null]), ["a", "b"]);
+    assert.equal(prefs.isShowSkipDisabled(["a", "b"], "a"), true);
+    assert.equal(prefs.isShowSkipDisabled(["a", "b"], "c"), false);
+
+    const added = prefs.toggleDisabledShow(["a"], "b");
+    assert.deepEqual(added, ["a", "b"]);
+    const removed = prefs.toggleDisabledShow(added, "a");
+    assert.deepEqual(removed, ["b"]);
+
+    const before = JSON.stringify({ language: "es", animeMode: "sub" });
+    const after = JSON.parse(prefs.withSetting(before, "animeSkipDisabledShows", removed));
+    assert.deepEqual(after.animeSkipDisabledShows, ["b"]);
+    assert.equal(after.language, "es");
+    assert.equal(after.animeMode, "sub");
+});

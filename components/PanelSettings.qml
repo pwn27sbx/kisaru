@@ -28,6 +28,11 @@ Item {
     // The grid/list switch lives here now (owner §33): [{ id: "grid", label }, …].
     property var layouts: []
     property string layout: ""
+    // Anime intro/outro skip settings: [{ id, label }]; empty hides the rows.
+    property var skipModes: []
+    property string skipMode: ""
+    property bool showSkipRecap: false
+    property bool skipRecap: false
     property string fontFamily: Style.font.family
     // The panels do not hand focus to this view, and Esc needs a focused item.
     property bool active: false
@@ -35,6 +40,8 @@ Item {
     signal closeRequested()
     signal modeSelected(string id)
     signal layoutSelected(string id)
+    signal skipModeSelected(string id)
+    signal skipRecapToggled(bool enabled)
 
     Item {
         id: keyCatcher
@@ -189,6 +196,43 @@ Item {
                     }
                 }
             }
+        }
+
+        // ── Skip intro / outro (anime panel) ───────────────────────────────
+        SettingsCard {
+            Layout.fillWidth: true
+            visible: root.skipModes.length > 0
+            label: I18n.t("settings.skipIntro")
+            description: I18n.t("settings.skipIntroHint")
+            fontFamily: root.fontFamily
+
+            Row {
+                spacing: Style.spacing.sm
+
+                Repeater {
+                    model: root.skipModes
+
+                    delegate: Chip {
+                        required property var modelData
+
+                        readonly property bool active: String(modelData.id || "") === root.skipMode
+
+                        text: String(modelData.label || "")
+                        current: active
+                        bodyFont: root.fontFamily
+                        onClicked: root.skipModeSelected(String(modelData.id || ""))
+                    }
+                }
+            }
+        }
+
+        Toggle {
+            Layout.fillWidth: true
+            visible: root.showSkipRecap
+            label: I18n.t("settings.skipRecap")
+            description: I18n.t("settings.skipRecapHint")
+            checked: root.skipRecap
+            onClicked: root.skipRecapToggled(!root.skipRecap)
         }
 
         // ── UI language ────────────────────────────────────────────────────

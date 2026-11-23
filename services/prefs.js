@@ -31,6 +31,11 @@ var VIEW_MODES = ["grid", "list"];
 var DEFAULT_ANIME_MODE = "sub";
 var ANIME_MODES = ["sub", "dub"];
 
+// Anime intro/outro skip preferences.
+var DEFAULT_ANIME_SKIP_MODE = "auto";
+var ANIME_SKIP_MODES = ["auto", "prompt", "off"];
+var DEFAULT_ANIME_SKIP_RECAP = false;
+
 function parseSettings(text) {
     try {
         var data = JSON.parse(String(text || ""));
@@ -113,6 +118,46 @@ function withSetting(text, key, value) {
     return JSON.stringify(data, null, 2) + "\n";
 }
 
+function normalizeAnimeSkipMode(value) {
+    var mode = String(value === undefined || value === null ? "" : value).trim().toLowerCase();
+    return ANIME_SKIP_MODES.indexOf(mode) >= 0 ? mode : DEFAULT_ANIME_SKIP_MODE;
+}
+
+function normalizeAnimeSkipRecap(value) {
+    return value === true;
+}
+
+function normalizeDisabledShows(list) {
+    if (!Array.isArray(list)) return [];
+    var seen = {};
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+        var id = String(list[i] === undefined || list[i] === null ? "" : list[i]).trim();
+        if (id.length > 0 && !seen[id]) {
+            seen[id] = true;
+            out.push(id);
+        }
+    }
+    return out;
+}
+
+function isShowSkipDisabled(list, showId) {
+    var id = String(showId === undefined || showId === null ? "" : showId).trim();
+    if (id.length === 0) return false;
+    return normalizeDisabledShows(list).indexOf(id) >= 0;
+}
+
+function toggleDisabledShow(list, showId) {
+    var id = String(showId === undefined || showId === null ? "" : showId).trim();
+    var clean = normalizeDisabledShows(list);
+    if (id.length === 0) return clean;
+    var idx = clean.indexOf(id);
+    if (idx >= 0) {
+        return clean.filter(function (item) { return item !== id; });
+    }
+    return clean.concat([id]);
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         DEFAULT_SCROLL_FACTOR: DEFAULT_SCROLL_FACTOR,
@@ -129,6 +174,14 @@ if (typeof module !== "undefined" && module.exports) {
         viewModeFor: viewModeFor,
         DEFAULT_ANIME_MODE: DEFAULT_ANIME_MODE,
         ANIME_MODE_OPTIONS: ANIME_MODE_OPTIONS,
-        normalizeAnimeMode: normalizeAnimeMode
+        normalizeAnimeMode: normalizeAnimeMode,
+        DEFAULT_ANIME_SKIP_MODE: DEFAULT_ANIME_SKIP_MODE,
+        ANIME_SKIP_MODES: ANIME_SKIP_MODES,
+        normalizeAnimeSkipMode: normalizeAnimeSkipMode,
+        DEFAULT_ANIME_SKIP_RECAP: DEFAULT_ANIME_SKIP_RECAP,
+        normalizeAnimeSkipRecap: normalizeAnimeSkipRecap,
+        normalizeDisabledShows: normalizeDisabledShows,
+        isShowSkipDisabled: isShowSkipDisabled,
+        toggleDisabledShow: toggleDisabledShow
     };
 }
