@@ -104,10 +104,15 @@ Item {
     property string _playingShowId: ""
     property string _playingEpId: ""
     property string _playingEpNum: ""
+    property bool _ignoreNextExit: false
 
     Process {
         id: mpvProcess
         onExited: function(exitCode) {
+            if (detailView._ignoreNextExit) {
+                detailView._ignoreNextExit = false
+                return
+            }
             // Confirm watched progress on clean exit (e.g. near-EOF ED skip),
             // including when the user bookmarked the show mid-episode.
             if (exitCode === 0 && detailView._playingShowId !== ""
@@ -130,7 +135,10 @@ Item {
             return
         }
 
-        mpvProcess.running = false
+        if (mpvProcess.running) {
+            detailView._ignoreNextExit = true
+            mpvProcess.running = false
+        }
 
         var args = MpvArgs.buildMpvArgs({
             url: url,

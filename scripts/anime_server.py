@@ -8,6 +8,7 @@ Run: pip install flask requests && python ani_api.py
 import base64
 import html
 import json
+import math
 import os
 import re
 import threading
@@ -951,7 +952,7 @@ def skip_times_route():
 
     try:
         duration = float(raw_duration) if raw_duration else 0.0
-        if duration < 0:
+        if not math.isfinite(duration) or duration < 0:
             duration = 0.0
     except ValueError:
         duration = 0.0

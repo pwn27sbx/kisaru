@@ -412,6 +412,66 @@ class AniSkipTest(unittest.TestCase):
         self.assertTrue(r3["stale"])
         self.assertEqual(r3["intervals"][0]["skip_id"], "cached-op")
 
+    def test_total_budget_caps_upstream_chain_and_clamps_timeout(self):
+        calls = []
+        clock = [100.0]
+
+        def fake_monotonic():
+            return clock[0]
+
+        def fake_http(url, method="GET", body=None, headers=None, timeout=4.0):
+            calls.append((url, timeout))
+            # Simulate AniList consuming 8.5s of the 8.0s total budget.
+            clock[0] += 8.5
+            raise TimeoutError("slow anilist")
+
+        with mock.patch.object(aniskip.time, "monotonic", side_effect=fake_monotonic):
+            res = aniskip.get_skip_times(
+                show_id="jkanime:slow-show",
+                episode="1",
+                meta={"name": "Slow Show"},
+                http_get=fake_http,
+            )
+        self.assertFalse(res["found"])
+        # Only AniList was attempted; Jikan was skipped because total budget expired.
+        self.assertEqual(len(calls), 1)
+        self.assertIn("graphql.anilist.co", calls[0][0])
+        self.assertLessEqual(calls[0][1], aniskip.HTTP_TIMEOUT)
+
+    def test_non_finite_duration_and_bad_episode_length_do_not_drop_intervals(self):
+        raw = [
+            {
+                "interval": {"startTime": 50.0, "endTime": 140.0},
+                "skipType": "op",
+                "skipId": "bad-len",
+                "episodeLength": "not-a-float",
+            },
+            {
+                "interval": {"startTime": float("nan"), "endTime": 100.0},
+                "skipType": "op",
+                "skipId": "nan-start",
+                "episodeLength": 1440.0,
+            },
+        ]
+        cleaned = aniskip.sanitize_intervals(raw, duration=float("inf"))
+        self.assertEqual(len(cleaned), 1)
+        self.assertEqual(cleaned[0]["skip_id"], "bad-len")
+        self.assertEqual(cleaned[0]["episode_length"], 0.0)
+
+        def ok_http(url, method="GET", body=None, headers=None, timeout=4.0):
+            self.assertIn("episodeLength=0", url)
+            return _aniskip_ok(raw)
+
+        res = aniskip.get_skip_times(
+            show_id="show-inf",
+            episode="1",
+            meta={"name": "Inf Test", "malId": "21"},
+            duration=float("inf"),
+            http_get=ok_http,
+        )
+        self.assertTrue(res["found"])
+        self.assertEqual(len(res["intervals"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

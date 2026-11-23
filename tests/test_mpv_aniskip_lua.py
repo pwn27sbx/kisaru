@@ -236,7 +236,15 @@ class MpvAniSkipLuaTest(unittest.TestCase):
         res = _run_lua_scenario(
             {"api": "http://127.0.0.1:6123", "show_id": "abc", "ep": "2", "mode": "auto", "recap": False, "lang": "en"},
             json.dumps({"found": False, "intervals": []}),
-            "fire_file_loaded(1440.0)",
+            """
+            fire_file_loaded(1440.0)
+            local args = state.async_calls[1].args
+            local max_t = nil
+            for i = 1, #args - 1 do
+                if args[i] == "--max-time" then max_t = args[i + 1] end
+            end
+            assert(max_t == "10", "Expected curl --max-time 10, got: " .. tostring(max_t))
+            """,
         )
         self.assertEqual(res["async_count"], 1)
         self.assertTrue(res["async_url"].startswith("http://127.0.0.1:6123/skip-times?"))
@@ -295,6 +303,32 @@ class MpvAniSkipLuaTest(unittest.TestCase):
             """,
         )
         self.assertAlmostEqual(res["time_pos"], 175.0)
+
+    def test_prompt_timeout_removes_forced_bindings_and_does_not_rebind(self):
+        payload = json.dumps({
+            "found": True,
+            "intervals": [
+                {"skip_type": "op", "skip_id": "op-1", "start_time": 85.0, "end_time": 175.0},
+            ],
+        })
+        res = _run_lua_scenario(
+            {"api": "http://127.0.0.1:5050", "show_id": "abc", "ep": "1", "mode": "prompt", "recap": False, "lang": "en"},
+            payload,
+            """
+            fire_file_loaded(1440.0)
+            tick(86.0)
+            assert(state.bindings["kisaru-skip-now"] ~= nil, "TAB active while prompt visible")
+            assert(state.bindings["kisaru-skip-dismiss"] ~= nil, "ESC active while prompt visible")
+            assert(#state.timers >= 1, "Prompt must schedule an expiration timer")
+            state.timers[#state.timers].fn()
+            assert(state.bindings["kisaru-skip-now"] == nil, "TAB must be removed when prompt OSD expires")
+            assert(state.bindings["kisaru-skip-dismiss"] == nil, "ESC must be removed when prompt OSD expires")
+            tick(92.0)
+            assert(state.bindings["kisaru-skip-now"] == nil, "Must not re-bind TAB after prompt timeout")
+            assert(state.bindings["kisaru-skip-dismiss"] == nil, "Must not re-bind ESC after prompt timeout")
+            """,
+        )
+        self.assertEqual(res["active_bindings"], [])
 
     def test_near_eof_ed_skip_finishes_episode_cleanly(self):
         payload = json.dumps({

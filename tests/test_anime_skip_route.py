@@ -131,9 +131,10 @@ class SkipTimesRouteTest(unittest.TestCase):
     def test_invalid_duration_defaults_to_zero_without_500(self):
         with mock.patch.object(anime_server, "_show_meta", return_value={"name": "X", "englishName": "", "malId": "1"}), \
              mock.patch.object(anime_server.aniskip, "get_skip_times", return_value={"found": False, "intervals": []}) as skip_mock:
-            code, _ = self._call_route({"id": "x", "ep": "1", "duration": "not-a-number"})
-        self.assertEqual(code, 200)
-        self.assertEqual(skip_mock.call_args[1]["duration"], 0.0)
+            for bad in ("not-a-number", "inf", "-inf", "nan", "-10"):
+                code, _ = self._call_route({"id": "x", "ep": "1", "duration": bad})
+                self.assertEqual(code, 200, bad)
+                self.assertEqual(skip_mock.call_args[1]["duration"], 0.0, bad)
 
     def test_unexpected_exception_returns_safe_empty_200(self):
         with mock.patch.object(anime_server, "_show_meta", side_effect=RuntimeError("boom")):

@@ -31,8 +31,10 @@ test("includes --script and --script-opts with dynamic apiUrl when enabled", () 
     }));
     assert.equal(args[0], "mpv");
     assert.ok(args.includes("--script=/opt/kisaru/scripts/mpv_aniskip.lua"));
-    const optArg = args.find((a) => a.startsWith("--script-opts="));
-    assert.ok(optArg, "expected --script-opts");
+    assert.ok(!args.some((a) => a.startsWith("--script-opts=")),
+        "must use --script-opts-append so user mpv.conf script-opts are preserved");
+    const optArg = args.find((a) => a.startsWith("--script-opts-append="));
+    assert.ok(optArg, "expected --script-opts-append");
     assert.ok(optArg.includes("kisaru_skip-api=http://127.0.0.1:6123"));
     assert.ok(optArg.includes("kisaru_skip-show_id=show-123"));
     assert.ok(optArg.includes("kisaru_skip-ep=1"));
@@ -47,10 +49,10 @@ test("includes --script and --script-opts with dynamic apiUrl when enabled", () 
     assert.equal(args[args.length - 1], BASE.url);
 });
 
-test("omits --script and --script-opts when skipMode is off", () => {
+test("omits --script and --script-opts-append when skipMode is off", () => {
     const args = mpvArgs.buildMpvArgs(Object.assign({}, BASE, { skipMode: "off" }));
     assert.ok(!args.some((a) => a.startsWith("--script=")));
-    assert.ok(!args.some((a) => a.startsWith("--script-opts=")));
+    assert.ok(!args.some((a) => a.startsWith("--script-opts")));
 });
 
 test("omits --script when per-show skip is disabled", () => {

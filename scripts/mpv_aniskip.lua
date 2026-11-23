@@ -34,6 +34,7 @@ local EOF_MARGIN_SEC = 2.0
 local PRE_TRIGGER_SEC = 0.5
 local END_MARGIN_SEC = 1.0
 local UNDO_WINDOW_SEC = 5.0
+local PROMPT_WINDOW_SEC = 4.0
 
 local STRINGS = {
     en = {
@@ -81,10 +82,15 @@ local intervals = {}
 local interval_state = {} -- skip_id -> "pending" | "skipped" | "undone" | "dismissed"
 local fetched = false
 local active_prompt_id = nil
+local prompt_timer = nil
 local undo_ctx = nil
 local undo_timer = nil
 
 local function clear_prompt()
+    if prompt_timer ~= nil then
+        prompt_timer:kill()
+        prompt_timer = nil
+    end
     if active_prompt_id ~= nil then
         mp.remove_key_binding("kisaru-skip-now")
         mp.remove_key_binding("kisaru-skip-dismiss")
@@ -185,7 +191,11 @@ local function show_prompt(iv, pos, duration)
         mp.osd_message("", 0.1)
     end)
 
-    mp.osd_message(string.format(tr(msg_key), label), 4.0)
+    mp.osd_message(string.format(tr(msg_key), label), PROMPT_WINDOW_SEC)
+    prompt_timer = mp.add_timeout(PROMPT_WINDOW_SEC, function()
+        interval_state[iv.skip_id] = "dismissed"
+        clear_prompt()
+    end)
 end
 
 local function inject_chapters(list, duration)
@@ -277,7 +287,8 @@ local function fetch_skip_times()
         playback_only = true,
         capture_stdout = true,
         capture_stderr = true,
-        args = { "curl", "-fsS", "--max-time", "4", url },
+        -- Backend enforces an 8s total budget; 10s gives clean headroom.
+        args = { "curl", "-fsS", "--max-time", "10", url },
     }, function(success, result)
         if not success or not result or result.status ~= 0 or not result.stdout then
             return

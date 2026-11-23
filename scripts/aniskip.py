@@ -6,6 +6,7 @@ isolated unit tests.
 """
 
 import json
+import math
 import os
 import re
 import tempfile
@@ -25,6 +26,8 @@ JIKAN_SEARCH_URL = "https://api.jikan.moe/v4/anime"
 SKIP_TYPES = ("op", "ed", "recap", "mixed-op", "mixed-ed")
 
 HTTP_TIMEOUT = 4.0
+TOTAL_BUDGET_SEC = 8.0
+MIN_BUDGET_LEFT_SEC = 0.1
 TTL_MAL_OK = 30 * 86400
 TTL_MAL_MISS = 7 * 86400
 TTL_EPISODE_OK = 7 * 86400
@@ -143,12 +146,25 @@ def _default_http(url: str, method: str = "GET", body: bytes | None = None,
         return exc.code, text
 
 
-def _jikan_throttle() -> None:
+def _remaining_timeout(deadline: float | None) -> float | None:
+    """Return clamped per-call timeout within the total request budget, or None if expired."""
+    if deadline is None:
+        return HTTP_TIMEOUT
+    rem = deadline - time.monotonic()
+    if rem <= MIN_BUDGET_LEFT_SEC:
+        return None
+    return min(HTTP_TIMEOUT, rem)
+
+
+def _jikan_throttle(deadline: float | None = None) -> bool:
     with _jikan_lock:
         wait = _jikan_last[0] + _JIKAN_MIN_INTERVAL - time.monotonic()
         if wait > 0:
+            if deadline is not None and (time.monotonic() + wait + MIN_BUDGET_LEFT_SEC) >= deadline:
+                return False
             time.sleep(wait)
         _jikan_last[0] = time.monotonic()
+    return True
 
 
 # ── Disk cache (XDG_CACHE_HOME/kisaru/aniskip) ──────────────────────────────
@@ -299,7 +315,10 @@ def _pick_best_candidate(query_titles: list[str], candidates: list[dict],
     return None
 
 
-def _query_anilist(query: str, http_get) -> list[dict] | None:
+def _query_anilist(query: str, http_get, deadline: float | None = None) -> list[dict] | None:
+    timeout = _remaining_timeout(deadline)
+    if timeout is None:
+        return None
     body = json.dumps({
         "query": ANILIST_SEARCH_GQL,
         "variables": {"search": query},
@@ -310,7 +329,7 @@ def _query_anilist(query: str, http_get) -> list[dict] | None:
             method="POST",
             body=body,
             headers={"Content-Type": "application/json", "Accept": "application/json"},
-            timeout=HTTP_TIMEOUT,
+            timeout=timeout,
         )
     except Exception:  # noqa: BLE001
         return None
@@ -341,13 +360,17 @@ def _query_anilist(query: str, http_get) -> list[dict] | None:
     return out
 
 
-def _query_jikan(query: str, http_get) -> list[dict] | None:
+def _query_jikan(query: str, http_get, deadline: float | None = None) -> list[dict] | None:
     if len(query) < 2:
         return []
-    _jikan_throttle()
+    if not _jikan_throttle(deadline):
+        return None
+    timeout = _remaining_timeout(deadline)
+    if timeout is None:
+        return None
     url = f"{JIKAN_SEARCH_URL}?{urllib.parse.urlencode({'q': query, 'limit': 5})}"
     try:
-        status, raw = http_get(url, method="GET", timeout=HTTP_TIMEOUT)
+        status, raw = http_get(url, method="GET", timeout=timeout)
     except Exception:  # noqa: BLE001
         return None
     if status != 200:
@@ -377,7 +400,7 @@ def _query_jikan(query: str, http_get) -> list[dict] | None:
 
 
 def resolve_mal_id(show_id: str, meta: dict | None, episode: int,
-                   http_get=None) -> tuple[int | None, str]:
+                   http_get=None, deadline: float | None = None) -> tuple[int | None, str]:
     """Resolve a Kisaru show to a MyAnimeList ID with fail-safe confidence checks."""
     http = http_get or _default_http
     meta = meta or {}
@@ -413,7 +436,7 @@ def resolve_mal_id(show_id: str, meta: dict | None, episode: int,
     year = parse_positive_int(meta.get("year"))
     primary_query = cleaned_titles[0]
 
-    anilist_cands = _query_anilist(primary_query, http)
+    anilist_cands = _query_anilist(primary_query, http, deadline=deadline)
     if anilist_cands is not None:
         picked = _pick_best_candidate(cleaned_titles, anilist_cands, year, episode)
         if picked:
@@ -421,7 +444,7 @@ def resolve_mal_id(show_id: str, meta: dict | None, episode: int,
                 _save_mal_cache_entry(show_id, picked, "anilist")
             return picked, "anilist"
 
-    jikan_cands = _query_jikan(primary_query, http)
+    jikan_cands = _query_jikan(primary_query, http, deadline=deadline)
     if jikan_cands is not None:
         picked = _pick_best_candidate(cleaned_titles, jikan_cands, year, episode)
         if picked:
@@ -437,10 +460,19 @@ def resolve_mal_id(show_id: str, meta: dict | None, episode: int,
 
 # ── AniSkip v2 fetch & interval sanitization ────────────────────────────────
 
+def _safe_finite_float(value, default: float = 0.0) -> float:
+    try:
+        num = float(value)
+        return num if math.isfinite(num) else default
+    except (TypeError, ValueError):
+        return default
+
+
 def sanitize_intervals(raw_results: list[dict], duration: float = 0.0) -> list[dict]:
     """Filter malformed/vandalized intervals and clamp within duration tolerance."""
     cleaned = []
-    has_dur = isinstance(duration, (int, float)) and duration > 0
+    dur = _safe_finite_float(duration, 0.0)
+    has_dur = dur > 0.0
     for item in raw_results or []:
         if not isinstance(item, dict):
             continue
@@ -449,6 +481,8 @@ def sanitize_intervals(raw_results: list[dict], duration: float = 0.0) -> list[d
             start = float(interval.get("startTime"))
             end = float(interval.get("endTime"))
         except (TypeError, ValueError):
+            continue
+        if not (math.isfinite(start) and math.isfinite(end)):
             continue
         skip_type = str(item.get("skipType") or "").strip().lower()
         if skip_type not in SKIP_TYPES:
@@ -461,33 +495,40 @@ def sanitize_intervals(raw_results: list[dict], duration: float = 0.0) -> list[d
         if skip_type in ("op", "ed", "mixed-op", "mixed-ed") and length > MAX_OP_ED_SEC:
             continue
         if has_dur:
-            if start >= duration:
+            if start >= dur:
                 continue
-            if end > duration + DURATION_TOLERANCE_SEC:
+            if end > dur + DURATION_TOLERANCE_SEC:
                 continue
-            if end > duration:
-                end = float(duration)
+            if end > dur:
+                end = dur
             if (end - start) < MIN_INTERVAL_SEC:
                 continue
+        ep_len = _safe_finite_float(item.get("episodeLength"), 0.0)
+        if ep_len < 0.0:
+            ep_len = 0.0
         cleaned.append({
             "skip_type": skip_type,
             "skip_id": str(item.get("skipId") or f"{skip_type}:{start:.1f}:{end:.1f}"),
             "start_time": round(start, 3),
             "end_time": round(end, 3),
-            "episode_length": float(item.get("episodeLength") or 0.0),
+            "episode_length": ep_len,
         })
     cleaned.sort(key=lambda x: x["start_time"])
     return cleaned
 
 
 def _fetch_aniskip_once(mal_id: int, episode: int, episode_length: float,
-                        http_get) -> tuple[str, list[dict]]:
+                        http_get, deadline: float | None = None) -> tuple[str, list[dict]]:
+    timeout = _remaining_timeout(deadline)
+    if timeout is None:
+        return "error", []
     params = [("types[]", t) for t in SKIP_TYPES]
-    ep_len_val = int(round(episode_length)) if episode_length and episode_length > 0 else 0
+    safe_len = _safe_finite_float(episode_length, 0.0)
+    ep_len_val = int(round(safe_len)) if safe_len > 0.0 else 0
     params.append(("episodeLength", str(ep_len_val)))
     url = f"{ANISKIP_BASE}/{mal_id}/{episode}?{urllib.parse.urlencode(params)}"
     try:
-        status, raw = http_get(url, method="GET", timeout=HTTP_TIMEOUT)
+        status, raw = http_get(url, method="GET", timeout=timeout)
     except Exception:  # noqa: BLE001
         return "error", []
     if status == 404:
@@ -504,9 +545,11 @@ def _fetch_aniskip_once(mal_id: int, episode: int, episode_length: float,
 
 
 def get_skip_times(show_id: str, episode, meta: dict | None = None,
-                   duration: float = 0.0, http_get=None) -> dict:
+                   duration: float = 0.0, http_get=None,
+                   total_budget: float = TOTAL_BUDGET_SEC) -> dict:
     """Resolve MAL ID and return sanitized AniSkip intervals with disk cache."""
     http = http_get or _default_http
+    deadline = time.monotonic() + max(0.0, _safe_finite_float(total_budget, TOTAL_BUDGET_SEC))
     ep_num = parse_episode_number(episode)
     if ep_num is None:
         return {
@@ -519,14 +562,11 @@ def get_skip_times(show_id: str, episode, meta: dict | None = None,
             "reason": "non_integer_episode",
         }
 
-    try:
-        dur = float(duration)
-        if dur < 0:
-            dur = 0.0
-    except (TypeError, ValueError):
+    dur = _safe_finite_float(duration, 0.0)
+    if dur < 0.0:
         dur = 0.0
 
-    mal_id, source = resolve_mal_id(show_id, meta, ep_num, http_get=http)
+    mal_id, source = resolve_mal_id(show_id, meta, ep_num, http_get=http, deadline=deadline)
     if not mal_id:
         return {
             "found": False,
@@ -558,10 +598,10 @@ def get_skip_times(show_id: str, episode, meta: dict | None = None,
                 "reason": "ok" if intervals else "not_found",
             }
 
-    state, raw_results = _fetch_aniskip_once(mal_id, ep_num, dur, http)
+    state, raw_results = _fetch_aniskip_once(mal_id, ep_num, dur, http, deadline=deadline)
     if state == "not_found" and dur > 0:
         # Retry once with wildcard episodeLength=0 to tolerate encode-length drift.
-        state, raw_results = _fetch_aniskip_once(mal_id, ep_num, 0.0, http)
+        state, raw_results = _fetch_aniskip_once(mal_id, ep_num, 0.0, http, deadline=deadline)
 
     if state == "error":
         # Offline / 429 / 5xx fallback: serve stale cache if available.
