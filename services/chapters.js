@@ -78,6 +78,262 @@ function mapChapter(raw) {
     };
 }
 
+// ── Versions ────────────────────────────────────────────────────────────────
+// A source can list the same chapter twice: "1" and "1.1", where the second is
+// a later re-upload, not a new chapter. Numbers alone cannot tell that apart
+// from a genuine decimal, because both live in the same series: a "12.5"
+// extra, a "55.1" with no chapter 55, a split numbering "12.1"/"12.2".
+//
+// So a decimal only merges inside a *generation*: many ".1" rows sharing one
+// upload window, later than their own chapter, with ids taken from another
+// block. Anything else stays exactly as the source listed it.
+
+var REUPLOAD_FRACTION = "1";
+var SPLIT_FRACTION = "2";
+var GENERATION_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+var MIN_GENERATION = 3;
+var MIN_COVERAGE = 0.25;
+
+function _chapterText(value) {
+    return value === null || value === undefined ? "" : String(value).trim();
+}
+
+function _isIntegerText(text) {
+    return text !== "" && /^\d+$/.test(text);
+}
+
+function _fraction(text) {
+    var dot = text.lastIndexOf(".");
+    return dot < 0 ? "" : text.slice(dot + 1);
+}
+
+function _baseOf(text) {
+    var dot = text.lastIndexOf(".");
+    return dot < 0 ? text : text.slice(0, dot);
+}
+
+// An id and its trailing number run, e.g. "zonatmo_org:114049" -> ["zonatmo_org:", 114049].
+// Ids whose prefix differs from the other set (uuid hashes, "old-1"/"new-1")
+// carry no comparable order, so the caller skips the check instead of guessing.
+function _idBlock(id) {
+    var text = _chapterText(id);
+    var match = text.match(/^(.*?)(\d+)$/);
+    return match ? { prefix: match[1], value: parseInt(match[2], 10) } : null;
+}
+
+function _dateOf(entry) {
+    return parseChapterDate(entry && entry.publishAt);
+}
+
+// Integer base chapter -> keys of its ".1" candidates, plus the facts that
+// decide whether they form a generation.
+function _generationFamilies(list, byKey, order) {
+    var bases = order.filter(function(key) { return _isIntegerText(key); });
+    var integerCount = bases.length;
+    if (integerCount === 0) return {};
+
+    var baseDates = {};
+    var baseIds = [];
+    for (var b = 0; b < bases.length; b++) {
+        var baseEntries = byKey[bases[b]];
+        var baseDate = _dateOf(baseEntries[0]);
+        if (baseDate !== null) baseDates[bases[b]] = baseDate.getTime();
+        var baseBlock = _idBlock(baseEntries[0].id);
+        if (baseBlock) baseIds.push(baseBlock);
+    }
+
+    // Candidate facts per base: a ".1" whose integer base exists as one row.
+    var facts = [];
+    for (var i = 0; i < order.length; i++) {
+        var key = order[i];
+        if (_fraction(key) !== REUPLOAD_FRACTION) continue;
+        var baseKey = _baseOf(key);
+        if (!byKey[baseKey] || byKey[baseKey].length !== 1) continue;
+        if (order.some(function(other) { return other !== key && _baseOf(other) === baseKey && _fraction(other) === SPLIT_FRACTION; })) {
+            continue;                       // split numbering: N.1/N.2 are two halves
+        }
+        if (baseDates[baseKey] === undefined) continue;
+        var entry = byKey[key][0];
+        var date = _dateOf(entry);
+        if (date === null || date.getTime() <= baseDates[baseKey]) continue;
+        facts.push({ key: key, base: baseKey, date: date.getTime(), id: entry.id });
+    }
+    if (facts.length < MIN_GENERATION) return {};
+
+    // One generation = candidates chained by upload date, each within a week
+    // of the previous one.
+    facts.sort(function(a, b) { return a.date - b.date; });
+    var families = {};
+    var cluster = [facts[0]];
+    function close(family) {
+        if (family.length < MIN_GENERATION) return;
+        if (family.length / integerCount < MIN_COVERAGE) return;
+
+        var blocks = family.map(function(fact) { return _idBlock(fact.id); });
+        if (blocks.every(function(block) { return block !== null; })
+            && baseIds.length && baseIds.every(function(block) { return block.prefix === blocks[0].prefix; })
+            && blocks.every(function(block) { return block.prefix === blocks[0].prefix; })) {
+            var minCandidate = Math.min.apply(null, blocks.map(function(block) { return block.value; }));
+            var maxCandidate = Math.max.apply(null, blocks.map(function(block) { return block.value; }));
+            var minBase = Math.min.apply(null, baseIds.map(function(block) { return block.value; }));
+            var maxBase = Math.max.apply(null, baseIds.map(function(block) { return block.value; }));
+            // Interleaved ids: the ".1" rows come from the same upload block,
+            // not from a later one, so they are not a re-upload generation.
+            if (minCandidate <= maxBase && maxCandidate >= minBase) return;
+        }
+        for (var c = 0; c < family.length; c++) families[family[c].key] = family[c].base;
+    }
+    for (var f = 1; f < facts.length; f++) {
+        if (facts[f].date - cluster[cluster.length - 1].date <= GENERATION_WINDOW_MS) {
+            cluster.push(facts[f]);
+        } else {
+            close(cluster);
+            cluster = [facts[f]];
+        }
+    }
+    close(cluster);
+    return families;
+}
+
+// Preferred version: what the user last read here, then what they picked from
+// the picker, then the newest upload, then the last row in source order.
+function _primaryVersion(versions, chapter, preferences) {
+    var prefs = preferences || {};
+    if (prefs.lastReadId) {
+        for (var a = 0; a < versions.length; a++) {
+            if (versions[a].id === prefs.lastReadId) return versions[a];
+        }
+    }
+    var choices = prefs.choices || {};
+    var chosen = choices[chapter];
+    if (chosen) {
+        for (var b = 0; b < versions.length; b++) {
+            if (versions[b].id === chosen) return versions[b];
+        }
+    }
+    var newest = versions[versions.length - 1];
+    var newestDate = _dateOf(newest);
+    for (var c = versions.length - 2; c >= 0; c--) {
+        var date = _dateOf(versions[c]);
+        if (date === null) continue;
+        if (newestDate === null || date.getTime() > newestDate.getTime()) {
+            newest = versions[c];
+            newestDate = date;
+        }
+    }
+    return newest;
+}
+
+// [{chapter, versions, primary}] in source order. `versions.length === 1` for
+// every chapter the source listed once, so consumers need no special case.
+function groupChapters(chapters, preferences) {
+    var list = Array.isArray(chapters) ? chapters : [];
+    var byKey = {};
+    var order = [];
+    for (var i = 0; i < list.length; i++) {
+        var entry = list[i];
+        if (!entry) continue;
+        var key = _chapterText(entry.chapter);
+        if (!byKey[key]) {
+            byKey[key] = [];
+            order.push(key);
+        }
+        byKey[key].push(entry);
+    }
+
+    var families = _generationFamilies(list, byKey, order);
+    var groups = [];
+    for (var g = 0; g < order.length; g++) {
+        var chapter = order[g];
+        if (families[chapter]) continue;    // attached to its base below
+        var versions = byKey[chapter].slice();
+        for (var h = 0; h < order.length; h++) {
+            if (families[order[h]] === chapter) versions.push(byKey[order[h]][0]);
+        }
+        if (versions.length > 1) {
+            versions.sort(function(a, b) {
+                var left = _dateOf(a);
+                var right = _dateOf(b);
+                if (left === null || right === null) return 0;
+                return left.getTime() - right.getTime();
+            });
+        }
+        groups.push({
+            chapter: chapter,
+            versions: versions,
+            primary: _primaryVersion(versions, chapter, preferences)
+        });
+    }
+    return groups;
+}
+
+// The chapter number a stored progress value belongs to: "2.1" (a version)
+// folds onto "2", so the badge and the highlight land on the grouped row.
+function canonicalNumber(groups, stored) {
+    var wanted = _chapterText(stored);
+    if (wanted === "") return wanted;
+    var list = Array.isArray(groups) ? groups : [];
+    for (var i = 0; i < list.length; i++) {
+        var group = list[i];
+        if (!group) continue;
+        if (group.chapter === wanted) return group.chapter;
+        for (var j = 0; j < (group.versions || []).length; j++) {
+            if (group.versions[j] && _chapterText(group.versions[j].chapter) === wanted) return group.chapter;
+        }
+    }
+    return wanted;
+}
+
+// Adjacent chapter one step away (-1 previous, +1 next) between grouped
+// chapters. `currentId` may be any version id; siblings never take a step.
+function adjacentGroup(groups, currentId, step) {
+    if (!Array.isArray(groups) || !groups.length || !currentId) return null;
+    if (step !== -1 && step !== 1) return null;
+
+    var entries = [];
+    var currentNum = null;
+    for (var i = 0; i < groups.length; i++) {
+        var group = groups[i];
+        if (!group) continue;
+        var number = chapterNumber(group.chapter);
+        var num = number === null ? 0 : number;
+        entries.push({ group: group, num: num, idx: i });
+        if (currentNum === null) {
+            for (var v = 0; v < (group.versions || []).length; v++) {
+                if (group.versions[v] && group.versions[v].id === currentId) {
+                    currentNum = num;
+                    break;
+                }
+            }
+        }
+    }
+    if (currentNum === null) return null;
+
+    entries.sort(function(a, b) {
+        return a.num !== b.num ? a.num - b.num : a.idx - b.idx;
+    });
+
+    if (step > 0) {
+        for (var j = 0; j < entries.length; j++) {
+            if (entries[j].num > currentNum) return entries[j].group;
+        }
+        return null;
+    }
+    var prevNum = null;
+    var prevGroup = null;
+    for (var k = 0; k < entries.length; k++) {
+        if (entries[k].num < currentNum) {
+            if (prevNum === null || entries[k].num > prevNum) {
+                prevNum = entries[k].num;
+                prevGroup = entries[k].group;
+            }
+        } else {
+            break;
+        }
+    }
+    return prevGroup;
+}
+
 function sameChapter(left, right) {
     var a = chapterNumber(left);
     var b = chapterNumber(right);
@@ -150,6 +406,9 @@ if (typeof module !== "undefined" && module.exports) {
         parseChapterDate: parseChapterDate,
         chapterDateLabel: chapterDateLabel,
         mapChapter: mapChapter,
+        groupChapters: groupChapters,
+        canonicalNumber: canonicalNumber,
+        adjacentGroup: adjacentGroup,
         sameChapter: sameChapter,
         chapterIndex: chapterIndex,
         adjacentChapter: adjacentChapter
