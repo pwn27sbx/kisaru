@@ -112,3 +112,41 @@ test("adjacentChapter returns null when list is empty or currentId is missing", 
     assert.equal(chapters.adjacentChapter(list, "", 1), null);
     assert.equal(chapters.adjacentChapter(list, "missing", 1), null);
 });
+
+// ── parseChapterDate / chapterDateLabel ──────────────────────────────────────
+//
+// zonatmo.org publishes the chapter date as dd/mm/yyyy ("09/04/2026"). JS's
+// Date parser reads that as mm/dd/yyyy, so "09/04" became 4 September and the
+// detail row showed the wrong day. The date is also the tie-breaker for the
+// default version, so it has to be a real Date, not a string.
+
+function day(value) {
+    const date = chapters.parseChapterDate(value);
+    return date === null ? null : [date.getFullYear(), date.getMonth() + 1, date.getDate()];
+}
+
+test("parseChapterDate reads dd/mm/yyyy day-first", () => {
+    assert.deepEqual(day("21/04/2026"), [2026, 4, 21]);
+    assert.deepEqual(day("09/04/2026"), [2026, 4, 9]);
+    assert.deepEqual(day("31/12/2025"), [2025, 12, 31]);
+});
+
+test("parseChapterDate accepts ISO dates and timestamps", () => {
+    assert.deepEqual(day("2026-04-21"), [2026, 4, 21]);
+    assert.deepEqual(day("2026-04-21T15:30:00Z"), [2026, 4, 21]);
+});
+
+test("parseChapterDate rejects empty and unparseable values", () => {
+    assert.equal(chapters.parseChapterDate(""), null);
+    assert.equal(chapters.parseChapterDate(null), null);
+    assert.equal(chapters.parseChapterDate(undefined), null);
+    assert.equal(chapters.parseChapterDate("hace 2 días"), null);
+    assert.equal(chapters.parseChapterDate("45/13/2026"), null);
+});
+
+test("chapterDateLabel keeps dd/mm/yyyy and normalises ISO", () => {
+    assert.equal(chapters.chapterDateLabel("21/04/2026"), "21/04/2026");
+    assert.equal(chapters.chapterDateLabel("2026-04-21"), "21/04/2026");
+    assert.equal(chapters.chapterDateLabel(""), "");
+    assert.equal(chapters.chapterDateLabel("hace 2 días"), "");
+});

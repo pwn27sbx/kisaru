@@ -23,6 +23,46 @@ function chapterNumber(value) {
     return isNaN(number) ? null : number;
 }
 
+// ── Dates ───────────────────────────────────────────────────────────────────
+// Sources answer in their own format: zonatmo.org publishes "09/04/2026"
+// (day first), MangaDex an ISO stamp. `new Date("09/04/2026")` reads month
+// first and turns 9 April into 4 September, so the day was displayed wrong on
+// the detail row and the default-version tie-breaker compared the wrong dates.
+
+var DATE_DMY = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+var DATE_ISO = /^(\d{4})-(\d{2})-(\d{2})/;
+
+// A local Date for a chapter date, or null when it cannot be read.
+function parseChapterDate(value) {
+    if (value === null || value === undefined || value === "") return null;
+    var text = String(value).trim();
+    var parts = text.match(DATE_DMY);
+    if (!parts) {
+        var iso = text.match(DATE_ISO);
+        if (!iso) return null;
+        parts = [iso[0], iso[3], iso[2], iso[1]];
+    }
+    var day = parseInt(parts[1], 10);
+    var month = parseInt(parts[2], 10);
+    var year = parseInt(parts[3], 10);
+    var date = new Date(year, month - 1, day);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+        return null;
+    }
+    return date;
+}
+
+// "09/04/2026" for every format we can read, "" otherwise. The raw day-first
+// string is what the owner reads on the site, so the picker shows it as-is.
+function chapterDateLabel(value) {
+    var date = parseChapterDate(value);
+    if (date === null) return "";
+    var day = String(date.getDate());
+    var month = String(date.getMonth() + 1);
+    return (day.length < 2 ? "0" + day : day) + "/" +
+           (month.length < 2 ? "0" + month : month) + "/" + date.getFullYear();
+}
+
 function sameChapter(left, right) {
     var a = chapterNumber(left);
     var b = chapterNumber(right);
@@ -92,6 +132,8 @@ if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         formatChapter: formatChapter,
         chapterNumber: chapterNumber,
+        parseChapterDate: parseChapterDate,
+        chapterDateLabel: chapterDateLabel,
         sameChapter: sameChapter,
         chapterIndex: chapterIndex,
         adjacentChapter: adjacentChapter

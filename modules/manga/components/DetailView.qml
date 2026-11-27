@@ -126,6 +126,14 @@ Item {
         return Chapters.formatChapter(ch)
     }
 
+    // Chapter dates arrive day-first ("09/04/2026"); Qt.formatDate alone would
+    // be right, but `new Date("09/04/2026")` reads month first. The helper in
+    // services/chapters.js parses both shapes and returns "" when unreadable.
+    function formatDate(value) {
+        const date = Chapters.parseChapterDate(value)
+        return date === null ? "" : Qt.formatDate(date, "MMM d, yyyy")
+    }
+
     // "Last: Ch. N" is the way back to where the reading stopped. The stored
     // chapter id belongs to whichever source answered last time, so the row is
     // matched by chapter number (services/chapters.js) and scrolled into view.
@@ -754,9 +762,7 @@ Item {
                                 font.pixelSize: Style.font.body; color: Colors.on_surface; elide: Text.ElideRight
                             }
                             Text {
-                                text: modelData.publishAt
-                                    ? Qt.formatDate(new Date(modelData.publishAt), "MMM d, yyyy")
-                                    : ""
+                                text: detailView.formatDate(modelData.publishAt)
                                 font.family: detailView.fontBody
                                 font.pixelSize: Style.font.caption; color: Colors.on_surface_variant
                                 opacity: 0.55; font.letterSpacing: 0.3
