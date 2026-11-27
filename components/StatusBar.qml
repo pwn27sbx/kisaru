@@ -186,7 +186,7 @@ Rectangle {
                 ? Style.pressedFillFor(Colors.muted, Colors.primary)
                 : _style.fill === HeaderCell.FILL.HOVER
                     ? Style.selectedFillFor(Colors.muted, Colors.primary)
-                    : "transparent"
+                    : Colors.clear(Style.selectedFillFor(Colors.muted, Colors.primary))
             opacity: root.prevEnabled ? 1.0 : 0.25
             Behavior on color { ColorAnimation { duration: Motion.fast } }
             Behavior on opacity { NumberAnimation { duration: Motion.base } }
@@ -246,7 +246,7 @@ Rectangle {
                 ? Style.pressedFillFor(Colors.muted, Colors.primary)
                 : _style.fill === HeaderCell.FILL.HOVER
                     ? Style.selectedFillFor(Colors.muted, Colors.primary)
-                    : "transparent"
+                    : Colors.clear(Style.selectedFillFor(Colors.muted, Colors.primary))
             opacity: root.nextEnabled ? 1.0 : 0.25
             Behavior on color { ColorAnimation { duration: Motion.fast } }
             Behavior on opacity { NumberAnimation { duration: Motion.base } }

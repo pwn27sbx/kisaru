@@ -63,7 +63,7 @@ Item {
 
                     width: parent.width
                     height: Style.space(26)
-                    color: hovered ? Colors.surface_container : "transparent"
+                    color: hovered ? Colors.surface_container : Colors.clear(Colors.surface_container)
                     cursorShape: Qt.PointingHandCursor
 
                     StyledText {

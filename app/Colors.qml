@@ -41,6 +41,17 @@ QtObject {
         return Util.alpha(base, a)
     }
 
+    // The "off" end of an animated fill.
+    //
+    // QML's `"transparent"` is black at alpha 0, so a ColorAnimation between a
+    // colour and it walks the RGB through black: the row flashes darker than the
+    // background before reaching the hover colour (owner, 2026-11-27). This
+    // keeps the colour's own channels and drops only the alpha, so the fade in
+    // and out never leaves the hue.
+    function clear(base) {
+        return Util.alpha(base, 0)
+    }
+
     // ---------------------------------------------------------- foundational
     readonly property color background: Commons.Color.background
     readonly property color bg: Commons.Color.background

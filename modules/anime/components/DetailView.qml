@@ -192,7 +192,7 @@ Item {
 
                     Rectangle {
                         anchors.centerIn: parent; width: 34; height: 34; radius: Style.cornerRadius
-                        color: backArea.containsMouse ? Colors.surface_container : "transparent"
+                        color: backArea.containsMouse ? Colors.surface_container : Colors.clear(Colors.surface_container)
                         Behavior on color { ColorAnimation { duration: Motion.base } }
                     }
                     Text {
@@ -345,13 +345,20 @@ Item {
                     id: metaActionsRow
                     Layout.fillWidth: true
                     spacing: Style.spacing.sm
-                    visible: skipToggleButton.visible || folderButton.visible || hideSwitch.visible
+                    // Ask each control's own condition, never its `visible`:
+                    // `Item.visible` reads the EFFECTIVE value, so ORing the
+                    // row's own children reads false whenever the row is hidden
+                    // and the row could never come back (2026-11-27).
+                    visible: skipToggleButton._shown || folderButton._shown || hideSwitch._shown
 
                     Rectangle {
                         id: skipToggleButton
                         readonly property bool _skipDisabled:
                             Anime.currentAnime ? UiPrefs.isAnimeSkipDisabled(Anime.currentAnime.id) : false
-                        visible: Anime.currentAnime !== null && !Anime.isHentaiId(Anime.currentAnime.id) && UiPrefs.animeSkipMode !== "off"
+                        readonly property bool _shown:
+                            Anime.currentAnime !== null && !Anime.isHentaiId(Anime.currentAnime.id)
+                            && UiPrefs.animeSkipMode !== "off"
+                        visible: _shown
                         implicitWidth: skipToggleLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
                         implicitHeight: Style.space(22)
                         radius: Style.cornerRadius
@@ -384,7 +391,9 @@ Item {
 
                     Rectangle {
                         id: folderButton
-                        visible: Anime.currentAnime !== null && Anime.visibleEntryId() !== ""
+                        readonly property bool _shown:
+                            Anime.currentAnime !== null && Anime.visibleEntryId() !== ""
+                        visible: _shown
                         implicitWidth: folderLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
                         implicitHeight: Style.space(22)
                         radius: Style.cornerRadius
@@ -415,7 +424,9 @@ Item {
 
                     HideSwitch {
                         id: hideSwitch
-                        visible: Privacy.configured && detailView._rawEntry !== null
+                        readonly property bool _shown:
+                            Privacy.configured && detailView._rawEntry !== null
+                        visible: _shown
                         checked: detailView._hideView.checked
                         note: detailView._hideNote
                         interactive: detailView._hideView.noteFolder === ""
@@ -496,7 +507,7 @@ Item {
                         ? Style.selectedFillFor(Colors.primary)
                         : (epRowAreaRect.pressed
                             ? Colors.surface_container_high
-                            : (epRowAreaRect.hovered ? Colors.surface_container : "transparent"))
+                            : (epRowAreaRect.hovered ? Colors.surface_container : Colors.clear(Colors.surface_container)))
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                     Rectangle {

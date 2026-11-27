@@ -123,7 +123,7 @@ Item {
                 ? Style.pressedFillFor(cell._fillBase, Colors.primary)
                 : cell._style.fill === HeaderCell.FILL.HOVER
                     ? Style.hoverFillFor(cell._fillBase, Colors.primary)
-                    : "transparent"
+                    : Colors.clear(Style.hoverFillFor(cell._fillBase, Colors.primary))
         // No border at all: the solid fill is the selected state, hover is the
         // tint, and nothing draws a ring (owner, round 6).
         border.width: 0
