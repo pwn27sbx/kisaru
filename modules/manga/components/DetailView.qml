@@ -7,6 +7,7 @@ import qs.services
 import qs.components
 import "../../../services/detail_hide.js" as DetailHide
 import "../../../services/chapters.js" as Chapters
+import "../../../services/list_badge.js" as ListBadge
 import "../../../services/scroll_metrics.js" as ScrollMetrics
 
 Item {
@@ -124,6 +125,12 @@ Item {
     // ── Helper ────────────────────────────────────────────────────────────────
     function formatChapter(ch) {
         return Chapters.formatChapter(ch)
+    }
+
+    // The badge text of one row. The list measures the same strings once
+    // (chapterBadges) and the row draws its own, so both must come from here.
+    function badgeLabel(ch) {
+        return KisaruI18n.t("ch", { 1: detailView.formatChapter(ch) })
     }
 
     // Chapter dates arrive day-first ("09/04/2026"); Qt.formatDate alone would
@@ -751,6 +758,16 @@ Item {
                 boundsBehavior: Flickable.StopAtBounds
                 model: detailView._processedGroups   // ← filtered + sorted
 
+                // The badge column's width: the widest pill this list can show,
+                // so every title starts on the same x (2026-11-27).
+                BadgeColumn {
+                    id: chapterBadges
+                    labels: detailView._processedGroups.map(function(group) {
+                        return detailView.badgeLabel(group.chapter)
+                    })
+                    fontFamily: detailView.fontBody
+                }
+
                 // The model arrives after the click that asked for a jump.
                 onCountChanged: detailView._applyPendingJump()
 
@@ -788,28 +805,25 @@ Item {
                         anchors {
                             bottom: parent.bottom
                             left: parent.left; right: parent.right
-                            leftMargin: Style.space(72); rightMargin: Style.space(16)
+                            // Starts on the badge column's left edge and ends on
+                            // the content's right edge: one inset with the fill's
+                            // content (owner, 2026-11-27).
+                            leftMargin: Style.space(ListBadge.ROW_INSET)
+                            rightMargin: Style.space(ListBadge.ROW_INSET)
                         }
                         height: 1; color: Colors.outline_variant; opacity: 0.25
                     }
 
                     RowLayout {
-                        anchors { fill: parent; leftMargin: Style.space(16); rightMargin: Style.space(16) }
+                        anchors { fill: parent; leftMargin: Style.space(ListBadge.ROW_INSET); rightMargin: Style.space(ListBadge.ROW_INSET) }
                         spacing: Style.spacing.xxxl
 
-                        // Chapter number pill
-                        Rectangle {
-                            width: chapterPillText.implicitWidth + 16
-                            height: 26; radius: Style.cornerRadius
-                            color: isLastRead ? Colors.primary : Colors.primary_container
-
-                            StyledText {
-                                id: chapterPillText; anchors.centerIn: parent
-                                text: KisaruI18n.t("ch", { 1: detailView.formatChapter(chapterRowAreaRect._group.chapter) })
-                                font.family: detailView.fontBody
-                                font.pixelSize: 9; font.bold: true; font.letterSpacing: 0.5 // style-ignore — bespoke size
-                                color: isLastRead ? Colors.on_primary : Colors.on_primary_container
-                            }
+                        // Chapter number pill, in the list's fixed badge column.
+                        ListBadge {
+                            label: detailView.badgeLabel(chapterRowAreaRect._group.chapter)
+                            active: isLastRead
+                            fontFamily: detailView.fontBody
+                            columnWidth: chapterBadges.columnWidth
                         }
 
                         Column {
@@ -840,35 +854,33 @@ Item {
                         }
 
                         // Versions chip: only when the source listed the same
-                        // chapter twice. Opens the picker for this row.
+                        // chapter twice. It is a button (owner, 2026-11-27: it
+                        // read as a static label) in the same box as the meta
+                        // bar's Folder button, with the chevron that says it
+                        // opens something. Behaviour is unchanged: same picker.
                         ClickableRect {
+                            id: versionsChip
                             visible: chapterRowAreaRect._hasVersions
-                            width: versionChipLabel.implicitWidth + 2 * Style.spacing.xs
-                            height: Style.space(22)
+                            implicitWidth: versionChipLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
+                            height: Style.space(24)
                             radius: Style.cornerRadius
-                            color: versionChipArea.containsMouse
+                            color: versionsChip.hovered
                                 ? Colors.surface_container_high
-                                : Colors.withAlpha(Colors.primary, 0.12)
+                                : Colors.clear(Colors.surface_container)
+                            border.color: Colors.outline_variant
+                            border.width: Style.spacing.hairline
+                            cursorShape: Qt.PointingHandCursor
+                            Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                             StyledText {
                                 id: versionChipLabel
                                 anchors.centerIn: parent
-                                text: KisaruI18n.tn("versions.count", chapterRowAreaRect._group.versions.length)
+                                text: KisaruI18n.tn("versions.count", chapterRowAreaRect._group.versions.length) + " ▾"
                                 font.family: detailView.fontBody
                                 font.pixelSize: Style.font.caption
-                                font.bold: true
-                                color: Colors.primary
+                                color: Colors.on_surface
                             }
-                            MouseArea {
-                                id: versionChipArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: function(mouse) {
-                                    mouse.accepted = true
-                                    detailView.openVersions(chapterRowAreaRect._group)
-                                }
-                            }
+                            onClicked: detailView.openVersions(chapterRowAreaRect._group)
                         }
 
                         // Download button / progress / downloaded mark

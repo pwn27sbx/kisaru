@@ -7,6 +7,7 @@ import qs.services
 import Quickshell.Io
 import qs.components
 import "../../../services/detail_hide.js" as DetailHide
+import "../../../services/list_badge.js" as ListBadge
 import "../../../services/mpv_args.js" as MpvArgs
 import "../../../services/scroll_metrics.js" as ScrollMetrics
 
@@ -15,6 +16,12 @@ Item {
 
     readonly property string fontDisplay: Style.font.family
     readonly property string fontBody:    Style.font.family
+
+    // The badge text of one row. The list measures the same strings once
+    // (episodeBadges) and the row draws its own, so both must come from here.
+    function badgeLabel(number) {
+        return KisaruI18n.t("ep", { 1: number || "?" })
+    }
 
     signal backRequested()
     // Hiding from Detail returns to the Library and leaves no detail behind.
@@ -493,6 +500,16 @@ Item {
                 boundsBehavior: Flickable.StopAtBounds
                 model: Anime.currentAnime ? Anime.currentAnime.episodes : []
 
+                // The badge column's width: the widest pill this list can show,
+                // so every title starts on the same x (2026-11-27).
+                BadgeColumn {
+                    id: episodeBadges
+                    labels: (Anime.currentAnime ? Anime.currentAnime.episodes : []).map(function(episode) {
+                        return detailView.badgeLabel(episode.number)
+                    })
+                    fontFamily: detailView.fontBody
+                }
+
 
                 delegate: ClickableRect {
                     id: epRowAreaRect
@@ -514,26 +531,25 @@ Item {
                         anchors {
                             bottom: parent.bottom
                             left: parent.left; right: parent.right
-                            leftMargin: Style.space(64); rightMargin: Style.space(16)
+                            // Starts on the badge column's left edge and ends on
+                            // the content's right edge: one inset with the fill's
+                            // content (owner, 2026-11-27).
+                            leftMargin: Style.space(ListBadge.ROW_INSET)
+                            rightMargin: Style.space(ListBadge.ROW_INSET)
                         }
                         height: 1; color: Colors.outline_variant; opacity: 0.22
                     }
 
                     RowLayout {
-                        anchors { fill: parent; leftMargin: Style.space(16); rightMargin: Style.space(16) }
+                        anchors { fill: parent; leftMargin: Style.space(ListBadge.ROW_INSET); rightMargin: Style.space(ListBadge.ROW_INSET) }
                         spacing: Style.spacing.xxxl
 
-                        Rectangle {
-                            width: epPillText.implicitWidth + 16; height: 26; radius: Style.cornerRadius
-                            color: isLastWatched ? Colors.primary : Colors.primary_container
-
-                            StyledText {
-                                id: epPillText; anchors.centerIn: parent
-                                text: KisaruI18n.t("ep", { 1: modelData.number || "?" })
-                                font.family: detailView.fontBody
-                                font.pixelSize: 9; font.bold: true; font.letterSpacing: 0.5 // style-ignore — bespoke size
-                                color: isLastWatched ? Colors.on_primary : Colors.on_primary_container
-                            }
+                        // Episode pill, in the list's fixed badge column.
+                        ListBadge {
+                            label: detailView.badgeLabel(modelData.number)
+                            active: isLastWatched
+                            fontFamily: detailView.fontBody
+                            columnWidth: episodeBadges.columnWidth
                         }
 
                         Text {

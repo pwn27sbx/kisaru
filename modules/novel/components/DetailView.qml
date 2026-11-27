@@ -6,12 +6,19 @@ import qs.Commons
 import qs.services
 import qs.components
 import "../../../services/detail_hide.js" as DetailHide
+import "../../../services/list_badge.js" as ListBadge
 
 Item {
     id: detailView
 
     readonly property string fontDisplay: Style.font.family
     readonly property string fontBody:    Style.font.family
+
+    // The badge text of one row. The list measures the same strings once
+    // (chapterBadges) and the row draws its own, so both must come from here.
+    function badgeLabel(ch) {
+        return KisaruI18n.t("ch", { 1: detailView.formatChapter(ch) })
+    }
 
     signal backRequested()
     signal chapterSelected(string chapterId)
@@ -703,6 +710,16 @@ Item {
                 boundsBehavior: Flickable.StopAtBounds
                 model: detailView._processedChapters   // ← filtered + sorted
 
+                // The badge column's width: the widest pill this list can show,
+                // so every title starts on the same x (2026-11-27).
+                BadgeColumn {
+                    id: chapterBadges
+                    labels: detailView._processedChapters.map(function(chapter) {
+                        return detailView.badgeLabel(chapter.chapter)
+                    })
+                    fontFamily: detailView.fontBody
+                }
+
 
                 delegate: ClickableRect {
                     id: rowAreaRect
@@ -720,26 +737,20 @@ Item {
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                     Rectangle {
-                        anchors { bottom: parent.bottom; left: parent.left; right: parent.right; leftMargin: Style.space(72); rightMargin: Style.space(16) }
+                        anchors { bottom: parent.bottom; left: parent.left; right: parent.right; leftMargin: Style.space(ListBadge.ROW_INSET); rightMargin: Style.space(ListBadge.ROW_INSET) }
                         height: 1; color: Colors.outline_variant; opacity: 0.25
                     }
 
                     RowLayout {
-                        anchors { fill: parent; leftMargin: Style.space(16); rightMargin: Style.space(16) }
+                        anchors { fill: parent; leftMargin: Style.space(ListBadge.ROW_INSET); rightMargin: Style.space(ListBadge.ROW_INSET) }
                         spacing: Style.spacing.xxxl
 
-                        // Chapter pill
-                        Rectangle {
-                            width: chPillTxt.implicitWidth + 16; height: 26; radius: Style.cornerRadius
-                            color: isLastRead ? Colors.primary : Colors.primary_container
-
-                            StyledText {
-                                id: chPillTxt; anchors.centerIn: parent
-                                text: KisaruI18n.t("ch", { 1: detailView.formatChapter(modelData.chapter) })
-                                font.family: detailView.fontBody; font.pixelSize: 9 // style-ignore — bespoke size
-                                font.bold: true; font.letterSpacing: 0.5
-                                color: isLastRead ? Colors.on_primary : Colors.on_primary_container
-                            }
+                        // Chapter pill, in the list's fixed badge column.
+                        ListBadge {
+                            label: detailView.badgeLabel(modelData.chapter)
+                            active: isLastRead
+                            fontFamily: detailView.fontBody
+                            columnWidth: chapterBadges.columnWidth
                         }
 
                         Column {

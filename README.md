@@ -282,10 +282,16 @@ prominente** en el detalle.
 ### Capítulos repetidos: una fila, varias versiones
 
 Cuando una fuente lista el mismo capítulo dos veces —`1` y `1.1`, la segunda una resubida
-completa de otro grupo— el detalle muestra **una sola fila** con un chip (`2 versiones`) que
-abre el selector. Cada versión aparece con su número de origen, su fecha (`Capítulo 1.1 ·
-21/04/2026`) y el grupo cuando la fuente lo nombra; la elegida se recuerda por serie. Sin
-elección previa se abre la que se estaba leyendo; si no hay ninguna, la subida más reciente.
+completa de otro grupo— el detalle muestra **una sola fila** con un chip de botón
+(`2 versiones ▾`) que abre el selector. Cada versión aparece con su número de origen, su
+fecha (`Capítulo 1.1 · 21/04/2026`) y el grupo cuando la fuente lo nombra; la elegida se
+recuerda por serie. Sin elección previa se abre la que se estaba leyendo; si no hay ninguna,
+la subida más reciente.
+
+El selector tiene dos acciones por versión: «Leer» abre ese capítulo con esa subida y «Usar
+en toda la serie» aplica la misma tanda de subida a cada capítulo que la tenga. La ventana
+se mide por su fila más larga para que ninguna fecha quede cortada, y se puede recorrer con
+las flechas (arriba/abajo) y `Enter`; `Esc` la cierra.
 
 Una resubida solo se agrupa cuando las filas decimales forman una **generación**: varias
 `N.1` con la misma ventana de subida, posteriores a su capítulo, con ids de otro bloque, y
@@ -298,11 +304,11 @@ El contador cuenta capítulos, «Siguiente» y «Anterior» nunca saltan a un he
 progreso es del capítulo aunque cambies de versión. Las descargas siguen siendo por versión:
 cada subida es su propia descarga en disco y nada se mueve ni se borra al agrupar.
 
-Cambiar la versión de toda la serie es una sola acción: en el selector, «Usar esta versión
-para toda la serie» aplica la misma tanda de subida a cada capítulo que la tenga y se
-recuerda por serie (los títulos fuera de la biblioteca, mientras dure el panel). Las
-elecciones hechas capítulo por capítulo siguen ganando, y un capítulo sin esa tanda —67 a
-71 en el ejemplo— conserva su versión por defecto.
+Cambiar la versión de toda la serie es una sola acción: en el selector, «Usar en toda la
+serie» aplica la misma tanda de subida a cada capítulo que la tenga y se recuerda por serie
+(los títulos fuera de la biblioteca, mientras dure el panel). Las elecciones hechas capítulo
+por capítulo siguen ganando, y un capítulo sin esa tanda —67 a 71 en el ejemplo— conserva su
+versión por defecto.
 
 ## Cómo se ve
 
@@ -311,6 +317,12 @@ header con pestañas y contadores, buscador, chips de filtro, tarjeta de portada
 lista, y un esqueleto de carga que dibuja la forma exacta de lo que va a llegar. La retícula
 es de tres columnas en las tres vistas, y cada panel recuerda su propio modo (cuadrícula o
 lista) en `settings.json`.
+
+En las tres listas de capítulos y episodios la píldora del número vive en una columna de
+ancho fijo —el del badge más ancho de esa lista, medido con la tipografía real— y la línea
+separadora va del borde izquierdo de esa columna al borde derecho del contenido. Así todos
+los títulos empiezan en la misma x y la línea no deja márgenes sueltos a los lados; lo mide
+`tests/list_row_alignment.test.js` sobre un render real.
 
 La paleta sale del tema de Omarchy (`qs.Commons.Color`, respaldado por
 `~/.local/state/omarchy/current/theme/colors.toml`). No hay copia propia ni archivo de

@@ -100,7 +100,8 @@ var tables = {
         "count.chapter": { one: "%1 capítulo", other: "%1 capítulos" },
         "versions.title": "Versiones",
         "versions.count": { one: "%1 versión", other: "%1 versiones" },
-        "versions.wholeSeries": "Usar esta versión para toda la serie",
+        "versions.read": "Leer",
+        "versions.wholeSeries": "Usar en toda la serie",
 
         // ── List controls (shared) ──────────────────────────────────────
         "filterChapters": "Filtrar capítulos…",
@@ -249,7 +250,8 @@ var tables = {
         "count.chapter": { one: "%1 chapter", other: "%1 chapters" },
         "versions.title": "Versions",
         "versions.count": { one: "%1 version", other: "%1 versions" },
-        "versions.wholeSeries": "Use this version for the whole series",
+        "versions.read": "Read",
+        "versions.wholeSeries": "Use for whole series",
 
         // ── List controls (shared) ──────────────────────────────────────
         "filterChapters": "Filter chapters…",
