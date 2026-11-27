@@ -64,12 +64,13 @@ test("omits --script and --script-opts-append when skipMode is off", () => {
 test("omits --script when per-show skip is disabled", () => {
     const args = mpvArgs.buildMpvArgs(Object.assign({}, BASE, { showSkipDisabled: true }));
     assert.ok(!args.some((a) => a.startsWith("--script=")));
-    assert.ok(!args.some((a) => a.startsWith("--script-opts=")));
+    assert.ok(!args.some((a) => a.startsWith("--script-opts")));
 });
 
 test("omits --script when apiUrl is empty (no hardcoded localhost fallback)", () => {
     const args = mpvArgs.buildMpvArgs(Object.assign({}, BASE, { apiUrl: "" }));
     assert.ok(!args.some((a) => a.startsWith("--script=")));
+    assert.ok(!args.some((a) => a.startsWith("--script-opts")));
     assert.ok(!args.some((a) => a.includes("5050")));
 });
 

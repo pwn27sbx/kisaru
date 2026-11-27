@@ -46,4 +46,28 @@ test("anime DetailView splits meta info and action controls into two balanced ro
     assert.match(row2Block, /id:\s*folderButton/, "folder chip belongs in metaActionsRow");
     assert.match(row2Block, /HideSwitch\s*\{/, "HideSwitch belongs in metaActionsRow");
     assert.match(row2Block, /spacing:\s*Style\.spacing\./, "metaActionsRow must use a Style.spacing token");
+
+    // Qt 6 RowLayout computes row implicitHeight from children's implicit/Layout.preferred
+    // sizes. Rectangle defaults to implicitWidth=0, implicitHeight=0, so chips inside
+    // metaInfoRow/metaActionsRow must set implicitWidth & implicitHeight (not raw width/height),
+    // ensuring Row 2 keeps its height even when HideSwitch is hidden.
+    const lastWatchedBlock = row1Block.slice(row1Block.indexOf("// Last-watched badge"));
+    const skipBlock = row2Block.slice(
+        row2Block.indexOf("id: skipToggleButton"),
+        row2Block.indexOf("id: folderButton")
+    );
+    const folderBlock = row2Block.slice(
+        row2Block.indexOf("id: folderButton"),
+        row2Block.indexOf("id: hideSwitch")
+    );
+
+    for (const [name, block] of [
+        ["last-watched badge", lastWatchedBlock],
+        ["skipToggleButton", skipBlock],
+        ["folderButton", folderBlock],
+    ]) {
+        assert.match(block, /\bimplicitWidth\s*:/, `${name} must bind implicitWidth for RowLayout`);
+        assert.match(block, /\bimplicitHeight\s*:/, `${name} must bind implicitHeight so Row 2 keeps height when HideSwitch is hidden`);
+        assert.doesNotMatch(block, /^\s*(?:width|height)\s*:/m, `${name} must not set raw width/height inside RowLayout`);
+    }
 });

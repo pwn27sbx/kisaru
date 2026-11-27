@@ -321,7 +321,9 @@ Item {
                         visible: _entry !== null && _entry !== undefined
                             && _entry.lastWatchedEpNum !== ""
                             && _entry.lastWatchedEpNum !== undefined
-                        height: 20; width: lastWatchedText.implicitWidth + 18; radius: Style.cornerRadius
+                        implicitHeight: Style.space(20)
+                        implicitWidth: lastWatchedText.implicitWidth + 18
+                        radius: Style.cornerRadius
                         color: Style.selectedFillFor(Colors.primary)
                         border.color: Colors.primary; border.width: 1
 
@@ -349,8 +351,8 @@ Item {
                         readonly property bool _skipDisabled:
                             Anime.currentAnime ? UiPrefs.isAnimeSkipDisabled(Anime.currentAnime.id) : false
                         visible: Anime.currentAnime !== null && UiPrefs.animeSkipMode !== "off"
-                        width: skipToggleLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
-                        height: Style.space(22)
+                        implicitWidth: skipToggleLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
+                        implicitHeight: Style.space(22)
                         radius: Style.cornerRadius
                         color: skipToggleArea.containsMouse
                             ? Colors.surface_container_high : Colors.surface_container
@@ -382,8 +384,8 @@ Item {
                     Rectangle {
                         id: folderButton
                         visible: Anime.currentAnime !== null && Anime.visibleEntryId() !== ""
-                        width: folderLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
-                        height: Style.space(22)
+                        implicitWidth: folderLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
+                        implicitHeight: Style.space(22)
                         radius: Style.cornerRadius
                         color: folderArea.containsMouse
                             ? Colors.surface_container_high : Colors.surface_container
