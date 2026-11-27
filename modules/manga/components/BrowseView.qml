@@ -212,6 +212,12 @@ Item {
                         // draws. metaLine with an empty status gives just the
                         // chapter ("Cap. 179"), so an absent chapter leaves the
                         // left slot empty instead of a bare "Cap.".
+                        //
+                        // This is the source's latest upload as the catalogue
+                        // lists it, so a re-upload can read "Cap. 1.1" here. The
+                        // Detail groups it (services/chapters.js); grouping the
+                        // card would need the series' chapter list, which the
+                        // catalogue does not fetch (decided 2026-11-27, D2).
                         metaChapter: MangaCard.metaLine(modelData.chapter, "",
                                                         browseView.cardTranslator)
                         metaStatus: KisaruI18n.tData(modelData.status || "")

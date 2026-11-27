@@ -665,8 +665,8 @@ test("manga chapter downloads are wired with private-mode guards and no ScrollBa
 
 test("manga chapter navigation shares Manga.openChapter and lives in the status bar with arrow keys", () => {
     const detail = read("modules/manga/components/DetailView.qml");
-    assert.match(detail, /Manga\.openChapter\(modelData\)/,
-        "DetailView must open chapters through Manga.openChapter");
+    assert.match(detail, /Manga\.openChapter\(chapterRowAreaRect\._version\)/,
+        "DetailView must open the row's default version through Manga.openChapter");
     assert.doesNotMatch(detail, /Manga\.fetchChapterPages\(/,
         "DetailView must not call Manga.fetchChapterPages directly");
     assert.doesNotMatch(detail, /Manga\.updateLastRead\(/,

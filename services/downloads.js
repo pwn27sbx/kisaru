@@ -111,6 +111,49 @@ function chapterState(chapterId, downloadedMap, jobs) {
     return { kind: "idle", done: 0, total: 0, error: "" };
 }
 
+// One grouped row over every upload of the same chapter: downloaded when any
+// version is on disk, the running job while one downloads, and the version id
+// behind the state so the row can label it. Grouping lives in chapters.js; this
+// only reads the ids it is handed.
+function groupState(versions, downloadedMap, jobs) {
+    var list = Array.isArray(versions) ? versions : [];
+    var running = null;
+    var failed = null;
+    for (var i = 0; i < list.length; i++) {
+        var id = list[i] && list[i].id;
+        if (!id) continue;
+        if (downloadedMap && downloadedMap[id]) {
+            return { kind: "downloaded", done: 0, total: 0, error: "", chapterId: id };
+        }
+        var job = jobs && jobs[id];
+        if (!job) continue;
+        if (job.status === "pending" || job.status === "downloading") {
+            if (!running) running = { id: id, job: job };
+        } else if (job.status === "error" && !failed) {
+            failed = { id: id, job: job };
+        }
+    }
+    if (running) {
+        return {
+            kind: "downloading",
+            done: Number(running.job.done) || 0,
+            total: Number(running.job.total) || 0,
+            error: "",
+            chapterId: running.id
+        };
+    }
+    if (failed) {
+        return {
+            kind: "error",
+            done: 0,
+            total: 0,
+            error: String(failed.job.error || ""),
+            chapterId: failed.id
+        };
+    }
+    return { kind: "idle", done: 0, total: 0, error: "", chapterId: "" };
+}
+
 function scrubHiddenJobs(jobs, isHiddenFn) {
     var out = {};
     if (!jobs || typeof jobs !== "object") return out;
@@ -183,6 +226,7 @@ if (typeof module !== "undefined" && module.exports) {
         formatBytes: formatBytes,
         isBusy: isBusy,
         chapterState: chapterState,
+    groupState: groupState,
         scrubHiddenJobs: scrubHiddenJobs,
         offlineMangaObject: offlineMangaObject
     };

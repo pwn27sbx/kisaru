@@ -234,3 +234,39 @@ test("DownloadsView folds each series behind a header that toggles through downl
     assert.match(view, /rotation:\s*seriesBlock\.expanded \? 90 : 0/, "the chevron rotates when expanded");
     assert.match(view, /Behavior on rotation \{ NumberAnimation \{ duration: Motion\.fast \} \}/, "the chevron animates with Motion.fast");
 });
+
+// ── groupState (chapter versions) ────────────────────────────────────────────
+//
+// A grouped row covers every upload of the same chapter: it reads as
+// downloaded when any version is on disk, shows the running job while one
+// downloads, and names the version behind the state so the row can label it.
+
+test("groupState follows the version that carries the state", () => {
+    const versions = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    const downloaded = { b: { chapterId: "b" } };
+
+    assert.deepEqual(Downloads.groupState(versions, downloaded, {}), {
+        kind: "downloaded", done: 0, total: 0, error: "", chapterId: "b"
+    });
+
+    const jobs = { a: { status: "downloading", done: 2, total: 5, error: "" } };
+    assert.deepEqual(Downloads.groupState(versions, {}, jobs), {
+        kind: "downloading", done: 2, total: 5, error: "", chapterId: "a"
+    });
+
+    assert.equal(Downloads.groupState(versions, downloaded, jobs).kind, "downloaded",
+        "a downloaded version outranks a job on another version");
+});
+
+test("groupState reports an error and falls back to idle", () => {
+    const versions = [{ id: "a" }, { id: "c" }];
+    const error = Downloads.groupState(versions, {}, { c: { status: "error", error: "boom" } });
+    assert.equal(error.kind, "error");
+    assert.equal(error.chapterId, "c");
+    assert.equal(error.error, "boom");
+
+    assert.deepEqual(Downloads.groupState([{ id: "z" }], {}, {}), {
+        kind: "idle", done: 0, total: 0, error: "", chapterId: ""
+    });
+    assert.equal(Downloads.groupState(null, {}, {}).kind, "idle");
+});
