@@ -54,7 +54,11 @@ function buildMpvArgs(opts) {
         if (cfg.showTitle && String(cfg.showTitle).length > 0) {
             scriptOpts.push("kisaru_skip-title=" + encodeURIComponent(String(cfg.showTitle)));
         }
-        args.push("--script-opts-append=" + scriptOpts.join(","));
+        // mpv's --script-opts-append adds ONE key=value item and does NOT split
+        // on commas, so each option must be emitted as its own flag.
+        for (var i = 0; i < scriptOpts.length; i++) {
+            args.push("--script-opts-append=" + scriptOpts[i]);
+        }
     }
 
     // `--` keeps a URL starting with "-" from being parsed as an mpv option.

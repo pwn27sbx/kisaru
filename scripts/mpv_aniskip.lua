@@ -15,6 +15,7 @@
 -- speed, ESC=leave fullscreen) remain intact during normal playback.
 
 local mp = require("mp")
+local msg = require("mp.msg")
 local options = require("mp.options")
 local utils = require("mp.utils")
 
@@ -143,6 +144,7 @@ local function perform_skip(iv, pre_pos, duration)
         return
     end
 
+    msg.verbose(string.format("skip %s: seeking to %.3f (from %.3f)", iv.skip_type, iv.end_time, pre_pos))
     mp.set_property_number("time-pos", iv.end_time)
     clear_undo()
 
@@ -263,6 +265,11 @@ local function fetch_skip_times()
     if fetched then
         return
     end
+    msg.verbose(string.format(
+        "opts api=%s show_id=%s ep=%s mode=%s recap=%s lang=%s",
+        tostring(opts.api), tostring(opts.show_id), tostring(opts.ep),
+        tostring(opts.mode), tostring(opts.recap), tostring(opts.lang)
+    ))
     if opts.mode == "off" or opts.api == "" or opts.show_id == "" or opts.ep == "" then
         return
     end
@@ -282,19 +289,22 @@ local function fetch_skip_times()
         url = url .. "&title=" .. opts.title
     end
 
+    msg.verbose("fetching " .. url)
     mp.command_native_async({
         name = "subprocess",
         playback_only = true,
         capture_stdout = true,
         capture_stderr = true,
         -- Backend enforces an 8s total budget; 10s gives clean headroom.
-        args = { "curl", "-fsS", "--max-time", "10", url },
+        args = { "curl", "-fsS", "--noproxy", "127.0.0.1,localhost", "--max-time", "10", url },
     }, function(success, result)
         if not success or not result or result.status ~= 0 or not result.stdout then
+            msg.verbose("fetch failed: status=" .. tostring(result and result.status))
             return
         end
         local data = utils.parse_json(result.stdout)
         if type(data) ~= "table" or not data.found or type(data.intervals) ~= "table" then
+            msg.verbose("no intervals found")
             return
         end
         local cur_dur = mp.get_property_number("duration", duration) or duration
@@ -317,6 +327,7 @@ local function fetch_skip_times()
             end
         end
         intervals = valid
+        msg.verbose(string.format("loaded %d interval(s)", #intervals))
         if #intervals > 0 then
             inject_chapters(intervals, cur_dur)
         end

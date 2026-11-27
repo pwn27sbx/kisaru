@@ -7,16 +7,21 @@ Runs syntax validation (`luac -p`) and executes the real Lua script under
 Run: python3 -m unittest tests/test_mpv_aniskip_lua.py
 """
 
+import http.server
 import json
 import os
 import shutil
 import subprocess
+import threading
 import unittest
+import urllib.parse
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LUA_SCRIPT = os.path.join(ROOT, "scripts", "mpv_aniskip.lua")
 LUA_BIN = shutil.which("luajit") or shutil.which("lua")
 LUAC_BIN = shutil.which("luac")
+MPV_BIN = shutil.which("mpv")
+NODE_BIN = shutil.which("node")
 
 
 def _to_lua_value(v) -> str:
@@ -120,6 +125,14 @@ function mp.command_native_async(tbl, cb)
 end
 
 package.preload["mp"] = function() return mp end
+package.preload["mp.msg"] = function()
+    return {{
+        verbose = function(...) end,
+        info = function(...) end,
+        warn = function(...) end,
+        debug = function(...) end,
+    }}
+end
 package.preload["mp.options"] = function()
     return {{
         read_options = function(defaults, _ident)
@@ -404,6 +417,88 @@ class MpvAniSkipLuaTest(unittest.TestCase):
             "fire_file_loaded(1440.0); tick(12.0)",
         )
         self.assertAlmostEqual(r_on["time_pos"], 70.0)
+
+
+@unittest.skipIf(MPV_BIN is None or NODE_BIN is None, "mpv or node not installed")
+class RealHeadlessMpvIntegrationTest(unittest.TestCase):
+    def test_real_headless_mpv_parses_opts_fetches_and_seeks(self):
+        received = []
+
+        class StubHandler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                parsed = urllib.parse.urlparse(self.path)
+                qs = urllib.parse.parse_qs(parsed.query)
+                received.append((parsed.path, qs))
+                body = json.dumps({
+                    "found": True,
+                    "mal_id": 21,
+                    "source": "stub",
+                    "intervals": [
+                        {"skip_type": "op", "skip_id": "op-live", "start_time": 1.0, "end_time": 6.0},
+                    ],
+                }).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, fmt, *args):
+                pass
+
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), StubHandler)
+        port = server.server_address[1]
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+
+        api_url = f"http://127.0.0.1:{port}"
+        node_code = (
+            "const m = require('./services/mpv_args.js');"
+            "console.log(JSON.stringify(m.buildMpvArgs({"
+            "  url: 'av://lavfi:testsrc=duration=8',"
+            "  title: 'Test — Ep. 3',"
+            f"  skipScriptPath: {json.dumps(LUA_SCRIPT)},"
+            f"  apiUrl: {json.dumps(api_url)},"
+            "  showId: 'test-show-42',"
+            "  episode: '3',"
+            "  showTitle: 'Solo Leveling, S=2',"
+            "  skipMode: 'auto',"
+            "  skipRecap: false,"
+            "  lang: 'en',"
+            "  showSkipDisabled: false"
+            "})));"
+        )
+        built = json.loads(subprocess.check_output(
+            [NODE_BIN, "-e", node_code], cwd=ROOT, text=True,
+        ))
+        # Extract the --script and --script-opts* flags produced by mpv_args.js
+        skip_flags = [a for a in built if a.startswith("--script")]
+
+        cmd = [
+            MPV_BIN,
+            "--no-config",
+            "--vo=null",
+            "--ao=null",
+            "--msg-level=all=warn,mpv_aniskip=v",
+            *skip_flags,
+            "--",
+            "av://lavfi:testsrc=duration=8",
+        ]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=20, check=False)
+        output = proc.stdout + "\n" + proc.stderr
+
+        self.assertEqual(proc.returncode, 0, output)
+        self.assertIn(f"api={api_url}", output)
+        self.assertIn("show_id=test-show-42", output)
+        self.assertIn("ep=3", output)
+        self.assertIn("mode=auto", output)
+        self.assertGreaterEqual(len(received), 1, f"Expected /skip-times HTTP hit. Output:\n{output}")
+        self.assertEqual(received[0][0], "/skip-times")
+        self.assertEqual(received[0][1].get("id"), ["test-show-42"])
+        self.assertEqual(received[0][1].get("ep"), ["3"])
+        self.assertIn("seeking to 6.000", output)
 
 
 if __name__ == "__main__":

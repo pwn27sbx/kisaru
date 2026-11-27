@@ -24,7 +24,7 @@ const BASE = {
     showSkipDisabled: false,
 };
 
-test("includes --script and --script-opts with dynamic apiUrl when enabled", () => {
+test("emits one --script-opts-append flag per option with dynamic apiUrl when enabled", () => {
     const args = mpvArgs.buildMpvArgs(Object.assign({}, BASE, {
         apiUrl: "http://127.0.0.1:6123",
         skipRecap: true,
@@ -33,17 +33,23 @@ test("includes --script and --script-opts with dynamic apiUrl when enabled", () 
     assert.ok(args.includes("--script=/opt/kisaru/scripts/mpv_aniskip.lua"));
     assert.ok(!args.some((a) => a.startsWith("--script-opts=")),
         "must use --script-opts-append so user mpv.conf script-opts are preserved");
-    const optArg = args.find((a) => a.startsWith("--script-opts-append="));
-    assert.ok(optArg, "expected --script-opts-append");
-    assert.ok(optArg.includes("kisaru_skip-api=http://127.0.0.1:6123"));
-    assert.ok(optArg.includes("kisaru_skip-show_id=show-123"));
-    assert.ok(optArg.includes("kisaru_skip-ep=1"));
-    assert.ok(optArg.includes("kisaru_skip-mode=auto"));
-    assert.ok(optArg.includes("kisaru_skip-recap=yes"));
-    assert.ok(optArg.includes("kisaru_skip-lang=es"));
+
+    const optArgs = args.filter((a) => a.startsWith("--script-opts-append="));
+    // mpv's --script-opts-append adds ONE key=value item and does NOT split on commas.
+    assert.equal(optArgs.length, 7, "expected one --script-opts-append flag per option");
+    for (const flag of optArgs) {
+        assert.ok(!flag.includes(","), `comma-joined flag breaks mpv parsing: ${flag}`);
+    }
+    assert.ok(optArgs.includes("--script-opts-append=kisaru_skip-api=http://127.0.0.1:6123"));
+    assert.ok(optArgs.includes("--script-opts-append=kisaru_skip-show_id=show-123"));
+    assert.ok(optArgs.includes("--script-opts-append=kisaru_skip-ep=1"));
+    assert.ok(optArgs.includes("--script-opts-append=kisaru_skip-mode=auto"));
+    assert.ok(optArgs.includes("--script-opts-append=kisaru_skip-recap=yes"));
+    assert.ok(optArgs.includes("--script-opts-append=kisaru_skip-lang=es"));
     // Commas and equals in showTitle must be percent-encoded so they cannot inject script-opts.
-    assert.ok(!optArg.includes("Steins;Gate, Part=1"));
-    assert.ok(optArg.includes("kisaru_skip-title=" + encodeURIComponent("Steins;Gate, Part=1")));
+    assert.ok(optArgs.includes(
+        "--script-opts-append=kisaru_skip-title=" + encodeURIComponent("Steins;Gate, Part=1")
+    ));
     // `--` stays right before the stream URL.
     assert.equal(args[args.length - 2], "--");
     assert.equal(args[args.length - 1], BASE.url);
