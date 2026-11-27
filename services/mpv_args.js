@@ -15,7 +15,24 @@ function buildMpvArgs(opts) {
         return [];
     }
 
-    var args = [
+    var privateSource = cfg.privateSource === true;
+    var args = privateSource ? [
+        "mpv",
+        "--fs",
+        "--force-window=yes",
+        "--no-config",
+        "--load-scripts=no",
+        "--resume-playback=no",
+        "--save-position-on-quit=no",
+        "--cache=no",
+        "--cache-on-disk=no",
+        "--title=Anime",
+        "--force-media-title=Anime",
+        "--term-title=Anime",
+        "--display-tags=",
+        "--osd-playlist-entry=filename",
+        "--no-terminal"
+    ] : [
         "mpv",
         "--fs",
         "--force-window=yes",
@@ -26,7 +43,7 @@ function buildMpvArgs(opts) {
     if (cfg.referer && String(cfg.referer).length > 0) {
         args.push("--referrer=" + String(cfg.referer));
     }
-    if (cfg.subtitle && String(cfg.subtitle).length > 0) {
+    if (!privateSource && cfg.subtitle && String(cfg.subtitle).length > 0) {
         args.push("--sub-file=" + String(cfg.subtitle));
     }
 
@@ -36,7 +53,8 @@ function buildMpvArgs(opts) {
     var showId = _sanitizeOptVal(cfg.showId).trim();
     var episode = _sanitizeOptVal(cfg.episode).trim();
 
-    if (skipMode !== "off"
+    if (!privateSource
+            && skipMode !== "off"
             && !cfg.showSkipDisabled
             && apiUrl.length > 0
             && scriptPath.length > 0

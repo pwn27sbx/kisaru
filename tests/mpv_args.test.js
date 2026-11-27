@@ -74,6 +74,31 @@ test("omits --script when apiUrl is empty (no hardcoded localhost fallback)", ()
     assert.ok(!args.some((a) => a.includes("5050")));
 });
 
+test("private source uses neutral isolated mpv arguments and never loads AniSkip", () => {
+    const args = mpvArgs.buildMpvArgs(Object.assign({}, BASE, { privateSource: true }));
+    for (const flag of [
+        "--no-config",
+        "--load-scripts=no",
+        "--resume-playback=no",
+        "--save-position-on-quit=no",
+        "--cache=no",
+        "--cache-on-disk=no",
+        "--title=Anime",
+        "--force-media-title=Anime",
+        "--term-title=Anime",
+        "--display-tags=",
+        "--osd-playlist-entry=filename",
+    ]) {
+        assert.ok(args.includes(flag), `missing private isolation flag: ${flag}`);
+    }
+    assert.ok(!args.some((a) => a.startsWith("--script")));
+    assert.ok(!args.some((a) => a.includes("show-123")));
+    assert.ok(!args.some((a) => a.includes("Steins;Gate")));
+    assert.ok(!args.some((a) => a.startsWith("--sub-file")));
+    assert.equal(args[args.length - 2], "--");
+    assert.equal(args[args.length - 1], BASE.url);
+});
+
 test("returns empty array when url is empty", () => {
     assert.deepEqual(mpvArgs.buildMpvArgs(Object.assign({}, BASE, { url: "" })), []);
 });

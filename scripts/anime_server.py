@@ -19,6 +19,7 @@ from flask import Flask, jsonify, request
 
 import anicli_fallback
 import aniskip
+import hentaila_source
 import jkanime_source
 import titles
 
@@ -718,6 +719,87 @@ def health():
     return jsonify({"status": "ok"})
 
 
+def _hentaila_disabled():
+    return os.environ.get("QS_HENTAILA_SOURCE", "on").strip().lower() in {
+        "0", "false", "off", "no",
+    }
+
+
+def _hentaila_unavailable():
+    return jsonify({"error": "source_unavailable"}), 502
+
+
+@app.route("/hentaila/search")
+def hentaila_search_route():
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"error": "missing_query"}), 400
+    try:
+        page = int(request.args.get("page", 1))
+    except ValueError:
+        return jsonify({"error": "invalid_page"}), 400
+    if _hentaila_disabled():
+        return jsonify({"error": "source_disabled"}), 404
+    try:
+        result = hentaila_source.search(query, page)
+    except hentaila_source.SourceError:
+        return _hentaila_unavailable()
+    items = []
+    for item in result["results"]:
+        entry = dict(item)
+        entry["id"] = "hentaila:" + entry["id"]
+        items.append(entry)
+    return jsonify({
+        "query": query,
+        "count": len(items),
+        "results": items,
+        "hasMore": result["hasMore"],
+        "nextPage": result["nextPage"],
+    })
+
+
+@app.route("/hentaila/series")
+def hentaila_series_route():
+    slug = request.args.get("id", "").strip()
+    if not slug:
+        return jsonify({"error": "missing_id"}), 400
+    if _hentaila_disabled():
+        return jsonify({"error": "source_disabled"}), 404
+    try:
+        result = hentaila_source.series(slug)
+    except hentaila_source.SourceError:
+        return _hentaila_unavailable()
+    body = dict(result)
+    body["id"] = "hentaila:" + result["id"]
+    return jsonify(body)
+
+
+@app.route("/hentaila/links")
+def hentaila_links_route():
+    slug = request.args.get("id", "").strip()
+    episode = request.args.get("ep", "").strip()
+    if not slug or not episode:
+        return jsonify({"error": "missing_parameters"}), 400
+    if _hentaila_disabled():
+        return jsonify({"error": "source_disabled"}), 404
+    try:
+        links = hentaila_source.links(slug, episode)
+    except hentaila_source.SourceError:
+        return _hentaila_unavailable()
+    if not links:
+        return jsonify({"error": "source_unavailable"}), 404
+    show_id = "hentaila:" + slug
+    return jsonify({
+        "show_id": show_id,
+        "episode": episode,
+        "mode": "sub",
+        "providers": {"HentaiLA": links},
+        "all_links": links,
+        "selected": links[0],
+        "requested_quality": "best",
+    })
+
+
 @app.route("/search")
 def search_route():
     """
@@ -755,6 +837,8 @@ def episodes_route():
     mode = request.args.get("mode", "sub").strip()
     if not show_id:
         return jsonify({"error": "Missing required param: id"}), 400
+    if show_id.startswith("hentaila:"):
+        return jsonify({"error": "not_found"}), 404
     try:
         if show_id.startswith("jkanime:"):
             eps = jkanime_source.episodes(show_id.split(":", 1)[1])
@@ -781,6 +865,8 @@ def links_route():
         return jsonify({"error": "Missing required param: id"}), 400
     if not ep_no:
         return jsonify({"error": "Missing required param: ep"}), 400
+    if show_id.startswith("hentaila:"):
+        return jsonify({"error": "not_found"}), 404
 
     try:
         if show_id.startswith("jkanime:"):
@@ -949,6 +1035,16 @@ def skip_times_route():
         return jsonify({"error": "Missing required param: id"}), 400
     if not ep_no:
         return jsonify({"error": "Missing required param: ep"}), 400
+    if show_id.startswith("hentaila:"):
+        return jsonify({
+            "found": False,
+            "mal_id": None,
+            "source": "",
+            "intervals": [],
+            "cached": False,
+            "stale": False,
+            "reason": "disabled_for_source",
+        })
 
     try:
         duration = float(raw_duration) if raw_duration else 0.0
@@ -1016,6 +1112,9 @@ if __name__ == "__main__":
   │  GET /search?q=blue+lock               │
   │  GET /episodes?id=<id>                 │
   │  GET /links?id=<id>&ep=1              │
+  │  GET /hentaila/search?q=<query>       │
+  │  GET /hentaila/series?id=<slug>       │
+  │  GET /hentaila/links?id=<slug>&ep=1   │
   │  GET /latest                           │
   │  GET /latest?mode=dub&country=JP       │
   │  GET /popular                          │
@@ -1027,6 +1126,20 @@ if __name__ == "__main__":
     if args.debug:
         import logging
         app.logger.setLevel(logging.DEBUG)
+
+    from werkzeug.serving import WSGIRequestHandler
+
+    class PrivateSafeRequestHandler(WSGIRequestHandler):
+        def log_request(self, code="-", size="-"):
+            original_path = self.path
+            if original_path.startswith("/hentaila/"):
+                self.path = "/hentaila/*"
+            try:
+                super().log_request(code, size)
+            finally:
+                self.path = original_path
+
     # Never the Werkzeug debugger: `debug=True` serves a console with code
     # execution to anyone who can reach the port (audit 2026-11-06, finding 36).
-    app.run(host=args.host, port=args.port, debug=False, use_reloader=False)
+    app.run(host=args.host, port=args.port, debug=False, use_reloader=False,
+            request_handler=PrivateSafeRequestHandler)
