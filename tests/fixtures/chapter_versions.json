@@ -1,0 +1,721 @@
+{
+  "comment": "Shared expectations for services/chapters.js and scripts/chapter_versions.py. Neutral shapes only.",
+  "cases": [
+    {
+      "name": "a later .1 generation merges",
+      "chapters": [
+        {
+          "id": "old-1",
+          "chapter": "1",
+          "title": "Capítulo 1",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-2",
+          "chapter": "2",
+          "title": "Capítulo 2",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-3",
+          "chapter": "3",
+          "title": "Capítulo 3",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-4",
+          "chapter": "4",
+          "title": "Capítulo 4",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-5",
+          "chapter": "5",
+          "title": "Capítulo 5",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-6",
+          "chapter": "6",
+          "title": "Capítulo 6",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "new-1",
+          "chapter": "1.1",
+          "title": "Capítulo 1.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-2",
+          "chapter": "2.1",
+          "title": "Capítulo 2.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-3",
+          "chapter": "3.1",
+          "title": "Capítulo 3.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-4",
+          "chapter": "4.1",
+          "title": "Capítulo 4.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-5",
+          "chapter": "5.1",
+          "title": "Capítulo 5.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-6",
+          "chapter": "6.1",
+          "title": "Capítulo 6.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        }
+      ],
+      "groups": 6
+    },
+    {
+      "name": "a single stray decimal stays",
+      "chapters": [
+        {
+          "id": "a",
+          "chapter": "23",
+          "title": "Capítulo 23",
+          "group": "",
+          "publishAt": "15/10/2026"
+        },
+        {
+          "id": "b",
+          "chapter": "23.1",
+          "title": "Capítulo 23.1",
+          "group": "",
+          "publishAt": "03/11/2026"
+        }
+      ],
+      "groups": 2
+    },
+    {
+      "name": "two strays on different days stay",
+      "chapters": [
+        {
+          "id": "a",
+          "chapter": "9",
+          "title": "Capítulo 9",
+          "group": "",
+          "publishAt": "11/07/2026"
+        },
+        {
+          "id": "b",
+          "chapter": "9.1",
+          "title": "Capítulo 9.1",
+          "group": "",
+          "publishAt": "10/07/2026"
+        },
+        {
+          "id": "c",
+          "chapter": "23",
+          "title": "Capítulo 23",
+          "group": "",
+          "publishAt": "15/10/2026"
+        },
+        {
+          "id": "d",
+          "chapter": "23.1",
+          "title": "Capítulo 23.1",
+          "group": "",
+          "publishAt": "03/11/2026"
+        }
+      ],
+      "groups": 4
+    },
+    {
+      "name": "an orphan decimal stays",
+      "chapters": [
+        {
+          "id": "old-54",
+          "chapter": "54",
+          "title": "Capítulo 54",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "orphan",
+          "chapter": "55.1",
+          "title": "Capítulo 55.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "old-56",
+          "chapter": "56",
+          "title": "Capítulo 56",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "new-56",
+          "chapter": "56.1",
+          "title": "Capítulo 56.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "old-57",
+          "chapter": "57",
+          "title": "Capítulo 57",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "new-57",
+          "chapter": "57.1",
+          "title": "Capítulo 57.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "old-58",
+          "chapter": "58",
+          "title": "Capítulo 58",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "new-58",
+          "chapter": "58.1",
+          "title": "Capítulo 58.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        }
+      ],
+      "groups": 5
+    },
+    {
+      "name": "a .5 extra never merges",
+      "chapters": [
+        {
+          "id": "old-1",
+          "chapter": "1",
+          "title": "Capítulo 1",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-2",
+          "chapter": "2",
+          "title": "Capítulo 2",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-3",
+          "chapter": "3",
+          "title": "Capítulo 3",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-4",
+          "chapter": "4",
+          "title": "Capítulo 4",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "new-1",
+          "chapter": "1.1",
+          "title": "Capítulo 1.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-2",
+          "chapter": "2.1",
+          "title": "Capítulo 2.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-3",
+          "chapter": "3.1",
+          "title": "Capítulo 3.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-4",
+          "chapter": "4.1",
+          "title": "Capítulo 4.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "extra",
+          "chapter": "2.5",
+          "title": "Capítulo 2.5",
+          "group": "",
+          "publishAt": "21/04/2026"
+        }
+      ],
+      "groups": 5
+    },
+    {
+      "name": "split numbering keeps the halves",
+      "chapters": [
+        {
+          "id": "old-1",
+          "chapter": "1",
+          "title": "Capítulo 1",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-2",
+          "chapter": "2",
+          "title": "Capítulo 2",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-3",
+          "chapter": "3",
+          "title": "Capítulo 3",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-4",
+          "chapter": "4",
+          "title": "Capítulo 4",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "new-1",
+          "chapter": "1.1",
+          "title": "Capítulo 1.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-2",
+          "chapter": "2.1",
+          "title": "Capítulo 2.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "half-2",
+          "chapter": "2.2",
+          "title": "Capítulo 2.2",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-3",
+          "chapter": "3.1",
+          "title": "Capítulo 3.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-4",
+          "chapter": "4.1",
+          "title": "Capítulo 4.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        }
+      ],
+      "groups": 6
+    },
+    {
+      "name": "no dates, no structural merge",
+      "chapters": [
+        {
+          "id": "old-1",
+          "chapter": "1",
+          "title": "Capítulo 1",
+          "group": "",
+          "publishAt": ""
+        },
+        {
+          "id": "old-2",
+          "chapter": "2",
+          "title": "Capítulo 2",
+          "group": "",
+          "publishAt": ""
+        },
+        {
+          "id": "old-3",
+          "chapter": "3",
+          "title": "Capítulo 3",
+          "group": "",
+          "publishAt": ""
+        },
+        {
+          "id": "old-4",
+          "chapter": "4",
+          "title": "Capítulo 4",
+          "group": "",
+          "publishAt": ""
+        },
+        {
+          "id": "new-1",
+          "chapter": "1.1",
+          "title": "Capítulo 1.1",
+          "group": "",
+          "publishAt": ""
+        },
+        {
+          "id": "new-2",
+          "chapter": "2.1",
+          "title": "Capítulo 2.1",
+          "group": "",
+          "publishAt": ""
+        },
+        {
+          "id": "new-3",
+          "chapter": "3.1",
+          "title": "Capítulo 3.1",
+          "group": "",
+          "publishAt": ""
+        },
+        {
+          "id": "new-4",
+          "chapter": "4.1",
+          "title": "Capítulo 4.1",
+          "group": "",
+          "publishAt": ""
+        }
+      ],
+      "groups": 8
+    },
+    {
+      "name": "interleaved ids are not a later generation",
+      "chapters": [
+        {
+          "id": "site:100",
+          "chapter": "1",
+          "title": "Capítulo 1",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "site:101",
+          "chapter": "2",
+          "title": "Capítulo 2",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "site:102",
+          "chapter": "3",
+          "title": "Capítulo 3",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "site:103",
+          "chapter": "1.1",
+          "title": "Capítulo 1.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "site:99",
+          "chapter": "2.1",
+          "title": "Capítulo 2.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "site:104",
+          "chapter": "3.1",
+          "title": "Capítulo 3.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        }
+      ],
+      "groups": 6
+    },
+    {
+      "name": "two pairs are below the quarter",
+      "chapters": [
+        {
+          "id": "old-1",
+          "chapter": "1",
+          "title": "Capítulo 1",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-2",
+          "chapter": "2",
+          "title": "Capítulo 2",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-3",
+          "chapter": "3",
+          "title": "Capítulo 3",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-4",
+          "chapter": "4",
+          "title": "Capítulo 4",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-5",
+          "chapter": "5",
+          "title": "Capítulo 5",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-6",
+          "chapter": "6",
+          "title": "Capítulo 6",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-7",
+          "chapter": "7",
+          "title": "Capítulo 7",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-8",
+          "chapter": "8",
+          "title": "Capítulo 8",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-9",
+          "chapter": "9",
+          "title": "Capítulo 9",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-10",
+          "chapter": "10",
+          "title": "Capítulo 10",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-11",
+          "chapter": "11",
+          "title": "Capítulo 11",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-12",
+          "chapter": "12",
+          "title": "Capítulo 12",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "new-1",
+          "chapter": "1.1",
+          "title": "Capítulo 1.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-2",
+          "chapter": "2.1",
+          "title": "Capítulo 2.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        }
+      ],
+      "groups": 14
+    },
+    {
+      "name": "three pairs meet the quarter",
+      "chapters": [
+        {
+          "id": "old-1",
+          "chapter": "1",
+          "title": "Capítulo 1",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-2",
+          "chapter": "2",
+          "title": "Capítulo 2",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-3",
+          "chapter": "3",
+          "title": "Capítulo 3",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-4",
+          "chapter": "4",
+          "title": "Capítulo 4",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-5",
+          "chapter": "5",
+          "title": "Capítulo 5",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-6",
+          "chapter": "6",
+          "title": "Capítulo 6",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-7",
+          "chapter": "7",
+          "title": "Capítulo 7",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-8",
+          "chapter": "8",
+          "title": "Capítulo 8",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-9",
+          "chapter": "9",
+          "title": "Capítulo 9",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-10",
+          "chapter": "10",
+          "title": "Capítulo 10",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-11",
+          "chapter": "11",
+          "title": "Capítulo 11",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "old-12",
+          "chapter": "12",
+          "title": "Capítulo 12",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "new-1",
+          "chapter": "1.1",
+          "title": "Capítulo 1.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-2",
+          "chapter": "2.1",
+          "title": "Capítulo 2.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "new-3",
+          "chapter": "3.1",
+          "title": "Capítulo 3.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        }
+      ],
+      "groups": 12
+    },
+    {
+      "name": "12.10 and 12.1 stay apart",
+      "chapters": [
+        {
+          "id": "old-12",
+          "chapter": "12",
+          "title": "Capítulo 12",
+          "group": "",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "one",
+          "chapter": "12.1",
+          "title": "Capítulo 12.1",
+          "group": "",
+          "publishAt": "21/04/2026"
+        },
+        {
+          "id": "ten",
+          "chapter": "12.10",
+          "title": "Capítulo 12.10",
+          "group": "",
+          "publishAt": "21/04/2026"
+        }
+      ],
+      "groups": 3
+    },
+    {
+      "name": "the same chapter string is one chapter",
+      "chapters": [
+        {
+          "id": "mangadex:a",
+          "chapter": "12",
+          "title": "Capítulo 12",
+          "group": "Grupo A",
+          "publishAt": "09/04/2026"
+        },
+        {
+          "id": "mangadex:b",
+          "chapter": "12",
+          "title": "Capítulo 12",
+          "group": "Grupo B",
+          "publishAt": "21/04/2026"
+        }
+      ],
+      "groups": 1
+    }
+  ]
+}

@@ -25,6 +25,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, urljoin, parse_qs, quote, unquote
 
+from chapter_versions import grouped_count
 from local_only import is_allowed_origin, is_loopback_host
 from proxy_policy import proxy_target_allowed
 from concurrent.futures import ThreadPoolExecutor
@@ -731,7 +732,10 @@ def fav_check():
             _cache.pop(key, None)
         try:
             data  = info(fav["id"])
-            count = len(data.get("chapters", []))
+            # A re-upload ("1.1") is the same chapter, not a new one: count the
+            # grouped chapters so a whole re-upload stops announcing itself as
+            # dozens of new chapters (chapter_versions.py, same rule as the UI).
+            count = grouped_count(data.get("chapters", []))
             if count > fav.get("lastKnownChapterCount", 0):
                 fav["hasNewChapters"]        = True
                 fav["lastKnownChapterCount"] = count

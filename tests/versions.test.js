@@ -287,3 +287,21 @@ test("adjacentGroup keeps the decimal chapters of a rejected generation", () => 
     assert.equal(chapters.adjacentGroup(groups, "c105", 1).chapter, "105.5");
     assert.equal(chapters.adjacentGroup(groups, "c1055", 1).chapter, "106");
 });
+
+// ── Shared corpus (JS and Python) ───────────────────────────────────────────
+//
+// tests/fixtures/chapter_versions.json feeds this test and
+// tests/test_chapter_versions.py: the backend counts favourites' new chapters
+// with the same rule (scripts/chapter_versions.py), so a change in one side
+// that the other does not follow fails here first.
+
+test("the shared corpus pins the JS grouping", () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const corpus = JSON.parse(
+        fs.readFileSync(path.join(__dirname, "fixtures", "chapter_versions.json"), "utf8")
+    );
+    for (const item of corpus.cases) {
+        assert.equal(chapters.groupChapters(item.chapters).length, item.groups, item.name);
+    }
+});
