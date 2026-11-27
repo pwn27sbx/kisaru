@@ -242,7 +242,6 @@ archivos de la biblioteca. No hay bloqueo por inactividad.
 
 ## Fuentes por panel
 
-- **Anime privado (+18):** HentaiLA aparece solo tras desbloquear el modo privado, usa portadas del proxy de manga y no ejecuta AniSkip. Está activado por defecto; `QS_HENTAILA_SOURCE=off` lo desactiva.
 - **Anime:** hianime primero; si el stream no trae pista de subtítulos en español, cae a
   [JKAnime](https://jkanime.net) por título (subtítulos en español, hardsub). Si **ambas**
   vuelven vacías, se pregunta a [`ani-cli-mx`](https://github.com/Gildedboy/ani-cli-mx)

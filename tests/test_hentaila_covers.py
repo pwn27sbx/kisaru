@@ -1,4 +1,4 @@
-"""Private anime covers share the manga image proxy allowlist."""
+"""HentaiLA covers share the manga image proxy allowlist."""
 
 import os
 import sys

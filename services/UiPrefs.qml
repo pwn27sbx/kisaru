@@ -76,7 +76,9 @@ Singleton {
     readonly property string animeSkipMode: Core.normalizeAnimeSkipMode(Core.parseSettings(root.raw).animeSkipMode)
     readonly property bool animeSkipRecap: Core.normalizeAnimeSkipRecap(Core.parseSettings(root.raw).animeSkipRecap)
     readonly property var animeSkipDisabledShows: Core.normalizeDisabledShows(Core.parseSettings(root.raw).animeSkipDisabledShows)
-    readonly property bool privateAnimeEnabled: Core.normalizePrivateAnimeEnabled(Core.parseSettings(root.raw).privateAnimeEnabled)
+    // Keep the legacy key so an existing off choice survives; the source itself
+    // is part of normal Anime search now.
+    readonly property bool hentailaSourceEnabled: Core.normalizeHentailaSourceEnabled(Core.parseSettings(root.raw).privateAnimeEnabled)
 
     function isAnimeSkipDisabled(showId) {
         return Core.isShowSkipDisabled(root.animeSkipDisabledShows, showId)
@@ -135,8 +137,8 @@ Singleton {
                         Core.toggleDisabledShow(root.animeSkipDisabledShows, showId))
     }
 
-    function setPrivateAnimeEnabled(enabled) {
-        root.setSetting("privateAnimeEnabled", Core.normalizePrivateAnimeEnabled(enabled))
+    function setHentailaSourceEnabled(enabled) {
+        root.setSetting("privateAnimeEnabled", Core.normalizeHentailaSourceEnabled(enabled))
     }
 
     FileView {

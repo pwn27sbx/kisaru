@@ -42,7 +42,6 @@ Item {
     // No "reader" stack — MPV handles playback externally
     property int browseStack:  0
     property int libraryStack: 0
-    property bool privateMode: false
 
     // Hidden but kept loaded: shell.qml skips the unload while this is set,
     // so the toggle brings the panel back exactly as it was left.
@@ -107,8 +106,7 @@ Item {
     }
 
     function _sendBrowseQuery(text) {
-        if (root.privateMode) Anime.searchPrivateAnime(text, true)
-        else Anime.searchAnime(text, true)
+        Anime.searchAnime(text, true)
     }
 
     // Header brand: the app glyph plus this panel's short name (decision 1).
@@ -150,12 +148,12 @@ Item {
             brand: brandComponent
             fontFamily: root.fontBody
             settingsMode: root.settingsMode
-            filters: root.tabIndex === 0 && !root.settingsMode && !root.privateMode ? browseView.filterOptions : []
+            filters: root.tabIndex === 0 && !root.settingsMode ? browseView.filterOptions : []
             filterValue: browseView.filterValue
             filterFallbackLabel: browseView.filterFallbackLabel
             filterDimmed: browseView.filterDimmed
             searchOpen: root.searchOpen
-            searchPlaceholder: root.privateMode ? KisaruI18n.t("anime.private.search") : KisaruI18n.t("anime.search")
+            searchPlaceholder: KisaruI18n.t("anime.search")
             onFilterChosen: function(value) { browseView.chooseFilter(value) }
             onSearchClicked: root.toggleSearch()
             onSearchEdited: searchDebounce.restart()
@@ -210,23 +208,11 @@ Item {
                 BrowseView {
                     id: browseView
                     anchors.fill: parent
-                    privateMode: root.privateMode
                     visible: root.browseStack === 0
                     opacity: visible ? 1 : 0
                     Behavior on opacity { NumberAnimation { duration: Motion.slow; easing.type: Motion.easeOut } }
 
                     onSearchCleared: root.clearSearch()
-                    onPrivateRequested: {
-                        root.privateMode = true
-                        root.browseStack = 0
-                        Anime.fetchPrivateAnime(true)
-                    }
-                    onPrivateClosed: {
-                        root.privateMode = false
-                        Anime.clearPrivateList()
-                        browseView.resetList()
-                    }
-
                     onAnimeSelected: function(show) {
                         Anime.fetchAnimeDetail(show)
                         root.browseStack = 1
@@ -313,9 +299,9 @@ Item {
                 showSkipRecap: UiPrefs.animeSkipMode !== "off"
                 skipRecap: UiPrefs.animeSkipRecap
                 onSkipRecapToggled: function(enabled) { UiPrefs.setAnimeSkipRecap(enabled) }
-                showPrivateSource: true
-                privateSourceEnabled: Anime.privateSourceEnabled
-                onPrivateSourceToggled: function(enabled) { UiPrefs.setPrivateAnimeEnabled(enabled) }
+                showHentailaSource: true
+                hentailaSourceEnabled: Anime.hentailaSourceEnabled
+                onHentailaSourceToggled: function(enabled) { UiPrefs.setHentailaSourceEnabled(enabled) }
                 onCloseRequested: root.settingsMode = false
             }
         }
@@ -332,7 +318,7 @@ Item {
             countText: StatusLine.barText({
                 settingsMode: root.settingsMode,
                 tabIndex: root.tabIndex,
-                browseCount: root.privateMode ? Anime.privateAnimeList.length : Anime.animeList.length,
+                browseCount: Anime.animeList.length,
                 libraryCount: Anime.visibleCount(),
                 folderName: libraryView.activeFolderName,
                 translate: KisaruI18n.tn
@@ -346,26 +332,12 @@ Item {
         title: KisaruI18n.t("panel.anime")
     }
 
-    Connections {
-        target: Anime
-        function onPrivateSourceEnabledChanged() {
-            if (Anime.privateSourceEnabled) return
-            root.privateMode = false
-            root.browseStack = 0
-            Anime.clearPrivateList()
-            browseView.resetList()
-        }
-    }
-
     // One hook: when the mode locks, a hidden title leaves no reader behind.
     Connections {
         target: Privacy
         function onLockedChanged() {
             if (!Privacy.locked) return
             root.collapseSearch()
-            root.privateMode = false
-            root.browseStack = 0
-            Anime.clearPrivateList()
             if (Anime.currentAnime && Anime.isHiddenLibraryEntry(Anime.currentAnime.id)) {
                 root.tabIndex = 1
                 root.browseStack = 0

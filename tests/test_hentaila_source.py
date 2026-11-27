@@ -1,4 +1,4 @@
-"""Contract tests for the private anime source adapter.
+"""Contract tests for the HentaiLA anime source adapter.
 
 All HTTP is mocked. Fixtures are neutral and contain no live titles, URLs,
 tokens, cookies or images.

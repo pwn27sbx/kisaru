@@ -6,7 +6,7 @@ import qs.services
 import "anime_links.js" as AnimeLinks
 import "app_paths.js" as Paths
 import "library_view.js" as LibraryViewJs
-import "private_anime.js" as PrivateAnime
+import "hentaila.js" as HentaiLA
 
 Singleton {
     id: root
@@ -26,16 +26,9 @@ Singleton {
     property string currentCountry: "ALL"
     property string currentView: ""
 
-    // Private source state is separate from global browse/search and is purged
-    // on lock. The section defaults on but remains invisible while locked.
-    property list<var> privateAnimeList: []
-    property bool isFetchingPrivateAnime: false
-    property string privateAnimeError: ""
-    property bool hasMorePrivateAnime: false
-    property int privatePage: 1
-    property string privateQuery: "a"
-    readonly property bool privateSourceEnabled: PrivateAnime.sourceEnabled(
-        UiPrefs.privateAnimeEnabled, Quickshell.env("QS_HENTAILA_SOURCE"))
+    // HentaiLA is a normal source in the shared search/browse flow.
+    readonly property bool hentailaSourceEnabled: HentaiLA.sourceEnabled(
+        UiPrefs.hentailaSourceEnabled, Quickshell.env("QS_HENTAILA_SOURCE"))
 
     property var currentAnime: null
     property bool isFetchingDetail: false
@@ -82,7 +75,7 @@ Singleton {
                 root.libraryList = []
             }
             root.libraryLoaded = true
-            console.log("[ServiceAnime] Library loaded —", root._displayLibraryList().length, "entries")
+            console.log("[ServiceAnime] Library loaded —", root.libraryList.length, "entries")
         }
         onLoadFailed: {
             // Missing at the new path: the probe flips _libraryPath to the
@@ -147,25 +140,21 @@ Singleton {
         }
     }
 
-    function isPrivateId(id) {
-        return PrivateAnime.isPrivateId(id)
+    function isHentaiId(id) {
+        return HentaiLA.isHentaiId(id)
     }
 
-    function _displayLibraryList() {
-        return PrivateAnime.visibleLibrary(root.libraryList, Privacy.locked)
-    }
-
-    function _privateCover(raw) {
-        return PrivateAnime.coverUrl(raw, Manga.apiUrl)
+    function _hentailaCover(raw) {
+        return HentaiLA.coverUrl(raw, Manga.apiUrl)
     }
 
     function visibleEntries(folderId) {
-        return LibraryViewJs.visibleEntries(root._displayLibraryList(), root._folders,
+        return LibraryViewJs.visibleEntries(root.libraryList, root._folders,
                                             root._viewOptions(folderId))
     }
 
     function visibleCount() {
-        return LibraryViewJs.visibleCount(root._displayLibraryList(), root._folders,
+        return LibraryViewJs.visibleCount(root.libraryList, root._folders,
                                           root._viewOptions())
     }
 
@@ -201,7 +190,6 @@ Singleton {
     }
 
     function setHidden(entryId, hidden) {
-        if (Privacy.locked && root.isPrivateId(entryId)) return
         root.libraryList = root.libraryList.map(function(e) {
             if (e.id !== entryId) return e
             return Object.assign({}, e, { hidden: hidden === true })
@@ -218,7 +206,6 @@ Singleton {
 
     function addToLibrary(anime) {
         if (isInLibrary(anime.id)) return
-        if (Privacy.locked && root.isPrivateId(anime.id)) return
         var entry = {
             id:                 anime.id,
             name:               anime.name               || "",
@@ -227,7 +214,7 @@ Singleton {
             score:              anime.score               || null,
             lastWatchedEpId:    "",
             lastWatchedEpNum:   "",
-            hidden:             root.isPrivateId(anime.id),
+            hidden:             false,
             bookmarked:         true,
             addedAt:            new Date().toISOString()
         }
@@ -237,7 +224,6 @@ Singleton {
     }
 
     function removeFromLibrary(animeId) {
-        if (Privacy.locked && root.isPrivateId(animeId)) return
         root.libraryList = root.libraryList.filter(function(e) { return e.id !== animeId })
         _saveLibrary()
         console.log("[ServiceAnime] Removed from library")
@@ -253,7 +239,6 @@ Singleton {
     }
 
     function toggleBookmark(anime) {
-        if (Privacy.locked && root.isPrivateId(anime.id)) return
         if (!isInLibrary(anime.id)) {
             addToLibrary(anime)
             return
@@ -269,7 +254,6 @@ Singleton {
         if (!isInLibrary(animeId)) return
         // A hidden title must not write progress while the mode is locked.
         if (Privacy.locked && root.isHiddenLibraryEntry(animeId)) return
-        if (Privacy.locked && root.isPrivateId(animeId)) return
         root.libraryList = root.libraryList.map(function(e) {
             if (e.id !== animeId) return e
             return Object.assign({}, e, {
@@ -296,19 +280,11 @@ Singleton {
 
     readonly property bool serverReady: backend.serverReady
 
-    onPrivateSourceEnabledChanged: {
-        if (!root.privateSourceEnabled) root.clearPrivateList()
-    }
-
-    Connections {
-        target: Privacy
-        function onLockedChanged() {
-            if (!Privacy.locked) return
-            root.clearPrivateList()
-            if (root.currentAnime && root.isPrivateId(root.currentAnime.id))
-                root.clearDetail()
-            root.clearStreamLinks()
-        }
+    onHentailaSourceEnabledChanged: {
+        if (root.hentailaSourceEnabled) return
+        root.animeList = HentaiLA.withoutSource(root.animeList)
+        if (root.currentAnime && root.isHentaiId(root.currentAnime.id))
+            root.clearDetail()
     }
 
     // Process, respawn budget and health poll: services/Backend.qml. Only the
@@ -441,92 +417,6 @@ Singleton {
         isFetchingAnime = false
     }
 
-    function _normalisePrivateShow(show) {
-        var item = root._normaliseShow(show)
-        item.thumbnail = root._privateCover(show.thumbnail || "")
-        return item
-    }
-
-    function fetchPrivateAnime(reset) {
-        if (Privacy.locked || !root.privateSourceEnabled || isFetchingPrivateAnime) return
-        if (reset === undefined || reset === true) {
-            privateAnimeList = []
-            privatePage = 1
-            hasMorePrivateAnime = false
-        }
-        isFetchingPrivateAnime = true
-        privateAnimeError = ""
-        privateQuery = "a"
-        const url = PrivateAnime.searchUrl(root.apiUrl, privateQuery, privatePage)
-        Http.get(url, function(err, body) {
-            if (Privacy.locked || !root.privateSourceEnabled) {
-                root.clearPrivateList()
-                return
-            }
-            if (err) {
-                privateAnimeError = KisaruI18n.t("anime.private.unavailable")
-                isFetchingPrivateAnime = false
-                return
-            }
-            root._parsePrivateResults(body)
-        })
-    }
-
-    function searchPrivateAnime(query, reset) {
-        if (Privacy.locked || !root.privateSourceEnabled || isFetchingPrivateAnime) return
-        if (reset === undefined || reset === true) {
-            privateAnimeList = []
-            privatePage = 1
-            hasMorePrivateAnime = false
-        }
-        isFetchingPrivateAnime = true
-        privateAnimeError = ""
-        privateQuery = query
-        const url = PrivateAnime.searchUrl(root.apiUrl, privateQuery, privatePage)
-        Http.get(url, function(err, body) {
-            if (Privacy.locked || !root.privateSourceEnabled) {
-                root.clearPrivateList()
-                return
-            }
-            if (err) {
-                privateAnimeError = KisaruI18n.t("anime.private.unavailable")
-                isFetchingPrivateAnime = false
-                return
-            }
-            root._parsePrivateResults(body)
-        })
-    }
-
-    function _parsePrivateResults(json) {
-        try {
-            const data = JSON.parse(json)
-            if (data.error) throw new Error("source_unavailable")
-            const items = (data.results || []).map(root._normalisePrivateShow)
-            privateAnimeList = [...privateAnimeList, ...items]
-            hasMorePrivateAnime = data.hasMore === true
-            privateAnimeError = ""
-        } catch (e) {
-            privateAnimeList = []
-            privateAnimeError = KisaruI18n.t("anime.private.unavailable")
-        }
-        isFetchingPrivateAnime = false
-    }
-
-    function fetchPrivateNextPage() {
-        if (!hasMorePrivateAnime || isFetchingPrivateAnime) return
-        privatePage++
-        searchPrivateAnime(privateQuery, false)
-    }
-
-    function clearPrivateList() {
-        privateAnimeList = []
-        isFetchingPrivateAnime = false
-        privateAnimeError = ""
-        hasMorePrivateAnime = false
-        privatePage = 1
-        privateQuery = "a"
-    }
-
     function fetchNextPage() {
         if (!hasMoreAnime || isFetchingAnime) return
         if (currentView === "popular") {
@@ -545,7 +435,7 @@ Singleton {
             name:        s.name        || "",
             englishName: s.english_name || s.englishName || s.name || "",
             nativeName:  s.native_name  || s.nativeName  || "",
-            thumbnail:   s.thumbnail   || "",
+            thumbnail:   root.isHentaiId(s.id) ? root._hentailaCover(s.thumbnail || "") : (s.thumbnail || ""),
             score:       s.score       !== undefined ? s.score : null,
             type:        s.type        || "",
             episodeCount: s.episode_count || "",
@@ -571,15 +461,8 @@ Singleton {
         // Seed what we already know from the list card immediately
         currentAnime = Object.assign({}, show, { episodes: [] })
 
-        const privateSource = root.isPrivateId(show.id)
-        const url = privateSource
-            ? root.apiUrl + "/hentaila/series?id=" + encodeURIComponent(show.id.split(":")[1])
-            : root.apiUrl + "/episodes?id=" + encodeURIComponent(show.id) + "&mode=" + currentMode
+        const url = root.apiUrl + "/episodes?id=" + encodeURIComponent(show.id) + "&mode=" + currentMode
         Http.get(url, function(err, body) {
-            if (privateSource && (Privacy.locked || !root.privateSourceEnabled)) {
-                root.clearDetail()
-                return
-            }
             if (err) { detailError = KisaruI18n.t("error.request", { 1: err }); isFetchingDetail = false; return }
             _parseAnimeDetail(show, body)
         })
@@ -627,19 +510,11 @@ Singleton {
         currentSubtitleLabel = ""
 
         const q = quality || "best"
-        const privateSource = root.isPrivateId(showId)
-        const url = privateSource
-            ? root.apiUrl + "/hentaila/links?id=" + encodeURIComponent(showId.split(":")[1])
-                + "&ep=" + encodeURIComponent(episodeNum)
-            : root.apiUrl + "/links?id=" + encodeURIComponent(showId)
-                + "&ep=" + encodeURIComponent(episodeNum)
-                + "&mode=" + currentMode
-                + "&quality=" + encodeURIComponent(q)
+        const url = root.apiUrl + "/links?id=" + encodeURIComponent(showId)
+            + "&ep=" + encodeURIComponent(episodeNum)
+            + "&mode=" + currentMode
+            + "&quality=" + encodeURIComponent(q)
         Http.get(url, function(err, body) {
-            if (privateSource && (Privacy.locked || !root.privateSourceEnabled)) {
-                root.clearStreamLinks()
-                return
-            }
             if (err) { linksError = KisaruI18n.t("error.request", { 1: err }); isFetchingLinks = false; return }
             _parseStreamLinks(body)
         })
