@@ -280,6 +280,25 @@ las fuentes que revisó— en vez de mostrar contenido como si fuera español. S
 capítulos en español para un manga concreto, se muestra en inglés **con un aviso
 prominente** en el detalle.
 
+### Capítulos repetidos: una fila, varias versiones
+
+Cuando una fuente lista el mismo capítulo dos veces —`1` y `1.1`, la segunda una resubida
+completa de otro grupo— el detalle muestra **una sola fila** con un chip (`2 versiones`) que
+abre el selector. Cada versión aparece con su número de origen, su fecha (`Capítulo 1.1 ·
+21/04/2026`) y el grupo cuando la fuente lo nombra; la elegida se recuerda por serie. Sin
+elección previa se abre la que se estaba leyendo; si no hay ninguna, la subida más reciente.
+
+Una resubida solo se agrupa cuando las filas decimales forman una **generación**: varias
+`N.1` con la misma ventana de subida, posteriores a su capítulo, con ids de otro bloque, y
+al menos tres de ellas cubriendo una cuarta parte de los capítulos enteros. Nunca se agrupan
+un `.5` (extra real), un decimal sin capítulo entero (`55.1` suelto) ni un `N.1` que convive
+con un `N.2` (dos mitades de un capítulo). Así conviven la resubida y el extra real en la
+misma serie sin adivinar.
+
+El contador cuenta capítulos, «Siguiente» y «Anterior» nunca saltan a un hermano, y el
+progreso es del capítulo aunque cambies de versión. Las descargas siguen siendo por versión:
+cada subida es su propia descarga en disco y nada se mueve ni se borra al agrupar.
+
 ## Cómo se ve
 
 Los tres paneles comparten una sola capa de componentes (`components/`, `services/`): un
