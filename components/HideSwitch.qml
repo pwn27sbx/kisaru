@@ -34,7 +34,7 @@ ClickableRect {
         }
         StyledText {
             anchors.verticalCenter: parent.verticalCenter
-            text: I18n.t(Toolbar.hideKey(root.checked))
+            text: KisaruI18n.t(Toolbar.hideKey(root.checked))
             font.family: root.bodyFont
             font.pixelSize: Style.font.caption
             font.bold: true

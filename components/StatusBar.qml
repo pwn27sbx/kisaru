@@ -115,7 +115,7 @@ Rectangle {
 
         StyledText {
             Layout.alignment: Qt.AlignVCenter
-            text: root.online ? I18n.t("status.online") : I18n.t("status.offline")
+            text: root.online ? KisaruI18n.t("status.online") : KisaruI18n.t("status.offline")
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             font.letterSpacing: 0.4
@@ -204,7 +204,7 @@ Rectangle {
 
                 StyledText {
                     Layout.alignment: Qt.AlignVCenter
-                    text: I18n.t("action.prev")
+                    text: KisaruI18n.t("action.prev")
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
                     color: root._labelColor
@@ -258,7 +258,7 @@ Rectangle {
 
                 StyledText {
                     Layout.alignment: Qt.AlignVCenter
-                    text: I18n.t("action.next")
+                    text: KisaruI18n.t("action.next")
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
                     color: root._labelColor
@@ -330,7 +330,7 @@ Rectangle {
 
         StyledText {
             Layout.alignment: Qt.AlignVCenter
-            text: I18n.t("status.search")
+            text: KisaruI18n.t("status.search")
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             color: root._labelColor
@@ -344,7 +344,7 @@ Rectangle {
 
         StyledText {
             Layout.alignment: Qt.AlignVCenter
-            text: I18n.t("status.close")
+            text: KisaruI18n.t("status.close")
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             color: root._labelColor

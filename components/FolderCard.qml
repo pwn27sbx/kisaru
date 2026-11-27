@@ -97,7 +97,7 @@ ClickableRect {
 
             StyledText {
                 width: parent.width
-                text: I18n.tn("folder.count", root.count)
+                text: KisaruI18n.tn("folder.count", root.count)
                 font.family: root.bodyFont
                 font.pixelSize: Style.font.caption
                 font.letterSpacing: 0.3

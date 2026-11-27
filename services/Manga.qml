@@ -382,7 +382,7 @@ Singleton {
         onTriggered: {
             if (!isFetchingManga) return
             isFetchingManga = false
-            mangaError = I18n.t("error.request", { 1: "timeout" })
+            mangaError = KisaruI18n.t("error.request", { 1: "timeout" })
         }
     }
 
@@ -411,7 +411,7 @@ Singleton {
             const url = root.apiUrl + "/hot"
             Http.get(url, function(err, body) {
                 fetchWatchdog.stop()
-                if (err) { mangaError = I18n.t("error.request", { 1: err }); isFetchingManga = false; return }
+                if (err) { mangaError = KisaruI18n.t("error.request", { 1: err }); isFetchingManga = false; return }
                 _parseMangaResults(body)
             })
         } else if (origin === "latest") {
@@ -422,7 +422,7 @@ Singleton {
             const url = root.apiUrl + "/latest?page=" + latestPage
             Http.get(url, function(err, body) {
                 fetchWatchdog.stop()
-                if (err) { mangaError = I18n.t("error.request", { 1: err }); isFetchingManga = false; return }
+                if (err) { mangaError = KisaruI18n.t("error.request", { 1: err }); isFetchingManga = false; return }
                 _parseMangaResults(body)
             })
         } else {
@@ -464,7 +464,7 @@ Singleton {
         if (type) url += "&type=" + encodeURIComponent(type)
         Http.get(url, function(err, body) {
             fetchWatchdog.stop()
-            if (err) { mangaError = I18n.t("error.request", { 1: err }); isFetchingManga = false; return }
+            if (err) { mangaError = KisaruI18n.t("error.request", { 1: err }); isFetchingManga = false; return }
             _parseMangaResults(body, replace)
         })
     }
@@ -506,7 +506,7 @@ Singleton {
 
             mangaError = ""
         } catch (e) {
-            mangaError = I18n.t("error.parse", { 1: e })
+            mangaError = KisaruI18n.t("error.parse", { 1: e })
             console.error("[ServiceManga]", e)
         }
         isFetchingManga = false
@@ -523,7 +523,7 @@ Singleton {
         detailTitle = ""
         const url = root.apiUrl + "/info?id=" + encodeURIComponent(mangaId)
         Http.get(url, function(err, body) {
-            if (err) { detailError = I18n.t("error.request", { 1: err }); isFetchingDetail = false; return }
+            if (err) { detailError = KisaruI18n.t("error.request", { 1: err }); isFetchingDetail = false; return }
             _parseMangaDetail(body)
         })
     }
@@ -567,7 +567,7 @@ Singleton {
             detailTitle = data.title || ""
             detailError = ""
         } catch (e) {
-            detailError = I18n.t("error.parse", { 1: e })
+            detailError = KisaruI18n.t("error.parse", { 1: e })
             console.error("[ServiceManga]", e)
         }
         isFetchingDetail = false
@@ -605,7 +605,7 @@ Singleton {
         pagesError = ""
         const url = root.apiUrl + "/pages?chapterId=" + encodeURIComponent(chapterId)
         Http.get(url, function(err, body) {
-            if (err) { pagesError = I18n.t("error.request", { 1: err }); isFetchingPages = false; return }
+            if (err) { pagesError = KisaruI18n.t("error.request", { 1: err }); isFetchingPages = false; return }
             _parseChapterPages(body)
         })
     }
@@ -618,7 +618,7 @@ Singleton {
         pagesError = ""
         const url = root.apiUrl + "/dl/pages?chapterId=" + encodeURIComponent(chapterId)
         Http.get(url, function(err, body) {
-            if (err) { pagesError = I18n.t("error.request", { 1: err }); isFetchingPages = false; return }
+            if (err) { pagesError = KisaruI18n.t("error.request", { 1: err }); isFetchingPages = false; return }
             _parseChapterPages(body)
         })
     }
@@ -627,12 +627,12 @@ Singleton {
         try {
             const data = JSON.parse(json)
             if (data.error || !Array.isArray(data)) {
-                pagesError = data.error || I18n.t("manga.invalidResponse")
+                pagesError = data.error || KisaruI18n.t("manga.invalidResponse")
                 isFetchingPages = false
                 return
             }
             if (data.length === 0) {
-                pagesError = I18n.t("manga.noPages")
+                pagesError = KisaruI18n.t("manga.noPages")
                 isFetchingPages = false
                 return
             }
@@ -645,7 +645,7 @@ Singleton {
             pagesError = ""
             isFetchingPages = false
         } catch (e) {
-            pagesError = I18n.t("error.parse", { 1: e })
+            pagesError = KisaruI18n.t("error.parse", { 1: e })
             isFetchingPages = false
         }
     }

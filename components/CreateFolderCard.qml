@@ -70,7 +70,7 @@ ClickableRect {
             }
             StyledText {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: I18n.t("folder.create")
+                text: KisaruI18n.t("folder.create")
                 font.family: root.bodyFont
                 font.pixelSize: Style.font.bodySmall
                 color: Colors.on_surface_variant
@@ -90,7 +90,7 @@ ClickableRect {
             }
             StyledText {
                 anchors.verticalCenter: parent.verticalCenter
-                text: I18n.t("folder.create")
+                text: KisaruI18n.t("folder.create")
                 font.family: root.bodyFont
                 font.pixelSize: Style.font.body
                 color: Colors.on_surface_variant

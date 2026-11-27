@@ -153,7 +153,7 @@ Item {
     readonly property bool _hasNext: Novel.hasNextChapter
 
     readonly property string wordCountLabel: Novel.currentChapter && Novel.currentChapter.wordCount > 0
-        ? I18n.t("words", { 1: (Math.round(Novel.currentChapter.wordCount / 100) / 10) }) : ""
+        ? KisaruI18n.t("words", { 1: (Math.round(Novel.currentChapter.wordCount / 100) / 10) }) : ""
 
     // The novel reader is a page of the theme, not a page of paper. Its ground,
     // its type and its chrome are the same `Colors` roles the rest of Kisaru
@@ -436,7 +436,7 @@ Item {
                     Row {
                         id: prevBtnRow; anchors.centerIn: parent; spacing: Style.space(5)
                         Text { anchors.verticalCenter: parent.verticalCenter; text: "‹"; font.pixelSize: Style.font.iconLarge; color: Colors.text }
-                        Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.t("action.prev"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: KisaruI18n.t("action.prev"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
                     }
                 }
 
@@ -476,7 +476,7 @@ Item {
 
                     Row {
                         id: nextBtnRow; anchors.centerIn: parent; spacing: Style.space(5)
-                        Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.t("action.next"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: KisaruI18n.t("action.next"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
                         Text { anchors.verticalCenter: parent.verticalCenter; text: "›"; font.pixelSize: Style.font.iconLarge; color: Colors.text }
                     }
                 }

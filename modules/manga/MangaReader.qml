@@ -189,7 +189,7 @@ Item {
     Component {
         id: brandComponent
         PanelBrand {
-            title: I18n.t("brand.manga")
+            title: KisaruI18n.t("brand.manga")
             fontFamily: root.fontBody
         }
     }
@@ -213,7 +213,7 @@ Item {
             id: header
             Layout.fillWidth: true
             z: 2
-            tabs: [I18n.t("tab.browse"), I18n.t("tab.library")]
+            tabs: [KisaruI18n.t("tab.browse"), KisaruI18n.t("tab.library")]
             tabIndex: root.tabIndex
             brand: brandComponent
             // Browse carries no number (the bar counts it); Library shows a badge,
@@ -226,7 +226,7 @@ Item {
             filterFallbackLabel: ""
             filterDimmed: false
             searchOpen: root.searchOpen
-            searchPlaceholder: I18n.t("manga.search")
+            searchPlaceholder: KisaruI18n.t("manga.search")
             onFilterChosen: function(value) { browseView.chooseFilter(value) }
             onSearchClicked: root.toggleSearch()
             onSearchEdited: searchDebounce.restart()
@@ -379,8 +379,8 @@ Item {
             PanelSettings {
                 showScroll: true
                 active: root.settingsMode
-                layouts: [ { id: "grid", label: I18n.t("view.grid") },
-                           { id: "list", label: I18n.t("view.list") } ]
+                layouts: [ { id: "grid", label: KisaruI18n.t("view.grid") },
+                           { id: "list", label: KisaruI18n.t("view.list") } ]
                 layout: UiPrefs.viewModeFor("manga")
                 onLayoutSelected: function(id) { UiPrefs.setViewMode("manga", id) }
                 onCloseRequested: root.settingsMode = false
@@ -401,7 +401,7 @@ Item {
                 browseCount: Manga.mangaList.length,
                 libraryCount: Manga.visibleCount(),
                 folderName: libraryView.activeFolderName,
-                translate: I18n.tn
+                translate: KisaruI18n.tn
             })
             fontFamily: root.fontBody
             navVisible: root._readerNavVisible
@@ -413,7 +413,7 @@ Item {
     }
 
     PanelDecor {
-        title: I18n.t("panel.manga")
+        title: KisaruI18n.t("panel.manga")
     }
 
     // One hook: when the mode locks, a hidden title leaves no reader behind,

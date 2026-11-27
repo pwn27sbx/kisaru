@@ -82,7 +82,7 @@ test("muted UI outside the card bands is not raised", () => {
 });
 test("the shared hide switch is readable, borderless and state-labelled", () => {
     const action = read("components/HideSwitch.qml");
-    assert.match(action, /text: I18n\.t\(Toolbar\.hideKey\(root\.checked\)\)/);
+    assert.match(action, /text: KisaruI18n\.t\(Toolbar\.hideKey\(root\.checked\)\)/);
     assert.match(action, /color: Colors\.on_surface/, "the label does not use the title tone");
     assert.ok(!/border\.(color|width)/.test(action), "the switch still draws a box");
     assert.ok(!/color:\s*Colors\.surface/.test(action), "the switch still has a filled box");

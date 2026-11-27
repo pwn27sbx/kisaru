@@ -58,7 +58,7 @@ Item {
         folderName: detailView._rawFolderName
     })
     readonly property string _hideNote: detailView._hideView.noteFolder === ""
-        ? "" : I18n.t("folder.hiddenBy", { 1: detailView._hideView.noteFolder })
+        ? "" : KisaruI18n.t("folder.hiddenBy", { 1: detailView._hideView.noteFolder })
 
 
     // Hiding from the Detail keeps the Detail open (owner, 2026-11-05): the
@@ -107,7 +107,7 @@ Item {
     // Human-readable list of the sources the ES chain tried (plan §F3).
     readonly property string _sourcesLabel: {
         const ids = Manga.sourcesTried || []
-        return ids.map(function(id) { return I18n.tSource(id) }).join(", ")
+        return ids.map(function(id) { return KisaruI18n.tSource(id) }).join(", ")
     }
 
     // ── Filter / sort state ───────────────────────────────────────────────────
@@ -255,7 +255,7 @@ Item {
                         StyledText {
                             id: libBtnLabel
                             anchors.verticalCenter: parent.verticalCenter
-                            text: I18n.t("tab.library")
+                            text: KisaruI18n.t("tab.library")
                             font.family: detailView.fontBody
                             font.pixelSize: Style.font.bodySmall; font.letterSpacing: 0.3
                             color: detailView._inLibrary ? Colors.on_primary_container : Colors.on_surface_variant
@@ -312,7 +312,7 @@ Item {
                 StyledText {
                     id: noSpanishTitle
                     width: parent.width
-                    text: "⚠  " + I18n.t("manga.noSpanishNotice")
+                    text: "⚠  " + KisaruI18n.t("manga.noSpanishNotice")
                     font.family: detailView.fontBody
                     font.pixelSize: Style.font.bodySmall; font.bold: true
                     color: Colors.on_error_container
@@ -322,7 +322,7 @@ Item {
                 StyledText {
                     width: parent.width
                     visible: detailView._sourcesLabel.length > 0
-                    text: I18n.t("manga.sourcesTried", { 1: detailView._sourcesLabel })
+                    text: KisaruI18n.t("manga.sourcesTried", { 1: detailView._sourcesLabel })
                     font.family: detailView.fontBody
                     font.pixelSize: Style.font.caption
                     color: Colors.on_error_container
@@ -344,7 +344,7 @@ Item {
                     StyledText {
                         id: otherSourcesLabel
                         anchors.centerIn: parent
-                        text: I18n.t("manga.searchOtherSources")
+                        text: KisaruI18n.t("manga.searchOtherSources")
                         font.family: detailView.fontBody
                         font.pixelSize: Style.font.caption; font.bold: true
                         color: otherSourcesArea.containsMouse
@@ -420,7 +420,7 @@ Item {
 
                         StyledText {
                             id: statusText; anchors.centerIn: parent
-                            text: Manga.currentManga ? I18n.tData(Manga.currentManga.status || "").toUpperCase() : ""
+                            text: Manga.currentManga ? KisaruI18n.tData(Manga.currentManga.status || "").toUpperCase() : ""
                             font.family: detailView.fontBody
                             font.pixelSize: 9; font.letterSpacing: 1.2; font.bold: true // style-ignore — bespoke size
                             color: Colors.tertiary
@@ -464,7 +464,7 @@ Item {
                 anchors { fill: parent; leftMargin: Style.space(16); rightMargin: Style.space(16) }
 
                 StyledText {
-                    text: Manga.currentManga ? I18n.tn("count.chapter", Manga.currentManga.chapters.length) : ""
+                    text: Manga.currentManga ? KisaruI18n.tn("count.chapter", Manga.currentManga.chapters.length) : ""
                     font.family: detailView.fontBody
                     font.pixelSize: Style.font.bodySmall; font.letterSpacing: 1
                     color: Colors.on_surface_variant; opacity: 0.75
@@ -486,8 +486,8 @@ Item {
                     StyledText {
                         id: folderLabel
                         anchors.centerIn: parent
-                        text: I18n.t("folder.current", { 1: detailView._folderValue === ""
-                            ? I18n.t("folder.none") : detailView._folderName })
+                        text: KisaruI18n.t("folder.current", { 1: detailView._folderValue === ""
+                            ? KisaruI18n.t("folder.none") : detailView._folderName })
                         font.family: detailView.fontBody
                         font.pixelSize: Style.font.caption
                         color: Colors.on_surface
@@ -528,7 +528,7 @@ Item {
                         id: lastReadText; anchors.centerIn: parent
                         text: {
                             var e = Manga.visibleEntry()
-                            return e ? I18n.t("last.ch", { 1: detailView.formatChapter(e.lastReadChapterNum) }) : ""
+                            return e ? KisaruI18n.t("last.ch", { 1: detailView.formatChapter(e.lastReadChapterNum) }) : ""
                         }
                         font.family: detailView.fontBody
                         font.pixelSize: 9; font.letterSpacing: 0.8 // style-ignore — bespoke size
@@ -593,7 +593,7 @@ Item {
                             // Placeholder text
                             StyledText {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: I18n.t("filterChapters")
+                                text: KisaruI18n.t("filterChapters")
                                 font.family: detailView.fontBody
                                 font.pixelSize: Style.font.body
                                 color: Colors.on_surface_variant
@@ -657,7 +657,7 @@ Item {
 
                         ToolTip.visible: containsMouse
                         ToolTip.delay: 600
-                        ToolTip.text: detailView._sortAscending ? I18n.t("sort.ascending") : I18n.t("sort.descending")
+                        ToolTip.text: detailView._sortAscending ? KisaruI18n.t("sort.ascending") : KisaruI18n.t("sort.descending")
                     }
                 }
             }
@@ -737,7 +737,7 @@ Item {
 
                             StyledText {
                                 id: chapterPillText; anchors.centerIn: parent
-                                text: I18n.t("ch", { 1: detailView.formatChapter(modelData.chapter) })
+                                text: KisaruI18n.t("ch", { 1: detailView.formatChapter(modelData.chapter) })
                                 font.family: detailView.fontBody
                                 font.pixelSize: 9; font.bold: true; font.letterSpacing: 0.5 // style-ignore — bespoke size
                                 color: isLastRead ? Colors.on_primary : Colors.on_primary_container
@@ -749,7 +749,7 @@ Item {
 
                             Text {
                                 width: parent.width
-                                text: modelData.title || I18n.t("chapter", { 1: detailView.formatChapter(modelData.chapter) })
+                                text: modelData.title || KisaruI18n.t("chapter", { 1: detailView.formatChapter(modelData.chapter) })
                                 font.family: detailView.fontBody
                                 font.pixelSize: Style.font.body; color: Colors.on_surface; elide: Text.ElideRight
                             }
@@ -840,18 +840,18 @@ Item {
                                 ToolTip.visible: containsMouse
                                 ToolTip.delay: 500
                                 ToolTip.text: {
-                                    if (dlControl.kind === "downloaded") return I18n.t("manga.downloaded")
+                                    if (dlControl.kind === "downloaded") return KisaruI18n.t("manga.downloaded")
                                     if (dlControl.kind === "downloading") {
                                         return chapterRowAreaRect._dlState.total > 0
-                                            ? I18n.t("manga.downloading", {
+                                            ? KisaruI18n.t("manga.downloading", {
                                                 1: chapterRowAreaRect._dlState.done,
                                                 2: chapterRowAreaRect._dlState.total
                                             })
-                                            : I18n.t("manga.download")
+                                            : KisaruI18n.t("manga.download")
                                     }
-                                    if (dlControl.kind === "error") return I18n.t("manga.downloadError")
-                                    if (dlControl.busyOther) return I18n.t("manga.downloadBusy")
-                                    return I18n.t("manga.download")
+                                    if (dlControl.kind === "error") return KisaruI18n.t("manga.downloadError")
+                                    if (dlControl.busyOther) return KisaruI18n.t("manga.downloadBusy")
+                                    return KisaruI18n.t("manga.download")
                                 }
                             }
                         }
@@ -891,7 +891,7 @@ Item {
         current: detailView._folderValue
         bodyFont: detailView.fontBody
         onChosen: function(folderId) { Manga.setFolder(Manga.libraryEntryId(), folderId) }
-        onCreateRequested: folderPrompt.openText(I18n.t("folder.create"), "")
+        onCreateRequested: folderPrompt.openText(KisaruI18n.t("folder.create"), "")
     }
 
     FolderPrompt {

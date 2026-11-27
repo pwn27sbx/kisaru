@@ -10,7 +10,7 @@ Rectangle {
     id: root
 
     property bool active: false
-    property string label: "" // callers pass I18n.t(...); no English default
+    property string label: "" // callers pass KisaruI18n.t(...); no English default
     property string detail: ""
     property string bodyFont: "Noto Sans"
     property int spinnerSize: 34

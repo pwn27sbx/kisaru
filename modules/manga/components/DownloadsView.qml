@@ -74,7 +74,7 @@ Item {
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: I18n.t("manga.downloads")
+                    text: KisaruI18n.t("manga.downloads")
                     font.family: downloadsView.fontDisplay
                     font.pixelSize: Style.font.subtitle
                     font.bold: true
@@ -111,8 +111,8 @@ Item {
             EmptyState {
                 visible: downloadsView._seriesList.length === 0
                 glyph: "↓"
-                title: I18n.t("manga.downloads.empty")
-                subtitle: I18n.t("manga.downloads.hint")
+                title: KisaruI18n.t("manga.downloads.empty")
+                subtitle: KisaruI18n.t("manga.downloads.hint")
                 displayFont: downloadsView.fontDisplay
                 bodyFont: downloadsView.fontBody
             }
@@ -199,7 +199,7 @@ Item {
 
                                 StyledText {
                                     width: parent.width
-                                    text: I18n.tn("count.chapter", (seriesBlock.modelData.chapters || []).length)
+                                    text: KisaruI18n.tn("count.chapter", (seriesBlock.modelData.chapters || []).length)
                                         + "  ·  " + DownloadsJs.formatBytes(seriesBlock.modelData.sizeBytes)
                                     font.family: downloadsView.fontBody
                                     font.pixelSize: Style.font.caption
@@ -250,7 +250,7 @@ Item {
                                     StyledText {
                                         id: chPill
                                         anchors.centerIn: parent
-                                        text: I18n.t("ch", { 1: Chapters.formatChapter(dlChapterRow.modelData.chapterNum) })
+                                        text: KisaruI18n.t("ch", { 1: Chapters.formatChapter(dlChapterRow.modelData.chapterNum) })
                                         font.family: downloadsView.fontBody
                                         font.pixelSize: Style.font.caption
                                         font.bold: true
@@ -265,7 +265,7 @@ Item {
                                     StyledText {
                                         width: parent.width
                                         text: dlChapterRow.modelData.title
-                                            || I18n.t("chapter", { 1: Chapters.formatChapter(dlChapterRow.modelData.chapterNum) })
+                                            || KisaruI18n.t("chapter", { 1: Chapters.formatChapter(dlChapterRow.modelData.chapterNum) })
                                         font.family: downloadsView.fontBody
                                         font.pixelSize: Style.font.bodySmall
                                         color: Colors.on_surface
@@ -316,7 +316,7 @@ Item {
 
                                         ToolTip.visible: containsMouse
                                         ToolTip.delay: 500
-                                        ToolTip.text: I18n.t("manga.downloadDelete")
+                                        ToolTip.text: KisaruI18n.t("manga.downloadDelete")
                                     }
                                 }
                             }

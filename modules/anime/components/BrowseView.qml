@@ -23,11 +23,11 @@ Item {
     // had; one value stands for the (view, country) pair the old chips set in
     // two steps.
     readonly property var filterOptions: [
-        { value: "popular", label: I18n.t("anime.filter.popular") },
-        { value: "latest", label: I18n.t("anime.filter.latest") },
-        { value: "JP", label: I18n.t("anime.filter.japan") },
-        { value: "CN", label: I18n.t("anime.filter.china") },
-        { value: "KR", label: I18n.t("anime.filter.korea") }
+        { value: "popular", label: KisaruI18n.t("anime.filter.popular") },
+        { value: "latest", label: KisaruI18n.t("anime.filter.latest") },
+        { value: "JP", label: KisaruI18n.t("anime.filter.japan") },
+        { value: "CN", label: KisaruI18n.t("anime.filter.china") },
+        { value: "KR", label: KisaruI18n.t("anime.filter.korea") }
     ]
     readonly property string filterValue:
         Anime.currentView === "popular" ? "popular"
@@ -37,7 +37,7 @@ Item {
     // A search replaces the list the filter describes, so the menu steps back
     // instead of claiming a filter that is not in force.
     readonly property bool filterDimmed: Anime.currentView === "search"
-    readonly property string filterFallbackLabel: I18n.t("anime.filter.latest")
+    readonly property string filterFallbackLabel: KisaruI18n.t("anime.filter.latest")
 
     // The body of the old chip handler, unchanged.
     function chooseFilter(value) {
@@ -162,7 +162,7 @@ Item {
                         title: modelData.englishName || modelData.name || ""
                         bodyFont: browseView.fontBody
                         typeBadge: modelData.type
-                            ? I18n.tData(modelData.type).toUpperCase() : ""
+                            ? KisaruI18n.tData(modelData.type).toUpperCase() : ""
                         // The score lives in the trailing corner, where the
                         // state sits on the other cards.
                         cornerText: modelData.score !== null && modelData.score !== undefined
@@ -173,7 +173,7 @@ Item {
                             var avail = modelData.availableEpisodes
                             if (!avail) return ""
                             var n = Anime.currentMode === "dub" ? avail.dub : avail.sub
-                            return n > 0 ? I18n.t("anime.epCount", { 1: n }) : ""
+                            return n > 0 ? KisaruI18n.t("anime.epCount", { 1: n }) : ""
                         }
                         bookmarked: Anime.isInLibrary(modelData.id)
 
@@ -221,11 +221,11 @@ Item {
                     }
                     meta: {
                         var parts = []
-                        if (modelData.type) parts.push(I18n.tData(modelData.type))
+                        if (modelData.type) parts.push(KisaruI18n.tData(modelData.type))
                         var avail = modelData.availableEpisodes
                         if (avail) {
                             var n = Anime.currentMode === "dub" ? avail.dub : avail.sub
-                            if (n > 0) parts.push(I18n.t("anime.epCount", { 1: n }))
+                            if (n > 0) parts.push(KisaruI18n.t("anime.epCount", { 1: n }))
                         }
                         return parts.join(" · ")
                     }

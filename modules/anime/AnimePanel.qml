@@ -112,7 +112,7 @@ Item {
     // Header brand: the app glyph plus this panel's short name (decision 1).
     Component {
         id: brandComponent
-        PanelBrand { title: I18n.t("brand.anime"); fontFamily: root.fontBody }
+        PanelBrand { title: KisaruI18n.t("brand.anime"); fontFamily: root.fontBody }
     }
 
     // ── Background ────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ Item {
             id: header
             Layout.fillWidth: true
             z: 2
-            tabs: [I18n.t("tab.browse"), I18n.t("tab.library")]
+            tabs: [KisaruI18n.t("tab.browse"), KisaruI18n.t("tab.library")]
             tabIndex: root.tabIndex
             // Browse carries no number; Library shows a badge, hidden at 0 (A-8).
             tabCounts: [-1, Anime.visibleCount()]
@@ -153,7 +153,7 @@ Item {
             filterFallbackLabel: browseView.filterFallbackLabel
             filterDimmed: browseView.filterDimmed
             searchOpen: root.searchOpen
-            searchPlaceholder: I18n.t("anime.search")
+            searchPlaceholder: KisaruI18n.t("anime.search")
             onFilterChosen: function(value) { browseView.chooseFilter(value) }
             onSearchClicked: root.toggleSearch()
             onSearchEdited: searchDebounce.restart()
@@ -282,8 +282,8 @@ Item {
             PanelSettings {
                 showScroll: false
                 active: root.settingsMode
-                layouts: [ { id: "grid", label: I18n.t("view.grid") },
-                           { id: "list", label: I18n.t("view.list") } ]
+                layouts: [ { id: "grid", label: KisaruI18n.t("view.grid") },
+                           { id: "list", label: KisaruI18n.t("view.list") } ]
                 layout: UiPrefs.viewModeFor("anime")
                 onLayoutSelected: function(id) { UiPrefs.setViewMode("anime", id) }
                 // SUB/DUB lives here now (owner, round 6): a preference like the
@@ -292,9 +292,9 @@ Item {
                 modes: Prefs.ANIME_MODE_OPTIONS
                 mode: Anime.currentMode
                 onModeSelected: function(id) { Anime.setMode(id) }
-                skipModes: [ { id: "auto",   label: I18n.t("settings.skipMode.auto") },
-                             { id: "prompt", label: I18n.t("settings.skipMode.prompt") },
-                             { id: "off",    label: I18n.t("settings.skipMode.off") } ]
+                skipModes: [ { id: "auto",   label: KisaruI18n.t("settings.skipMode.auto") },
+                             { id: "prompt", label: KisaruI18n.t("settings.skipMode.prompt") },
+                             { id: "off",    label: KisaruI18n.t("settings.skipMode.off") } ]
                 skipMode: UiPrefs.animeSkipMode
                 onSkipModeSelected: function(id) { UiPrefs.setAnimeSkipMode(id) }
                 showSkipRecap: UiPrefs.animeSkipMode !== "off"
@@ -319,7 +319,7 @@ Item {
                 browseCount: Anime.animeList.length,
                 libraryCount: Anime.visibleCount(),
                 folderName: libraryView.activeFolderName,
-                translate: I18n.tn
+                translate: KisaruI18n.tn
             })
             modeText: Anime.currentMode.toUpperCase()
             fontFamily: root.fontBody
@@ -327,7 +327,7 @@ Item {
     }
 
     PanelDecor {
-        title: I18n.t("panel.anime")
+        title: KisaruI18n.t("panel.anime")
     }
 
     // One hook: when the mode locks, a hidden title leaves no reader behind.

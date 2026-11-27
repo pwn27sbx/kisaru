@@ -138,7 +138,7 @@ test("each Detail explains a folder-hidden title and refuses the press", () => {
             `${file}: the switch does not read the folder rule`);
         assert.match(qml, new RegExp(`Organizer\\.isHidden\\("${kind}", detailView\\._rawFolderValue\\)`),
             `${file}: the raw folder's hidden flag is not read`);
-        assert.match(qml, /I18n\.t\("folder\.hiddenBy"/,
+        assert.match(qml, /KisaruI18n\.t\("folder\.hiddenBy"/,
             `${file}: the folder note is not translated`);
         assert.match(qml, /checked: detailView\._hideView\.checked/,
             `${file}: the switch does not show the shared state`);

@@ -68,7 +68,7 @@ Item {
 
             StyledText {
                 width: parent.width
-                text: I18n.t("folder.pick")
+                text: KisaruI18n.t("folder.pick")
                 font.family: root.bodyFont
                 font.pixelSize: Style.font.body
                 font.bold: true
@@ -98,7 +98,7 @@ Item {
                                 left: parent.left; verticalCenter: parent.verticalCenter
                                 leftMargin: Style.spacing.sm
                             }
-                            text: I18n.t("folder.none")
+                            text: KisaruI18n.t("folder.none")
                             font.family: root.bodyFont
                             font.pixelSize: Style.font.bodySmall
                             font.bold: root.current === ""
@@ -162,7 +162,7 @@ Item {
                             }
                             StyledText {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: I18n.t("folder.create")
+                                text: KisaruI18n.t("folder.create")
                                 font.family: root.bodyFont
                                 font.pixelSize: Style.font.bodySmall
                                 color: Colors.primary

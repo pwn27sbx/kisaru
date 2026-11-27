@@ -54,7 +54,7 @@ Item {
         folderName: detailView._rawFolderName
     })
     readonly property string _hideNote: detailView._hideView.noteFolder === ""
-        ? "" : I18n.t("folder.hiddenBy", { 1: detailView._hideView.noteFolder })
+        ? "" : KisaruI18n.t("folder.hiddenBy", { 1: detailView._hideView.noteFolder })
 
 
     // Hiding from the Detail keeps the Detail open (owner, 2026-11-05): the
@@ -260,7 +260,7 @@ Item {
                         }
                         StyledText {
                             id: libBtnLabel; anchors.verticalCenter: parent.verticalCenter
-                            text: I18n.t("tab.library"); font.family: detailView.fontBody
+                            text: KisaruI18n.t("tab.library"); font.family: detailView.fontBody
                             font.pixelSize: Style.font.bodySmall; font.letterSpacing: 0.3
                             color: detailView._inLibrary ? Colors.on_primary_container : Colors.on_surface_variant
                             Behavior on color { ColorAnimation { duration: Motion.base } }
@@ -352,7 +352,7 @@ Item {
 
                         Text {
                             id: statusTxt; anchors.centerIn: parent
-                            text: Novel.currentNovel ? I18n.tData(Novel.currentNovel.status || "").toUpperCase() : ""
+                            text: Novel.currentNovel ? KisaruI18n.tData(Novel.currentNovel.status || "").toUpperCase() : ""
                             font.family: detailView.fontBody; font.pixelSize: 9 // style-ignore — bespoke size
                             font.letterSpacing: 1.2; font.bold: true; color: Colors.tertiary
                         }
@@ -402,7 +402,7 @@ Item {
                 anchors { fill: parent; leftMargin: Style.space(16); rightMargin: Style.space(16) }
 
                 Text {
-                    text: Novel.currentNovel ? I18n.tn("count.chapter", Novel.currentNovel.chapters.length) : ""
+                    text: Novel.currentNovel ? KisaruI18n.tn("count.chapter", Novel.currentNovel.chapters.length) : ""
                     font.family: detailView.fontBody; font.pixelSize: Style.font.bodySmall
                     font.letterSpacing: 1; color: Colors.on_surface_variant; opacity: 0.75
                 }
@@ -410,7 +410,7 @@ Item {
                 // The site stopped answering partway through the list
                 Text {
                     visible: Novel.currentNovel !== null && Novel.currentNovel.partial
-                    text: I18n.t("novel.listIncomplete")
+                    text: KisaruI18n.t("novel.listIncomplete")
                     font.family: detailView.fontBody; font.pixelSize: Style.font.caption
                     color: Colors.tertiary
                     MouseArea {
@@ -436,8 +436,8 @@ Item {
                     StyledText {
                         id: folderLabel
                         anchors.centerIn: parent
-                        text: I18n.t("folder.current", { 1: detailView._folderValue === ""
-                            ? I18n.t("folder.none") : detailView._folderName })
+                        text: KisaruI18n.t("folder.current", { 1: detailView._folderValue === ""
+                            ? KisaruI18n.t("folder.none") : detailView._folderName })
                         font.family: detailView.fontBody
                         font.pixelSize: Style.font.caption
                         color: Colors.on_surface
@@ -472,7 +472,7 @@ Item {
                         id: lastReadTxt; anchors.centerIn: parent
                         text: {
                             var e = Novel.visibleEntry()
-                            return e ? I18n.t("last.ch", { 1: e.lastReadChapterNum }) : ""
+                            return e ? KisaruI18n.t("last.ch", { 1: e.lastReadChapterNum }) : ""
                         }
                         font.family: detailView.fontBody; font.pixelSize: 9 // style-ignore — bespoke size
                         font.letterSpacing: 0.8; color: Colors.primary
@@ -497,7 +497,7 @@ Item {
                 spacing: Style.spacing.lg
 
                 Button {
-                    text: I18n.t("action.continue")
+                    text: KisaruI18n.t("action.continue")
                     font.family: detailView.fontBody; font.pixelSize: Style.font.body; font.bold: true
                     contentItem: StyledText {
                         text: parent.text; font: parent.font
@@ -510,7 +510,7 @@ Item {
                 }
 
                 Button {
-                    text: I18n.t("novel.nextChapter")
+                    text: KisaruI18n.t("novel.nextChapter")
                     font.family: detailView.fontBody; font.pixelSize: Style.font.body; font.bold: true
                     contentItem: StyledText {
                         text: parent.text; font: parent.font
@@ -570,7 +570,7 @@ Item {
 
                             StyledText {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: I18n.t("filterChapters")
+                                text: KisaruI18n.t("filterChapters")
                                 font.family: detailView.fontBody; font.pixelSize: Style.font.body
                                 color: Colors.on_surface_variant; opacity: 0.45
                                 visible: chapterSearch.text === "" && !chapterSearch.activeFocus
@@ -630,7 +630,7 @@ Item {
 
                         ToolTip.visible: containsMouse
                         ToolTip.delay: 600
-                        ToolTip.text: detailView._sortAscending ? I18n.t("sort.ascending") : I18n.t("sort.descending")
+                        ToolTip.text: detailView._sortAscending ? KisaruI18n.t("sort.ascending") : KisaruI18n.t("sort.descending")
                     }
                 }
             }
@@ -671,7 +671,7 @@ Item {
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
                         width: 280; horizontalAlignment: Text.AlignHCenter
-                        text: I18n.t("novel.loadFailed") + "\n" + Novel.detailError
+                        text: KisaruI18n.t("novel.loadFailed") + "\n" + Novel.detailError
                         color: Colors.on_surface_variant
                         font.family: detailView.fontBody; font.pixelSize: Style.font.body
                         wrapMode: Text.Wrap; lineHeight: 1.4
@@ -685,7 +685,7 @@ Item {
 
                         Text {
                             id: retryLabel; anchors.centerIn: parent
-                            text: I18n.t("action.retry")
+                            text: KisaruI18n.t("action.retry")
                             font.family: detailView.fontBody; font.pixelSize: Style.font.body; font.bold: true
                             color: retryArea.containsMouse ? Colors.on_primary : Colors.on_primary_container
                         }
@@ -735,7 +735,7 @@ Item {
 
                             StyledText {
                                 id: chPillTxt; anchors.centerIn: parent
-                                text: I18n.t("ch", { 1: detailView.formatChapter(modelData.chapter) })
+                                text: KisaruI18n.t("ch", { 1: detailView.formatChapter(modelData.chapter) })
                                 font.family: detailView.fontBody; font.pixelSize: 9 // style-ignore — bespoke size
                                 font.bold: true; font.letterSpacing: 0.5
                                 color: isLastRead ? Colors.on_primary : Colors.on_primary_container
@@ -747,7 +747,7 @@ Item {
 
                             StyledText {
                                 width: parent.width
-                                text: modelData.title || I18n.t("chapter", { 1: detailView.formatChapter(modelData.chapter) })
+                                text: modelData.title || KisaruI18n.t("chapter", { 1: detailView.formatChapter(modelData.chapter) })
                                 font.family: detailView.fontBody; font.pixelSize: Style.font.body
                                 color: Colors.on_surface; elide: Text.ElideRight
                             }
@@ -796,7 +796,7 @@ Item {
         current: detailView._folderValue
         bodyFont: detailView.fontBody
         onChosen: function(folderId) { Novel.setFolder(Novel.currentNovel.id, folderId) }
-        onCreateRequested: folderPrompt.openText(I18n.t("folder.create"), "")
+        onCreateRequested: folderPrompt.openText(KisaruI18n.t("folder.create"), "")
     }
 
     FolderPrompt {

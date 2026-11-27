@@ -121,7 +121,7 @@ Item {
     // Header brand: the app glyph plus this panel's short name (decision 1).
     Component {
         id: brandComponent
-        PanelBrand { title: I18n.t("brand.novel"); fontFamily: root.fontBody }
+        PanelBrand { title: KisaruI18n.t("brand.novel"); fontFamily: root.fontBody }
     }
 
     Rectangle { anchors.fill: parent; color: Colors.background }
@@ -140,7 +140,7 @@ Item {
         PanelHeader {
             id: header
             Layout.fillWidth: true; z: 2
-            tabs: [I18n.t("tab.browse"), I18n.t("tab.library")]
+            tabs: [KisaruI18n.t("tab.browse"), KisaruI18n.t("tab.library")]
             tabIndex: root.tabIndex
             // Browse carries no number; Library shows a badge, hidden at 0 (A-8).
             tabCounts: [-1, Novel.visibleCount()]
@@ -152,7 +152,7 @@ Item {
             filterFallbackLabel: browseView.filterFallbackLabel
             filterDimmed: browseView.filterDimmed
             searchOpen: root.searchOpen
-            searchPlaceholder: I18n.t("novel.search")
+            searchPlaceholder: KisaruI18n.t("novel.search")
             onFilterChosen: function(value) { browseView.chooseFilter(value) }
             onSearchClicked: root.toggleSearch()
             onSearchEdited: searchDebounce.restart()
@@ -316,8 +316,8 @@ Item {
             PanelSettings {
                 showScroll: true
                 active: root.settingsMode
-                layouts: [ { id: "grid", label: I18n.t("view.grid") },
-                           { id: "list", label: I18n.t("view.list") } ]
+                layouts: [ { id: "grid", label: KisaruI18n.t("view.grid") },
+                           { id: "list", label: KisaruI18n.t("view.list") } ]
                 layout: UiPrefs.viewModeFor("novel")
                 onLayoutSelected: function(id) { UiPrefs.setViewMode("novel", id) }
                 onCloseRequested: root.settingsMode = false
@@ -336,14 +336,14 @@ Item {
                 browseCount: Novel.novelList.length,
                 libraryCount: Novel.visibleCount(),
                 folderName: libraryView.activeFolderName,
-                translate: I18n.tn
+                translate: KisaruI18n.tn
             })
             fontFamily: root.fontBody
         }
     }
 
     PanelDecor {
-        title: I18n.t("panel.novel")
+        title: KisaruI18n.t("panel.novel")
     }
 
     // One hook: when the mode locks, a hidden title leaves no reader behind.

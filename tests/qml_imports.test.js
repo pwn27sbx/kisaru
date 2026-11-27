@@ -22,7 +22,7 @@ const DIRS = ["components", "modules"];
 // singleton -> the import that provides it
 const OWNERS = {
     UiPrefs: "import qs.services",
-    I18n: "import qs.services",
+    KisaruI18n: "import qs.services",
     Organizer: "import qs.services",
     Privacy: "import qs.services",
     Updater: "import qs.services",

@@ -85,7 +85,7 @@ Item {
     function _newFolder() {
         _promptAction = "create"
         _promptFolder = ""
-        folderPrompt.openText(I18n.t("folder.create"), "")
+        folderPrompt.openText(KisaruI18n.t("folder.create"), "")
     }
 
     function _renameFolder(folderId) {
@@ -93,7 +93,7 @@ Item {
         var folder = Organizer.folder("novel", folderId)
         _promptAction = "rename"
         _promptFolder = folderId
-        folderPrompt.openText(I18n.t("folder.rename"), folder ? folder.name : "")
+        folderPrompt.openText(KisaruI18n.t("folder.rename"), folder ? folder.name : "")
     }
 
     function _confirmDelete(folderId) {
@@ -102,8 +102,8 @@ Item {
         if (!folder) return
         _promptAction = "delete"
         _promptFolder = folderId
-        folderPrompt.openConfirm(I18n.t("folder.delete"),
-            folder.hidden ? I18n.t("folder.deleteHidden") : I18n.t("folder.deleteMessage"))
+        folderPrompt.openConfirm(KisaruI18n.t("folder.delete"),
+            folder.hidden ? KisaruI18n.t("folder.deleteHidden") : KisaruI18n.t("folder.deleteMessage"))
     }
 
     function _acceptPrompt(value) {
@@ -184,7 +184,7 @@ Item {
             }
 
             StyledText {
-                text: I18n.tn("folder.count", libraryView._folderEntries.length)
+                text: KisaruI18n.tn("folder.count", libraryView._folderEntries.length)
                 font.family: libraryView.fontBody
                 font.pixelSize: Style.font.caption
                 color: Colors.card_secondary
@@ -203,7 +203,7 @@ Item {
             OverflowMenu {
                 visible: !activeFolderLockedOut
                 options: Toolbar.menuActions().map(function(action) {
-                    return { value: action.value, label: I18n.t(action.key), danger: action.danger }
+                    return { value: action.value, label: KisaruI18n.t(action.key), danger: action.danger }
                 })
                 bodyFont: libraryView.fontBody
                 onChosen: function(value) {
@@ -269,8 +269,8 @@ Item {
                         bodyFont: libraryView.fontBody
                         started: entry ? entry.lastReadChapterNum : ""
                         label: entry && entry.lastReadChapterNum
-                                ? I18n.t("ch", { 1: entry.lastReadChapterNum })
-                                : I18n.t("state.notStarted")
+                                ? KisaruI18n.t("ch", { 1: entry.lastReadChapterNum })
+                                : KisaruI18n.t("state.notStarted")
                     }
 
                     onClicked: {
@@ -328,8 +328,8 @@ Item {
                     inset: Gutter.ink
                     meta: ""
                     progress: entry && entry.lastReadChapterNum
-                        ? I18n.t("ch", { 1: entry.lastReadChapterNum })
-                        : I18n.t("state.notStarted")
+                        ? KisaruI18n.t("ch", { 1: entry.lastReadChapterNum })
+                        : KisaruI18n.t("state.notStarted")
                     progressActive: entry ? !!entry.lastReadChapterNum : false
 
                     onClicked: {

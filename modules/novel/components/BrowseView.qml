@@ -35,14 +35,14 @@ Item {
 
     // The tool bar's filter menu (owner §32): same two entries, same call.
     readonly property var filterOptions: [
-        { value: "hot", label: I18n.t("novel.filter.hot") },
-        { value: "latest", label: I18n.t("novel.filter.latest") }
+        { value: "hot", label: KisaruI18n.t("novel.filter.hot") },
+        { value: "latest", label: KisaruI18n.t("novel.filter.latest") }
     ]
     readonly property string filterValue: browseView.currentFilter
     // A search puts the list in "search": the menu dims and keeps naming the
     // last real filter instead of pretending the filter is in force.
     readonly property bool filterDimmed: browseView.currentFilter === "search"
-    readonly property string filterFallbackLabel: I18n.t("novel.filter.hot")
+    readonly property string filterFallbackLabel: KisaruI18n.t("novel.filter.hot")
 
     function chooseFilter(value) {
         browseView._switchFilter(value)
@@ -150,7 +150,7 @@ Item {
                         // The novel's state, trailing corner, with the same
                         // tones the manga cards use for the same words.
                         cornerText: modelData.status
-                            ? I18n.tData(modelData.status).toUpperCase() : ""
+                            ? KisaruI18n.tData(modelData.status).toUpperCase() : ""
                         cornerTone: MangaCard.statusTone(modelData.status || "")
 
                         onClicked: {

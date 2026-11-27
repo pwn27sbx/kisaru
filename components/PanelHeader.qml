@@ -259,7 +259,7 @@ Item {
         PanelActionButton {
             id: searchButton
             iconText: "󰍉"
-            tooltipText: I18n.t("search.open")
+            tooltipText: KisaruI18n.t("search.open")
             focusable: true
             hasCursor: root.searchOpen
             size: root.implicitHeight
@@ -268,7 +268,7 @@ Item {
 
         PanelActionButton {
             iconText: "󰒓"
-            tooltipText: I18n.t("settings.open")
+            tooltipText: KisaruI18n.t("settings.open")
             focusable: true
             hasCursor: root.settingsMode
             size: root.implicitHeight

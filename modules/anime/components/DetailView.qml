@@ -55,7 +55,7 @@ Item {
         folderName: detailView._rawFolderName
     })
     readonly property string _hideNote: detailView._hideView.noteFolder === ""
-        ? "" : I18n.t("folder.hiddenBy", { 1: detailView._hideView.noteFolder })
+        ? "" : KisaruI18n.t("folder.hiddenBy", { 1: detailView._hideView.noteFolder })
 
     // Hiding from the Detail keeps the Detail open (owner, 2026-11-05): the
     // title is marked hidden and stays usable so it can be filed into a hidden
@@ -144,7 +144,7 @@ Item {
             url: url,
             referer: referer,
             subtitle: subtitle,
-            title: title || I18n.t("anime.mpvTitle"),
+            title: title || KisaruI18n.t("anime.mpvTitle"),
             skipScriptPath: ReaderEnv.scripts + "/mpv_aniskip.lua",
             apiUrl: Anime.apiUrl,
             showId: showId || "",
@@ -152,7 +152,7 @@ Item {
             showTitle: showTitle || "",
             skipMode: UiPrefs.animeSkipMode,
             skipRecap: UiPrefs.animeSkipRecap,
-            lang: I18n.lang,
+            lang: KisaruI18n.lang,
             showSkipDisabled: UiPrefs.isAnimeSkipDisabled(showId || "")
         })
         if (args.length === 0) return
@@ -238,7 +238,7 @@ Item {
                         StyledText {
                             id: libBtnLabel
                             anchors.verticalCenter: parent.verticalCenter
-                            text: I18n.t("tab.library")
+                            text: KisaruI18n.t("tab.library")
                             font.family: detailView.fontBody
                             font.pixelSize: Style.font.bodySmall; font.letterSpacing: 0.3
                             color: detailView._inLibrary
@@ -278,7 +278,7 @@ Item {
 
                 StyledText {
                     text: Anime.currentAnime
-                        ? I18n.tn("count.episode", Anime.currentAnime.episodes
+                        ? KisaruI18n.tn("count.episode", Anime.currentAnime.episodes
                             ? Anime.currentAnime.episodes.length : 0)
                         : ""
                     font.family: detailView.fontBody
@@ -289,7 +289,7 @@ Item {
                 // Which subtitle track was picked (from the resolved stream)
                 StyledText {
                     visible: Anime.currentSubtitleLabel.length > 0
-                    text: I18n.t("anime.subtitles", { 1: Anime.currentSubtitleLabel })
+                    text: KisaruI18n.t("anime.subtitles", { 1: Anime.currentSubtitleLabel })
                     font.family: detailView.fontBody
                     font.pixelSize: Style.font.caption; font.letterSpacing: 0.3
                     color: Colors.tertiary
@@ -316,8 +316,8 @@ Item {
                         id: skipToggleLabel
                         anchors.centerIn: parent
                         text: skipToggleButton._skipDisabled
-                            ? I18n.t("anime.skip.off")
-                            : I18n.t("anime.skip.on")
+                            ? KisaruI18n.t("anime.skip.off")
+                            : KisaruI18n.t("anime.skip.on")
                         font.family: detailView.fontBody
                         font.pixelSize: Style.font.caption
                         color: skipToggleButton._skipDisabled ? Colors.on_surface_variant : Colors.primary
@@ -348,8 +348,8 @@ Item {
                     StyledText {
                         id: folderLabel
                         anchors.centerIn: parent
-                        text: I18n.t("folder.current", { 1: detailView._folderValue === ""
-                            ? I18n.t("folder.none") : detailView._folderName })
+                        text: KisaruI18n.t("folder.current", { 1: detailView._folderValue === ""
+                            ? KisaruI18n.t("folder.none") : detailView._folderName })
                         font.family: detailView.fontBody
                         font.pixelSize: Style.font.caption
                         color: Colors.on_surface
@@ -386,7 +386,7 @@ Item {
                         id: lastWatchedText; anchors.centerIn: parent
                         text: {
                             var e = Anime.visibleEntry()
-                            return e ? I18n.t("last.ep", { 1: e.lastWatchedEpNum }) : ""
+                            return e ? KisaruI18n.t("last.ep", { 1: e.lastWatchedEpNum }) : ""
                         }
                         font.family: detailView.fontBody
                         font.pixelSize: 9; font.letterSpacing: 0.8; color: Colors.primary // style-ignore — bespoke size
@@ -415,8 +415,8 @@ Item {
                 anchors.fill: parent; z: 6
                 active: Anime.isFetchingLinks
                 color: Colors.withAlpha(Colors.background, 0.88)
-                label: I18n.t("anime.fetching")
-                detail: Anime.currentEpisode ? I18n.t("episode", { 1: Anime.currentEpisode }) : ""
+                label: KisaruI18n.t("anime.fetching")
+                detail: Anime.currentEpisode ? KisaruI18n.t("episode", { 1: Anime.currentEpisode }) : ""
                 bodyFont: detailView.fontBody
             }
 
@@ -487,7 +487,7 @@ Item {
 
                             StyledText {
                                 id: epPillText; anchors.centerIn: parent
-                                text: I18n.t("ep", { 1: modelData.number || "?" })
+                                text: KisaruI18n.t("ep", { 1: modelData.number || "?" })
                                 font.family: detailView.fontBody
                                 font.pixelSize: 9; font.bold: true; font.letterSpacing: 0.5 // style-ignore — bespoke size
                                 color: isLastWatched ? Colors.on_primary : Colors.on_primary_container
@@ -496,7 +496,7 @@ Item {
 
                         Text {
                             Layout.fillWidth: true
-                            text: I18n.t("episode", { 1: modelData.number || "" })
+                            text: KisaruI18n.t("episode", { 1: modelData.number || "" })
                             font.family: detailView.fontBody
                             font.pixelSize: Style.font.body; color: Colors.on_surface; elide: Text.ElideRight
                         }
@@ -554,7 +554,7 @@ Item {
                 ? (Anime.currentAnime.englishName || Anime.currentAnime.name || "")
                 : ""
             var title = showTitle !== ""
-                ? showTitle + " — " + I18n.t("ep", { 1: Anime.currentEpisode })
+                ? showTitle + " — " + KisaruI18n.t("ep", { 1: Anime.currentEpisode })
                 : ""
             detailView._playWithMpv(
                 lnk.url, lnk.referer, lnk.subtitle, title,
@@ -583,7 +583,7 @@ Item {
         current: detailView._folderValue
         bodyFont: detailView.fontBody
         onChosen: function(folderId) { Anime.setFolder(Anime.currentAnime.id, folderId) }
-        onCreateRequested: folderPrompt.openText(I18n.t("folder.create"), "")
+        onCreateRequested: folderPrompt.openText(KisaruI18n.t("folder.create"), "")
     }
 
     FolderPrompt {

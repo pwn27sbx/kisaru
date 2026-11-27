@@ -296,7 +296,7 @@ Singleton {
 
         const url = root.apiUrl + "/popular?size=20&page=" + popularPage + "&date_range=1"
         Http.get(url, function(err, body) {
-            if (err) { animeError = I18n.t("error.request", { 1: err }); isFetchingAnime = false; return }
+            if (err) { animeError = KisaruI18n.t("error.request", { 1: err }); isFetchingAnime = false; return }
             _parsePopularResults(body)
         })
     }
@@ -316,7 +316,7 @@ Singleton {
             hasMoreAnime = fetched < (data.total || 0)
             animeError = ""
         } catch (e) {
-            animeError = I18n.t("error.parse", { 1: e })
+            animeError = KisaruI18n.t("error.parse", { 1: e })
             console.error("[ServiceAnime]", e)
         }
         isFetchingAnime = false
@@ -337,7 +337,7 @@ Singleton {
             + "&mode=" + currentMode
             + "&country=" + currentCountry
         Http.get(url, function(err, body) {
-            if (err) { animeError = I18n.t("error.request", { 1: err }); isFetchingAnime = false; return }
+            if (err) { animeError = KisaruI18n.t("error.request", { 1: err }); isFetchingAnime = false; return }
             _parseLatestResults(body)
         })
     }
@@ -356,7 +356,7 @@ Singleton {
             hasMoreAnime = fetched < (data.total || 0)
             animeError = ""
         } catch (e) {
-            animeError = I18n.t("error.parse", { 1: e })
+            animeError = KisaruI18n.t("error.parse", { 1: e })
             console.error("[ServiceAnime]", e)
         }
         isFetchingAnime = false
@@ -373,7 +373,7 @@ Singleton {
         const url = root.apiUrl + "/search?q=" + encodeURIComponent(query)
             + "&mode=" + currentMode
         Http.get(url, function(err, body) {
-            if (err) { animeError = I18n.t("error.request", { 1: err }); isFetchingAnime = false; return }
+            if (err) { animeError = KisaruI18n.t("error.request", { 1: err }); isFetchingAnime = false; return }
             _parseSearchResults(body)
         })
     }
@@ -392,7 +392,7 @@ Singleton {
             hasMoreAnime = false
             animeError = ""
         } catch (e) {
-            animeError = I18n.t("error.parse", { 1: e })
+            animeError = KisaruI18n.t("error.parse", { 1: e })
             console.error("[ServiceAnime]", e)
         }
         isFetchingAnime = false
@@ -445,7 +445,7 @@ Singleton {
         const url = root.apiUrl + "/episodes?id=" + encodeURIComponent(show.id)
             + "&mode=" + currentMode
         Http.get(url, function(err, body) {
-            if (err) { detailError = I18n.t("error.request", { 1: err }); isFetchingDetail = false; return }
+            if (err) { detailError = KisaruI18n.t("error.request", { 1: err }); isFetchingDetail = false; return }
             _parseAnimeDetail(show, body)
         })
     }
@@ -469,7 +469,7 @@ Singleton {
             })
             detailError = ""
         } catch (e) {
-            detailError = I18n.t("error.parse", { 1: e })
+            detailError = KisaruI18n.t("error.parse", { 1: e })
             console.error("[ServiceAnime]", e)
         }
         isFetchingDetail = false
@@ -496,7 +496,7 @@ Singleton {
             + "&mode=" + currentMode
             + "&quality=" + encodeURIComponent(q)
         Http.get(url, function(err, body) {
-            if (err) { linksError = I18n.t("error.request", { 1: err }); isFetchingLinks = false; return }
+            if (err) { linksError = KisaruI18n.t("error.request", { 1: err }); isFetchingLinks = false; return }
             _parseStreamLinks(body)
         })
     }
@@ -507,9 +507,9 @@ Singleton {
             streamLinks = parsed.streamLinks
             selectedLink = parsed.selectedLink
             currentSubtitleLabel = parsed.subtitleLabel
-            linksError = parsed.empty ? I18n.t("anime.noStream") : (parsed.error || "")
+            linksError = parsed.empty ? KisaruI18n.t("anime.noStream") : (parsed.error || "")
         } catch (e) {
-            linksError = I18n.t("error.parse", { 1: e })
+            linksError = KisaruI18n.t("error.parse", { 1: e })
             console.error("[ServiceAnime]", e)
         }
         isFetchingLinks = false

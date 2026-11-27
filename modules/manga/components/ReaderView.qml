@@ -144,7 +144,7 @@ Item {
         color: Colors.background
         textColor: Colors.text
         spinnerSize: 40
-        label: I18n.t("manga.loadingPages")
+        label: KisaruI18n.t("manga.loadingPages")
         detail: Manga.currentManga ? Manga.currentManga.title : ""
         bodyFont: readerView.fontBody
     }
@@ -202,7 +202,7 @@ Item {
                             anchors.centerIn: parent
                             spacing: Style.space(5)
                             Text { anchors.verticalCenter: parent.verticalCenter; text: "‹"; font.pixelSize: Style.font.iconLarge; color: Colors.text }
-                            Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.t("action.prev"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: KisaruI18n.t("action.prev"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
                         }
                     }
 
@@ -238,7 +238,7 @@ Item {
                             id: errNextRow
                             anchors.centerIn: parent
                             spacing: Style.space(5)
-                            Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.t("action.next"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: KisaruI18n.t("action.next"); font.family: readerView.fontBody; font.pixelSize: Style.font.body; color: Colors.text }
                             Text { anchors.verticalCenter: parent.verticalCenter; text: "›"; font.pixelSize: Style.font.iconLarge; color: Colors.text }
                         }
                     }
@@ -439,9 +439,9 @@ Item {
                     }
                     StyledText {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: I18n.t("page", { 1: modelData.index + 1 })
+                        text: KisaruI18n.t("page", { 1: modelData.index + 1 })
                             + (pageItem.failed && !autoRetry.running
-                                ? "  ·  " + I18n.t("manga.pageFailed") + "  ·  " + I18n.t("manga.pageRetry")
+                                ? "  ·  " + KisaruI18n.t("manga.pageFailed") + "  ·  " + KisaruI18n.t("manga.pageRetry")
                                 : "")
                         color: Util.alpha(Colors.text, 0.3)
                         font.pixelSize: Style.font.caption

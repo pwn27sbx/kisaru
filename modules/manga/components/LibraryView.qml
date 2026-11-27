@@ -73,7 +73,7 @@ Item {
 
     // metaLine composes "chapter · status"; the wording lives in
     // manga_card.js, so both views share one adapter instead of copying it.
-    readonly property var cardTranslator: MangaCard.translator(I18n.t)
+    readonly property var cardTranslator: MangaCard.translator(KisaruI18n.t)
 
     // The layout the user picked (persisted in settings.json), shared with
     // Browse through UiPrefs: switching it in one view switches it in both.
@@ -104,7 +104,7 @@ Item {
     function _newFolder() {
         _promptAction = "create"
         _promptFolder = ""
-        folderPrompt.openText(I18n.t("folder.create"), "")
+        folderPrompt.openText(KisaruI18n.t("folder.create"), "")
     }
 
     function _renameFolder(folderId) {
@@ -112,7 +112,7 @@ Item {
         var folder = Organizer.folder("manga", folderId)
         _promptAction = "rename"
         _promptFolder = folderId
-        folderPrompt.openText(I18n.t("folder.rename"), folder ? folder.name : "")
+        folderPrompt.openText(KisaruI18n.t("folder.rename"), folder ? folder.name : "")
     }
 
     function _confirmDelete(folderId) {
@@ -121,8 +121,8 @@ Item {
         if (!folder) return
         _promptAction = "delete"
         _promptFolder = folderId
-        folderPrompt.openConfirm(I18n.t("folder.delete"),
-            folder.hidden ? I18n.t("folder.deleteHidden") : I18n.t("folder.deleteMessage"))
+        folderPrompt.openConfirm(KisaruI18n.t("folder.delete"),
+            folder.hidden ? KisaruI18n.t("folder.deleteHidden") : KisaruI18n.t("folder.deleteMessage"))
     }
 
     function _acceptPrompt(value) {
@@ -203,7 +203,7 @@ Item {
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: I18n.t("manga.downloads")
+                    text: KisaruI18n.t("manga.downloads")
                     font.family: libraryView.fontBody
                     font.pixelSize: Style.font.bodySmall
                     font.bold: true
@@ -213,7 +213,7 @@ Item {
 
                 StyledText {
                     visible: downloadsEntryBar._dlSummary.chapterCount > 0
-                    text: I18n.tn("count.chapter", downloadsEntryBar._dlSummary.chapterCount)
+                    text: KisaruI18n.tn("count.chapter", downloadsEntryBar._dlSummary.chapterCount)
                         + " · " + DownloadsJs.formatBytes(downloadsEntryBar._dlSummary.totalBytes)
                     font.family: libraryView.fontBody
                     font.pixelSize: Style.font.caption
@@ -266,7 +266,7 @@ Item {
             }
 
             StyledText {
-                text: I18n.tn("folder.count", libraryView._folderEntries.length)
+                text: KisaruI18n.tn("folder.count", libraryView._folderEntries.length)
                 font.family: libraryView.fontBody
                 font.pixelSize: Style.font.caption
                 color: Colors.card_secondary
@@ -286,7 +286,7 @@ Item {
             OverflowMenu {
                 visible: !activeFolderLockedOut
                 options: Toolbar.menuActions().map(function(action) {
-                    return { value: action.value, label: I18n.t(action.key), danger: action.danger }
+                    return { value: action.value, label: KisaruI18n.t(action.key), danger: action.danger }
                 })
                 bodyFont: libraryView.fontBody
                 onChosen: function(value) {
@@ -353,7 +353,7 @@ Item {
                     footerHeight: 30
                     metaChapter: entry
                         ? MangaCard.metaLine(entry.chapter, "", libraryView.cardTranslator) : ""
-                    metaStatus: entry ? I18n.tData(entry.status || "") : ""
+                    metaStatus: entry ? KisaruI18n.tData(entry.status || "") : ""
                     metaTone: entry ? MangaCard.statusTone(entry.status || "") : "muted"
 
                     CoverProgressBar {
@@ -362,8 +362,8 @@ Item {
                         bodyFont: libraryView.fontBody
                         started: entry ? entry.lastReadChapterNum : ""
                         label: entry && entry.lastReadChapterNum
-                                ? I18n.t("ch", { 1: entry.lastReadChapterNum })
-                                : I18n.t("state.notStarted")
+                                ? KisaruI18n.t("ch", { 1: entry.lastReadChapterNum })
+                                : KisaruI18n.t("state.notStarted")
                     }
 
                     onClicked: {
@@ -424,11 +424,11 @@ Item {
                     title: entry ? (entry.title || "") : ""
                     bodyFont: libraryView.fontBody
                     meta: entry
-                        ? MangaCard.metaLine(entry.chapter, I18n.tData(entry.status || ""),
+                        ? MangaCard.metaLine(entry.chapter, KisaruI18n.tData(entry.status || ""),
                                              libraryView.cardTranslator) : ""
                     progress: entry && entry.lastReadChapterNum
-                              ? I18n.t("ch", { 1: entry.lastReadChapterNum })
-                              : I18n.t("state.notStarted")
+                              ? KisaruI18n.t("ch", { 1: entry.lastReadChapterNum })
+                              : KisaruI18n.t("state.notStarted")
                     progressActive: entry ? !!entry.lastReadChapterNum : false
 
                     onClicked: {

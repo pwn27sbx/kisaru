@@ -147,7 +147,7 @@ Item {
                     StyledText {
                         id: cancelLabel
                         anchors.centerIn: parent
-                        text: I18n.t("action.cancel")
+                        text: KisaruI18n.t("action.cancel")
                         font.family: Style.font.family
                         font.pixelSize: Style.font.bodySmall
                         color: Colors.on_surface_variant
@@ -176,7 +176,7 @@ Item {
                     StyledText {
                         id: confirmLabel
                         anchors.centerIn: parent
-                        text: root.textMode ? I18n.t("folder.save") : I18n.t("folder.delete")
+                        text: root.textMode ? KisaruI18n.t("folder.save") : KisaruI18n.t("folder.delete")
                         font.family: Style.font.family
                         font.pixelSize: Style.font.bodySmall
                         font.bold: true

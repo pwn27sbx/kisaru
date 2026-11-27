@@ -469,7 +469,7 @@ test("the folder cards, the hide switches and no padlock are wired", () => {
         const qml = read(file);
         assert.match(qml, /FolderPicker\s*\{/, `${file}: no folder list`);
         assert.match(qml, /onCreateRequested: folderPrompt\.openText/, `${file}: cannot create from Detail`);
-        assert.match(qml, /I18n\.t\("folder\.current"/, `${file}: the button does not name the folder`);
+        assert.match(qml, /KisaruI18n\.t\("folder\.current"/, `${file}: the button does not name the folder`);
         assert.ok(!qml.includes("_folderOptions"), `${file}: the old menu remains`);
         assert.match(qml, /HideSwitch\s*\{/, `${file}: no title hide switch`);
         assert.match(qml, /function _toggleHiddenTitle\(\)/, `${file}: no title hide handler`);
@@ -697,9 +697,9 @@ test("manga chapter navigation shares Manga.openChapter and lives in the status 
         "StatusBar must expose prevRequested()");
     assert.match(statusBar, /signal nextRequested\(\)/,
         "StatusBar must expose nextRequested()");
-    assert.match(statusBar, /I18n\.t\("action\.prev"\)/,
+    assert.match(statusBar, /KisaruI18n\.t\("action\.prev"\)/,
         "StatusBar must reuse action.prev");
-    assert.match(statusBar, /I18n\.t\("action\.next"\)/,
+    assert.match(statusBar, /KisaruI18n\.t\("action\.next"\)/,
         "StatusBar must reuse action.next");
     // Round 3 (C1-C2): readable text via contrast.js, and nav in left stateRow.
     assert.match(statusBar, /import "\.\.\/services\/contrast\.js" as Contrast/,
@@ -722,8 +722,8 @@ test("manga chapter navigation shares Manga.openChapter and lives in the status 
 
     // Round 4 (D1-D3): arrow order `← Prev · Next →` and header-style hover/pressed fills.
     const idxLeftArrow = leftGroup.indexOf('key: "←"');
-    const idxPrevLabel = leftGroup.indexOf('I18n.t("action.prev")');
-    const idxNextLabel = leftGroup.indexOf('I18n.t("action.next")');
+    const idxPrevLabel = leftGroup.indexOf('KisaruI18n.t("action.prev")');
+    const idxNextLabel = leftGroup.indexOf('KisaruI18n.t("action.next")');
     const idxRightArrow = leftGroup.indexOf('key: "→"');
     assert.ok(idxLeftArrow >= 0 && idxPrevLabel > idxLeftArrow,
         "StatusBar prev must read ← then action.prev");

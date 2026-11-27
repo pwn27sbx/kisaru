@@ -25,9 +25,9 @@ Rectangle {
     color: Colors.surface_container_high
 
     function hint() {
-        if (Updater.blocked === "reinstall") return I18n.t("update.reinstall")
-        if (Updater.blocked === "not-main") return I18n.t("update.notMain")
-        if (Updater.blocked === "dirty") return I18n.t("update.dirty")
+        if (Updater.blocked === "reinstall") return KisaruI18n.t("update.reinstall")
+        if (Updater.blocked === "not-main") return KisaruI18n.t("update.notMain")
+        if (Updater.blocked === "dirty") return KisaruI18n.t("update.dirty")
         return ""
     }
 
@@ -83,7 +83,7 @@ Rectangle {
 
             StyledText {
                 Layout.fillWidth: true
-                text: I18n.t("update.available", { 1: Updater.latest })
+                text: KisaruI18n.t("update.available", { 1: Updater.latest })
                 color: Colors.on_surface
                 font.pixelSize: Style.font.body
                 elide: Text.ElideRight
@@ -102,12 +102,12 @@ Rectangle {
         BannerButton {
             visible: Updater.canUpdate
             solid: true
-            text: I18n.t("update.action")
+            text: KisaruI18n.t("update.action")
             onClicked: Updater.launch(root.panel)
         }
 
         BannerButton {
-            text: I18n.t("update.later")
+            text: KisaruI18n.t("update.later")
             onClicked: Updater.dismiss()
         }
     }

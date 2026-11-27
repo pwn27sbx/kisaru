@@ -22,7 +22,7 @@ const UI_DIRS = ["modules", "components"];
 const SERVICE_DIR = "services";
 
 const TEXT_PROP = /\b(?:text|label|title|subtitle|placeholderText)\s*:/g;
-const KEY_CALL = /I18n\.tn?\s*\(\s*"([^"]+)"/g;
+const KEY_CALL = /KisaruI18n\.tn?\s*\(\s*"([^"]+)"/g;
 const ASCII_WORD = /[A-Za-z]{2}/;
 
 function walk(dir) {
@@ -51,7 +51,7 @@ function stripI18nCalls(src) {
     let out = "";
     let i = 0;
     while (i < src.length) {
-        const m = /I18n\.t(?:n)?\s*\(/.exec(src.slice(i));
+        const m = /KisaruI18n\.t(?:n)?\s*\(/.exec(src.slice(i));
         if (!m) { out += src.slice(i); break; }
         out += src.slice(i, i + m.index);
         let j = i + m.index + m[0].length; // just past the '('

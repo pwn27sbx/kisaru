@@ -375,7 +375,7 @@ Singleton {
         currentSearchText = ""
         currentGenre = ""
         Http.get(root.apiUrl + "/hot", function(err, body) {
-            if (err) { novelError = I18n.t("error.request", { 1: err }); isFetchingNovel = false; return }
+            if (err) { novelError = KisaruI18n.t("error.request", { 1: err }); isFetchingNovel = false; return }
             _parseNovelResults(body, true)
         })
     }
@@ -387,7 +387,7 @@ Singleton {
         isFetchingNovel = true
         novelError = ""
         Http.get(root.apiUrl + "/latest?page=" + latestPage, function(err, body) {
-            if (err) { novelError = I18n.t("error.request", { 1: err }); isFetchingNovel = false; return }
+            if (err) { novelError = KisaruI18n.t("error.request", { 1: err }); isFetchingNovel = false; return }
             _parseNovelResults(body, false)
         })
     }
@@ -404,7 +404,7 @@ Singleton {
         if (genre)  url += "&genre="  + encodeURIComponent(genre)
         if (status && status !== "All") url += "&status=" + encodeURIComponent(status)
         Http.get(url, function(err, body) {
-            if (err) { novelError = I18n.t("error.request", { 1: err }); isFetchingNovel = false; return }
+            if (err) { novelError = KisaruI18n.t("error.request", { 1: err }); isFetchingNovel = false; return }
             _parseNovelResults(body, false)
         })
     }
@@ -421,7 +421,7 @@ Singleton {
             if (currentStatus && currentStatus !== "All")
                 url += "&status=" + encodeURIComponent(currentStatus)
             Http.get(url, function(err, body) {
-                if (err) { novelError = I18n.t("error.request", { 1: err }); isFetchingNovel = false; return }
+                if (err) { novelError = KisaruI18n.t("error.request", { 1: err }); isFetchingNovel = false; return }
                 _parseNovelResults(body, false)
             })
         } else {
@@ -451,7 +451,7 @@ Singleton {
             hasMoreNovels = isHot ? false : (data.hasMore || false)
             novelError = ""
         } catch (e) {
-            novelError = I18n.t("error.parse", { 1: e })
+            novelError = KisaruI18n.t("error.parse", { 1: e })
             console.error("[ServiceNovel]", e)
         }
         isFetchingNovel = false
@@ -466,7 +466,7 @@ Singleton {
         detailError = ""
         const url = root.apiUrl + "/info?id=" + encodeURIComponent(novelId)
         Http.get(url, function(err, body) {
-            if (err) { detailError = I18n.t("error.request", { 1: err }); isFetchingDetail = false; return }
+            if (err) { detailError = KisaruI18n.t("error.request", { 1: err }); isFetchingDetail = false; return }
             _parseNovelDetail(body)
         })
     }
@@ -495,7 +495,7 @@ Singleton {
             }
             detailError = ""
         } catch (e) {
-            detailError = I18n.t("error.parse", { 1: e })
+            detailError = KisaruI18n.t("error.parse", { 1: e })
             console.error("[ServiceNovel]", e)
         }
         isFetchingDetail = false
@@ -510,7 +510,7 @@ Singleton {
         chapterError = ""
         const url = root.apiUrl + "/chapter?id=" + encodeURIComponent(chapterId)
         Http.get(url, function(err, body) {
-            if (err) { chapterError = I18n.t("error.request", { 1: err }); isFetchingChapter = false; return }
+            if (err) { chapterError = KisaruI18n.t("error.request", { 1: err }); isFetchingChapter = false; return }
             _parseChapter(body)
         })
     }
@@ -529,7 +529,7 @@ Singleton {
             }
             chapterError = ""
         } catch (e) {
-            chapterError = I18n.t("error.parse", { 1: e })
+            chapterError = KisaruI18n.t("error.parse", { 1: e })
             console.error("[ServiceNovel]", e)
         }
         isFetchingChapter = false

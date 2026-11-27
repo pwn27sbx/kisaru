@@ -77,7 +77,7 @@ ClickableRect {
             spacing: Style.spacing.xs
 
             StyledText {
-                text: I18n.tn("folder.count", root.count)
+                text: KisaruI18n.tn("folder.count", root.count)
                 font.family: root.bodyFont
                 font.pixelSize: Math.round(Style.font.body * ListMetrics.DATUM_SCALE)
                 font.letterSpacing: 0.3

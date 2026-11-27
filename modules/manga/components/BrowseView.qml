@@ -19,7 +19,7 @@ Item {
 
     // metaLine composes "chapter · status"; the wording lives in
     // manga_card.js, so both views share one adapter instead of copying it.
-    readonly property var cardTranslator: MangaCard.translator(I18n.t)
+    readonly property var cardTranslator: MangaCard.translator(KisaruI18n.t)
 
     // One number for the grid and its skeleton: they must not disagree. Both
     // come from services/CardMetrics.qml now, the single source the six grids
@@ -50,8 +50,8 @@ Item {
     // The tool bar's filter menu (owner §32). The labels are the same five the
     // chips showed; the values are what fetchByOrigin expects.
     readonly property var filterOptions: [
-        { value: "", label: I18n.t("manga.filter.hot") },
-        { value: "latest", label: I18n.t("manga.filter.latest") },
+        { value: "", label: KisaruI18n.t("manga.filter.hot") },
+        { value: "latest", label: KisaruI18n.t("manga.filter.latest") },
         // Origin tags are data values, identical in both languages.
         { value: "ja", label: "Manga" }, // i18n-ignore — origin tag
         { value: "ko", label: "Manhwa" }, // i18n-ignore — origin tag
@@ -199,7 +199,7 @@ Item {
                         // The work's format, leading corner. The tint comes
                         // from the type DATA, not from the badge text: tData()
                         // may localize it and the casing is a display choice.
-                        typeBadge: I18n.tData(modelData.type || "").toUpperCase()
+                        typeBadge: KisaruI18n.tData(modelData.type || "").toUpperCase()
                         // The badge tint comes from the type DATA, not from the
                         // badge text above: tData() may localize it and the
                         // casing is a display choice. Manhwa/manhua are the
@@ -214,7 +214,7 @@ Item {
                         // left slot empty instead of a bare "Cap.".
                         metaChapter: MangaCard.metaLine(modelData.chapter, "",
                                                         browseView.cardTranslator)
-                        metaStatus: I18n.tData(modelData.status || "")
+                        metaStatus: KisaruI18n.tData(modelData.status || "")
                         metaTone: MangaCard.statusTone(modelData.status || "")
 
                         onClicked: {
@@ -259,7 +259,7 @@ Item {
                     title: modelData.title || ""
                     bodyFont: browseView.fontBody
                     meta: MangaCard.metaLine(modelData.chapter,
-                                             I18n.tData(modelData.status || ""),
+                                             KisaruI18n.tData(modelData.status || ""),
                                              browseView.cardTranslator)
 
                     onClicked: {

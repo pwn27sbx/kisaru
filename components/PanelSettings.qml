@@ -66,14 +66,14 @@ Item {
 
             PanelActionButton {
                 iconText: "󰁍"
-                tooltipText: I18n.t("settings.back")
+                tooltipText: KisaruI18n.t("settings.back")
                 focusable: true
                 onClicked: root.closeRequested()
             }
 
             StyledText {
                 Layout.fillWidth: true
-                text: I18n.t("settings.title")
+                text: KisaruI18n.t("settings.title")
                 color: Colors.text
                 font.pixelSize: Style.font.heading
                 font.bold: true
@@ -93,7 +93,7 @@ Item {
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: I18n.t("settings.scroll")
+                    text: KisaruI18n.t("settings.scroll")
                     color: Colors.text
                     font.pixelSize: Style.font.body
                 }
@@ -126,7 +126,7 @@ Item {
 
             StyledText {
                 Layout.fillWidth: true
-                text: I18n.t("settings.scrollHint")
+                text: KisaruI18n.t("settings.scrollHint")
                 color: Colors.muted
                 font.pixelSize: Style.font.caption
                 wrapMode: Text.WordWrap
@@ -144,8 +144,8 @@ Item {
         SettingsCard {
             Layout.fillWidth: true
             visible: root.modes.length > 0
-            label: I18n.t("settings.audio")
-            description: I18n.t("settings.audioHint")
+            label: KisaruI18n.t("settings.audio")
+            description: KisaruI18n.t("settings.audioHint")
             fontFamily: root.fontFamily
 
             Row {
@@ -174,8 +174,8 @@ Item {
         SettingsCard {
             Layout.fillWidth: true
             visible: root.layouts.length > 0
-            label: I18n.t("settings.layout")
-            description: I18n.t("settings.layoutHint")
+            label: KisaruI18n.t("settings.layout")
+            description: KisaruI18n.t("settings.layoutHint")
             fontFamily: root.fontFamily
 
             Row {
@@ -202,8 +202,8 @@ Item {
         SettingsCard {
             Layout.fillWidth: true
             visible: root.skipModes.length > 0
-            label: I18n.t("settings.skipIntro")
-            description: I18n.t("settings.skipIntroHint")
+            label: KisaruI18n.t("settings.skipIntro")
+            description: KisaruI18n.t("settings.skipIntroHint")
             fontFamily: root.fontFamily
 
             Row {
@@ -229,8 +229,8 @@ Item {
         Toggle {
             Layout.fillWidth: true
             visible: root.showSkipRecap
-            label: I18n.t("settings.skipRecap")
-            description: I18n.t("settings.skipRecapHint")
+            label: KisaruI18n.t("settings.skipRecap")
+            description: KisaruI18n.t("settings.skipRecapHint")
             checked: root.skipRecap
             onClicked: root.skipRecapToggled(!root.skipRecap)
         }
@@ -238,13 +238,13 @@ Item {
         // ── UI language ────────────────────────────────────────────────────
         Toggle {
             Layout.fillWidth: true
-            label: I18n.t("settings.language")
-            description: I18n.pinnedByEnv ? I18n.t("settings.languagePinned") : I18n.t("settings.languageHint")
-            checked: I18n.lang === "es"
+            label: KisaruI18n.t("settings.language")
+            description: KisaruI18n.pinnedByEnv ? KisaruI18n.t("settings.languagePinned") : KisaruI18n.t("settings.languageHint")
+            checked: KisaruI18n.lang === "es"
             // QS_LANG wins over the file, so the row would look broken.
-            enabled: !I18n.pinnedByEnv
+            enabled: !KisaruI18n.pinnedByEnv
             opacity: enabled ? 1 : 0.6
-            onClicked: I18n.setLanguage(checked ? "en" : "es")
+            onClicked: KisaruI18n.setLanguage(checked ? "en" : "es")
         }
 
         Item { Layout.fillHeight: true }
