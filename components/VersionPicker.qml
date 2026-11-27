@@ -110,7 +110,7 @@ Item {
                             height: Style.space(34)
                             color: current
                                 ? Colors.primary
-                                : (hovered ? Colors.surface_container : "transparent")
+                                : (hovered ? Colors.surface_container : Colors.clear(Colors.surface_container))
 
                             Row {
                                 anchors {
@@ -157,7 +157,7 @@ Item {
                                     width: Style.space(28); height: Style.space(24)
                                     radius: Style.cornerRadius
                                     color: downloadArea.containsMouse && !row.current
-                                        ? Colors.surface_container_high : "transparent"
+                                        ? Colors.surface_container_high : Colors.clear(Colors.surface_container_high)
                                     readonly property string kind: row.modelData.state
                                     readonly property string glyph: root._glyph(row.modelData)
 
