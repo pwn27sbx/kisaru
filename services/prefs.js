@@ -35,6 +35,8 @@ var ANIME_MODES = ["sub", "dub"];
 var DEFAULT_ANIME_SKIP_MODE = "auto";
 var ANIME_SKIP_MODES = ["auto", "prompt", "off"];
 var DEFAULT_ANIME_SKIP_RECAP = false;
+// The private anime section is invisible while locked, so it ships enabled.
+var DEFAULT_PRIVATE_ANIME_ENABLED = true;
 
 function parseSettings(text) {
     try {
@@ -127,6 +129,10 @@ function normalizeAnimeSkipRecap(value) {
     return value === true;
 }
 
+function normalizePrivateAnimeEnabled(value) {
+    return value === false ? false : DEFAULT_PRIVATE_ANIME_ENABLED;
+}
+
 function normalizeDisabledShows(list) {
     if (!Array.isArray(list)) return [];
     var seen = {};
@@ -180,6 +186,8 @@ if (typeof module !== "undefined" && module.exports) {
         normalizeAnimeSkipMode: normalizeAnimeSkipMode,
         DEFAULT_ANIME_SKIP_RECAP: DEFAULT_ANIME_SKIP_RECAP,
         normalizeAnimeSkipRecap: normalizeAnimeSkipRecap,
+        DEFAULT_PRIVATE_ANIME_ENABLED: DEFAULT_PRIVATE_ANIME_ENABLED,
+        normalizePrivateAnimeEnabled: normalizePrivateAnimeEnabled,
         normalizeDisabledShows: normalizeDisabledShows,
         isShowSkipDisabled: isShowSkipDisabled,
         toggleDisabledShow: toggleDisabledShow

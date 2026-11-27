@@ -19,6 +19,14 @@ Item {
     // stop sharing manga's choice.
     readonly property bool listMode: UiPrefs.viewModeFor("anime") === "list"
 
+    property bool privateMode: false
+    readonly property var items: privateMode ? Anime.privateAnimeList : Anime.animeList
+    readonly property bool loading: privateMode ? Anime.isFetchingPrivateAnime : Anime.isFetchingAnime
+    readonly property string errorText: privateMode ? Anime.privateAnimeError : Anime.animeError
+
+    signal privateRequested()
+    signal privateClosed()
+
     // The tool bar's filter menu (owner §32). The same five entries the chips
     // had; one value stands for the (view, country) pair the old chips set in
     // two steps.
@@ -55,7 +63,13 @@ Item {
     signal searchCleared()
 
     function resetList() {
-        Anime.fetchPopular(true)
+        if (browseView.privateMode) Anime.fetchPrivateAnime(true)
+        else Anime.fetchPopular(true)
+    }
+
+    function loadMore() {
+        if (browseView.privateMode) Anime.fetchPrivateNextPage()
+        else Anime.fetchNextPage()
     }
 
     // ── Background ────────────────────────────────────────────────────────────
@@ -73,12 +87,34 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
+            PanelActionButton {
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: Style.spacing.md
+                z: 12
+                iconText: KisaruI18n.t("anime.private.entry")
+                tooltipText: KisaruI18n.t("anime.private.entry")
+                visible: !browseView.privateMode && !Privacy.locked && Anime.privateSourceEnabled
+                onClicked: browseView.privateRequested()
+            }
+
+            PanelActionButton {
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: Style.spacing.md
+                z: 12
+                iconText: "󰁍"
+                tooltipText: KisaruI18n.t("settings.back")
+                visible: browseView.privateMode
+                onClicked: browseView.privateClosed()
+            }
+
             // Loading: ghost cards where the first page will land
             SkeletonGrid {
                 anchors.fill: parent; z: 10
                 anchors.leftMargin: Gutter.left
                 anchors.rightMargin: Gutter.right
-                active: !browseView.listMode && Anime.isFetchingAnime && Anime.animeList.length === 0
+                active: !browseView.listMode && browseView.loading && browseView.items.length === 0
                 columns: CardMetrics.columns
                 padding: Style.space(0)
                 cellHeight: CardMetrics.cellHeight(width / CardMetrics.columns)
@@ -93,20 +129,20 @@ Item {
                 rowHeight: Style.space(ListMetrics.ROW_HEIGHT_BASE)
                 cover: true
                 inset: Gutter.ink
-                active: browseView.listMode && Anime.isFetchingAnime && Anime.animeList.length === 0
+                active: browseView.listMode && browseView.loading && browseView.items.length === 0
             }
 
             // More pages on the way
             LoadingBar {
                 anchors { top: parent.top; left: parent.left; right: parent.right }
                 z: 11
-                active: Anime.isFetchingAnime && Anime.animeList.length > 0
+                active: browseView.loading && browseView.items.length > 0
             }
 
             // Error
             Rectangle {
                 anchors.fill: parent; color: Colors.background
-                visible: Anime.animeError.length > 0 && !Anime.isFetchingAnime
+                visible: browseView.errorText.length > 0 && !browseView.loading
                 z: 9
 
                 Column {
@@ -117,7 +153,7 @@ Item {
                         anchors.horizontalCenter: parent.horizontalCenter; opacity: 0.8
                     }
                     StyledText {
-                        text: Anime.animeError
+                        text: browseView.errorText
                         color: Colors.on_surface_variant; font.pixelSize: Style.font.body
                         font.family: browseView.fontBody
                         wrapMode: Text.Wrap; width: 260
@@ -144,12 +180,12 @@ Item {
                 boundsBehavior: Flickable.StopAtBounds
                 // A ScriptModel diffs each new array against the last, so appending a
                 // page inserts rows instead of resetting the view (and its scroll).
-                model: ScriptModel { values: Anime.animeList }
+                model: ScriptModel { values: browseView.items }
 
 
                 onContentYChanged: {
                     if (contentY + height > contentHeight - cellHeight * 2)
-                        Anime.fetchNextPage()
+                        browseView.loadMore()
                 }
 
                 delegate: Item {
@@ -197,12 +233,12 @@ Item {
                 visible: browseView.listMode
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                model: ScriptModel { values: Anime.animeList }
+                model: ScriptModel { values: browseView.items }
 
 
                 onContentYChanged: {
                     if (ListMetrics.shouldFetchMore(contentY, height, contentHeight))
-                        Anime.fetchNextPage()
+                        browseView.loadMore()
                 }
 
                 delegate: ListRow {

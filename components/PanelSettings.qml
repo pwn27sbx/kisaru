@@ -33,6 +33,8 @@ Item {
     property string skipMode: ""
     property bool showSkipRecap: false
     property bool skipRecap: false
+    property bool showPrivateSource: false
+    property bool privateSourceEnabled: true
     property string fontFamily: Style.font.family
     // The panels do not hand focus to this view, and Esc needs a focused item.
     property bool active: false
@@ -42,6 +44,7 @@ Item {
     signal layoutSelected(string id)
     signal skipModeSelected(string id)
     signal skipRecapToggled(bool enabled)
+    signal privateSourceToggled(bool enabled)
 
     Item {
         id: keyCatcher
@@ -233,6 +236,15 @@ Item {
             description: KisaruI18n.t("settings.skipRecapHint")
             checked: root.skipRecap
             onClicked: root.skipRecapToggled(!root.skipRecap)
+        }
+
+        Toggle {
+            Layout.fillWidth: true
+            visible: root.showPrivateSource
+            label: KisaruI18n.t("settings.privateSource")
+            description: KisaruI18n.t("settings.privateSourceHint")
+            checked: root.privateSourceEnabled
+            onClicked: root.privateSourceToggled(!root.privateSourceEnabled)
         }
 
         // ── UI language ────────────────────────────────────────────────────

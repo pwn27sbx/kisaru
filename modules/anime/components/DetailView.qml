@@ -129,6 +129,18 @@ Item {
         }
     }
 
+    Connections {
+        target: Privacy
+        function onLockedChanged() {
+            if (!Privacy.locked || !Anime.isPrivateId(detailView._playingShowId)) return
+            detailView._ignoreNextExit = true
+            mpvProcess.running = false
+            detailView._playingShowId = ""
+            detailView._playingEpId = ""
+            detailView._playingEpNum = ""
+        }
+    }
+
     function _playWithMpv(url, referer, subtitle, title, showId, epNum, showTitle) {
         if (!url || url.length === 0) {
             console.warn("[AnimeDetail] _playWithMpv called with empty URL, aborting")
@@ -153,7 +165,8 @@ Item {
             skipMode: UiPrefs.animeSkipMode,
             skipRecap: UiPrefs.animeSkipRecap,
             lang: KisaruI18n.lang,
-            showSkipDisabled: UiPrefs.isAnimeSkipDisabled(showId || "")
+            showSkipDisabled: UiPrefs.isAnimeSkipDisabled(showId || ""),
+            privateSource: Anime.isPrivateId(showId || "")
         })
         if (args.length === 0) return
 
@@ -350,7 +363,7 @@ Item {
                         id: skipToggleButton
                         readonly property bool _skipDisabled:
                             Anime.currentAnime ? UiPrefs.isAnimeSkipDisabled(Anime.currentAnime.id) : false
-                        visible: Anime.currentAnime !== null && UiPrefs.animeSkipMode !== "off"
+                        visible: Anime.currentAnime !== null && !Anime.isPrivateId(Anime.currentAnime.id) && UiPrefs.animeSkipMode !== "off"
                         implicitWidth: skipToggleLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
                         implicitHeight: Style.space(22)
                         radius: Style.cornerRadius

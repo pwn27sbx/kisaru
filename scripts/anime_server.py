@@ -27,6 +27,14 @@ import subtitles
 
 app = Flask(__name__)
 
+
+@app.after_request
+def _private_source_no_store(response):
+    if request.path.startswith("/hentaila/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0"
 ALLANIME_REFR = "https://allmanga.to"
 ALLANIME_BASE = "allanime.day"
@@ -734,15 +742,19 @@ def hentaila_search_route():
     query = request.args.get("q", "").strip()
     if not query:
         return jsonify({"error": "missing_query"}), 400
+    if _hentaila_disabled():
+        return jsonify({"error": "source_disabled"}), 404
     try:
         page = int(request.args.get("page", 1))
     except ValueError:
         return jsonify({"error": "invalid_page"}), 400
-    if _hentaila_disabled():
-        return jsonify({"error": "source_disabled"}), 404
+    if page < 1:
+        return jsonify({"error": "invalid_page"}), 400
     try:
         result = hentaila_source.search(query, page)
     except hentaila_source.SourceError:
+        return _hentaila_unavailable()
+    except (KeyError, TypeError, ValueError):
         return _hentaila_unavailable()
     items = []
     for item in result["results"]:
@@ -769,6 +781,8 @@ def hentaila_series_route():
         result = hentaila_source.series(slug)
     except hentaila_source.SourceError:
         return _hentaila_unavailable()
+    except (KeyError, TypeError, ValueError):
+        return _hentaila_unavailable()
     body = dict(result)
     body["id"] = "hentaila:" + result["id"]
     return jsonify(body)
@@ -786,8 +800,10 @@ def hentaila_links_route():
         links = hentaila_source.links(slug, episode)
     except hentaila_source.SourceError:
         return _hentaila_unavailable()
+    except (KeyError, TypeError, ValueError):
+        return _hentaila_unavailable()
     if not links:
-        return jsonify({"error": "source_unavailable"}), 404
+        return jsonify({"error": "no_stream"}), 404
     show_id = "hentaila:" + slug
     return jsonify({
         "show_id": show_id,

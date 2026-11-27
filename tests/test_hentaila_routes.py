@@ -122,6 +122,27 @@ class PrivateRoutesTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 400)
 
+    def test_private_responses_are_no_store(self):
+        with mock.patch.object(hentaila_source, "search", return_value={
+            "results": [], "hasMore": False, "nextPage": 1,
+        }):
+            response = self.client.get("/hentaila/search", query_string={"q": "sample"})
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+
+    def test_disabled_switch_wins_over_invalid_page(self):
+        with mock.patch.dict(os.environ, {"QS_HENTAILA_SOURCE": "off"}), \
+             mock.patch.object(hentaila_source, "search") as search:
+            response = self.client.get("/hentaila/search", query_string={"q": "sample", "page": "bad"})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.get_json(), {"error": "source_disabled"})
+        search.assert_not_called()
+
+    def test_empty_private_links_have_a_fixed_no_stream_error(self):
+        with mock.patch.object(hentaila_source, "links", return_value=[]):
+            response = self.client.get("/hentaila/links", query_string={"id": "item-one", "ep": "1"})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.get_json(), {"error": "no_stream"})
+
     def test_private_access_log_redacts_query_and_title(self):
         import ast
         from pathlib import Path

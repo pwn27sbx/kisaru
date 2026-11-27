@@ -77,7 +77,7 @@ def referer_for(host):
             return referer
     return ""
 
-SOURCES = ("mangadex", "inmanga", "zonatmo", "zonatmo_org", "manhwaweb", "mangafire")
+SOURCES = ("mangadex", "inmanga", "zonatmo", "zonatmo_org", "manhwaweb", "mangafire", "private_anime")
 
 # One fixed query per source: "solo leveling" does not exist on MangaDex with a
 # Spanish translation, nor on InManga, so a single global query would report
@@ -89,6 +89,7 @@ PROBE_QUERY = {
     "zonatmo_org": QUERY,
     "manhwaweb": QUERY,
     "mangafire": "jujutsu kaisen",
+    "private_anime": "contract",
 }
 
 
@@ -273,6 +274,19 @@ def run(sources, modules, fetch=fetch_bytes, chain=True):
             lines.append(f"FAIL {name}: unknown source")
             broken += 1
             continue
+        if name == "private_anime":
+            if os.environ.get("QS_HENTAILA_SOURCE", "on").strip().lower() in {
+                "0", "false", "off", "no",
+            }:
+                lines.append("skip private_anime: disabled")
+                continue
+            required = ("search", "series", "links")
+            if not all(callable(getattr(module, attr, None)) for attr in required):
+                lines.append("FAIL private_anime: contract-missing")
+                broken += 1
+            else:
+                lines.append("ok   private_anime: offline-contract")
+            continue
         problems, stats, item_id = probe(module, fetch, PROBE_QUERY.get(name, QUERY))
         if not problems and chain and item_id:
             problems = check_chain(name, item_id)
@@ -361,6 +375,7 @@ def report(code, lines, elapsed, webhook="", checkin_url="", post=post_json):
 
 def load_modules():
     """The real source modules, imported only when the canary actually runs."""
+    import hentaila_source
     import inmanga_source
     import mangafire_source
     import manga_sources
@@ -375,6 +390,7 @@ def load_modules():
         "zonatmo_org": zonatmo_org_source,
         "manhwaweb": manhwaweb_source,
         "mangafire": mangafire_source,
+        "private_anime": hentaila_source,
     }
 
 

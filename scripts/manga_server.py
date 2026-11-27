@@ -184,6 +184,8 @@ IMAGE_REFERERS = {
     "img1mw.xyz": "https://manhwaweb.com/",
     "img2mw.xyz": "https://manhwaweb.com/",
     "uploads.manhwaweb.com": "https://manhwaweb.com/",
+    "hentaila.com": "https://hentaila.com/",
+    "cdn.hentaila.com": "https://hentaila.com/",
 }
 MANGAFIRE_REFERER = "https://mangafire.to/"
 
@@ -220,8 +222,9 @@ IMAGE_HOSTS = frozenset({
     "zonatmo.org", "zonatmo.net",
     # InManga
     "cdn1.intomanga.com", "assets.intomanga.com",
-    # WeebCentral's covers and the anime cover host
+    # WeebCentral's covers and the anime cover hosts
     "temp.compsci88.com", "cdn.jkdesa.com",
+    "hentaila.com", "cdn.hentaila.com",
 })
 # MangaDex serves every page from a per-user at-home node
 # (<hash>.mangadex.network), so the family has to match by suffix.

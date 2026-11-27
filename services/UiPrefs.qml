@@ -76,6 +76,7 @@ Singleton {
     readonly property string animeSkipMode: Core.normalizeAnimeSkipMode(Core.parseSettings(root.raw).animeSkipMode)
     readonly property bool animeSkipRecap: Core.normalizeAnimeSkipRecap(Core.parseSettings(root.raw).animeSkipRecap)
     readonly property var animeSkipDisabledShows: Core.normalizeDisabledShows(Core.parseSettings(root.raw).animeSkipDisabledShows)
+    readonly property bool privateAnimeEnabled: Core.normalizePrivateAnimeEnabled(Core.parseSettings(root.raw).privateAnimeEnabled)
 
     function isAnimeSkipDisabled(showId) {
         return Core.isShowSkipDisabled(root.animeSkipDisabledShows, showId)
@@ -132,6 +133,10 @@ Singleton {
     function toggleAnimeSkipShow(showId) {
         root.setSetting("animeSkipDisabledShows",
                         Core.toggleDisabledShow(root.animeSkipDisabledShows, showId))
+    }
+
+    function setPrivateAnimeEnabled(enabled) {
+        root.setSetting("privateAnimeEnabled", Core.normalizePrivateAnimeEnabled(enabled))
     }
 
     FileView {
