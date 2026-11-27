@@ -63,6 +63,21 @@ function chapterDateLabel(value) {
            (month.length < 2 ? "0" + month : month) + "/" + date.getFullYear();
 }
 
+// One chapter row as the UI wants it. Every source fills what it has; `group`
+// only exists for MangaDex and zonatmo.net, and the version picker labels a
+// re-upload with it whenever it is there.
+function mapChapter(raw) {
+    var chapter = raw || {};
+    return {
+        id:        chapter.id || "",
+        chapter:   chapter.chapter || "",
+        title:     chapter.title || "",
+        pages:     0,
+        group:     chapter.group || "",
+        publishAt: chapter.publishAt || ""
+    };
+}
+
 function sameChapter(left, right) {
     var a = chapterNumber(left);
     var b = chapterNumber(right);
@@ -134,6 +149,7 @@ if (typeof module !== "undefined" && module.exports) {
         chapterNumber: chapterNumber,
         parseChapterDate: parseChapterDate,
         chapterDateLabel: chapterDateLabel,
+        mapChapter: mapChapter,
         sameChapter: sameChapter,
         chapterIndex: chapterIndex,
         adjacentChapter: adjacentChapter

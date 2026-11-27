@@ -150,3 +150,33 @@ test("chapterDateLabel keeps dd/mm/yyyy and normalises ISO", () => {
     assert.equal(chapters.chapterDateLabel(""), "");
     assert.equal(chapters.chapterDateLabel("hace 2 días"), "");
 });
+
+// ── mapChapter ──────────────────────────────────────────────────────────────
+//
+// The /info mapping in services/Manga.qml hardcoded `group: ""`, so the group
+// name MangaDex and zonatmo.net send never reached the list (and the version
+// picker needs it to label a re-upload).
+
+test("mapChapter keeps the source group and the rest of the chapter", () => {
+    const mapped = chapters.mapChapter({
+        id: "mangadex:abc",
+        chapter: "12",
+        title: "Chapter 12",
+        group: "Grupo B",
+        publishAt: "2026-04-21T00:00:00+00:00"
+    });
+    assert.equal(mapped.id, "mangadex:abc");
+    assert.equal(mapped.chapter, "12");
+    assert.equal(mapped.title, "Chapter 12");
+    assert.equal(mapped.group, "Grupo B");
+    assert.equal(mapped.publishAt, "2026-04-21T00:00:00+00:00");
+});
+
+test("mapChapter defaults missing fields without inventing a group", () => {
+    const mapped = chapters.mapChapter({ id: "zonatmo_org:1", chapter: "3.1" });
+    assert.equal(mapped.chapter, "3.1");
+    assert.equal(mapped.title, "");
+    assert.equal(mapped.group, "");
+    assert.equal(mapped.publishAt, "");
+    assert.equal(mapped.pages, 0);
+});

@@ -553,14 +553,7 @@ Singleton {
                 authors:     data.authors     || [],
                 tags:        data.tags        || [],
                 language:    data.language    || "",
-                chapters:    (data.chapters   || []).map(ch => ({
-                    id:        ch.id        || "",
-                    chapter:   ch.chapter   || "",
-                    title:     ch.title     || "",
-                    pages:     0,
-                    group:     "",
-                    publishAt: ch.publishAt || ""
-                }))
+                chapters:    (data.chapters   || []).map(ch => Chapters.mapChapter(ch))
             }
             notice = data.notice || ""
             sourcesTried = data.sourcesTried || []
