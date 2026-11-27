@@ -269,127 +269,155 @@ Item {
         }
 
         Rectangle {
-            Layout.fillWidth: true; height: 34
+            Layout.fillWidth: true
+            Layout.preferredHeight: metaColumn.implicitHeight + 2 * Style.spacing.sm
             color: Colors.surface_container
             visible: Anime.currentAnime !== null
 
-            RowLayout {
-                anchors { fill: parent; leftMargin: Style.space(16); rightMargin: Style.space(16) }
-
-                StyledText {
-                    text: Anime.currentAnime
-                        ? KisaruI18n.tn("count.episode", Anime.currentAnime.episodes
-                            ? Anime.currentAnime.episodes.length : 0)
-                        : ""
-                    font.family: detailView.fontBody
-                    font.pixelSize: Style.font.bodySmall; font.letterSpacing: 1
-                    color: Colors.on_surface_variant; opacity: 0.75
+            ColumnLayout {
+                id: metaColumn
+                anchors {
+                    left: parent.left; right: parent.right
+                    verticalCenter: parent.verticalCenter
+                    leftMargin: Style.space(16); rightMargin: Style.space(16)
                 }
+                spacing: Style.spacing.xs
 
-                // Which subtitle track was picked (from the resolved stream)
-                StyledText {
-                    visible: Anime.currentSubtitleLabel.length > 0
-                    text: KisaruI18n.t("anime.subtitles", { 1: Anime.currentSubtitleLabel })
-                    font.family: detailView.fontBody
-                    font.pixelSize: Style.font.caption; font.letterSpacing: 0.3
-                    color: Colors.tertiary
-                    elide: Text.ElideRight
-                    Layout.maximumWidth: 220
-                }
-
-                Item { Layout.fillWidth: true }
-
-                Rectangle {
-                    id: skipToggleButton
-                    readonly property bool _skipDisabled:
-                        Anime.currentAnime ? UiPrefs.isAnimeSkipDisabled(Anime.currentAnime.id) : false
-                    visible: Anime.currentAnime !== null && UiPrefs.animeSkipMode !== "off"
-                    width: skipToggleLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
-                    height: Style.space(22)
-                    radius: Style.cornerRadius
-                    color: skipToggleArea.containsMouse
-                        ? Colors.surface_container_high : Colors.surface_container
-                    border.color: _skipDisabled ? Colors.outline_variant : Colors.primary
-                    border.width: Style.spacing.hairline
+                // Row 1: episode count · subtitle track (elided) · last-watched badge
+                RowLayout {
+                    id: metaInfoRow
+                    Layout.fillWidth: true
+                    spacing: Style.spacing.sm
 
                     StyledText {
-                        id: skipToggleLabel
-                        anchors.centerIn: parent
-                        text: skipToggleButton._skipDisabled
-                            ? KisaruI18n.t("anime.skip.off")
-                            : KisaruI18n.t("anime.skip.on")
+                        text: Anime.currentAnime
+                            ? KisaruI18n.tn("count.episode", Anime.currentAnime.episodes
+                                ? Anime.currentAnime.episodes.length : 0)
+                            : ""
                         font.family: detailView.fontBody
-                        font.pixelSize: Style.font.caption
-                        color: skipToggleButton._skipDisabled ? Colors.on_surface_variant : Colors.primary
+                        font.pixelSize: Style.font.bodySmall; font.letterSpacing: 1
+                        color: Colors.on_surface_variant; opacity: 0.75
                     }
-                    MouseArea {
-                        id: skipToggleArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (Anime.currentAnime)
-                                UiPrefs.toggleAnimeSkipShow(Anime.currentAnime.id)
+
+                    // Which subtitle track was picked (from the resolved stream)
+                    StyledText {
+                        visible: Anime.currentSubtitleLabel.length > 0
+                        Layout.fillWidth: true
+                        text: KisaruI18n.t("anime.subtitles", { 1: Anime.currentSubtitleLabel })
+                        font.family: detailView.fontBody
+                        font.pixelSize: Style.font.caption; font.letterSpacing: 0.3
+                        color: Colors.tertiary
+                        elide: Text.ElideRight
+                    }
+
+                    Item {
+                        visible: Anime.currentSubtitleLabel.length === 0
+                        Layout.fillWidth: true
+                    }
+
+                    // Last-watched badge
+                    Rectangle {
+                        readonly property var _entry: Anime.visibleEntry()
+                        visible: _entry !== null && _entry !== undefined
+                            && _entry.lastWatchedEpNum !== ""
+                            && _entry.lastWatchedEpNum !== undefined
+                        height: 20; width: lastWatchedText.implicitWidth + 18; radius: Style.cornerRadius
+                        color: Style.selectedFillFor(Colors.primary)
+                        border.color: Colors.primary; border.width: 1
+
+                        Text {
+                            id: lastWatchedText; anchors.centerIn: parent
+                            text: {
+                                var e = Anime.visibleEntry()
+                                return e ? KisaruI18n.t("last.ep", { 1: e.lastWatchedEpNum }) : ""
+                            }
+                            font.family: detailView.fontBody
+                            font.pixelSize: 9; font.letterSpacing: 0.8; color: Colors.primary // style-ignore — bespoke size
                         }
                     }
                 }
 
-                Rectangle {
-                    id: folderButton
-                    visible: Anime.currentAnime !== null && Anime.visibleEntryId() !== ""
-                    width: folderLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
-                    height: Style.space(22)
-                    radius: Style.cornerRadius
-                    color: folderArea.containsMouse
-                        ? Colors.surface_container_high : Colors.surface_container
-                    border.color: Colors.outline_variant
-                    border.width: Style.spacing.hairline
+                // Row 2: per-show controls (skip · folder · hide switch)
+                RowLayout {
+                    id: metaActionsRow
+                    Layout.fillWidth: true
+                    spacing: Style.spacing.sm
+                    visible: skipToggleButton.visible || folderButton.visible || hideSwitch.visible
 
-                    StyledText {
-                        id: folderLabel
-                        anchors.centerIn: parent
-                        text: KisaruI18n.t("folder.current", { 1: detailView._folderValue === ""
-                            ? KisaruI18n.t("folder.none") : detailView._folderName })
-                        font.family: detailView.fontBody
-                        font.pixelSize: Style.font.caption
-                        color: Colors.on_surface
-                    }
-                    MouseArea {
-                        id: folderArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: folderPicker.opened = true
-                    }
-                }
+                    Rectangle {
+                        id: skipToggleButton
+                        readonly property bool _skipDisabled:
+                            Anime.currentAnime ? UiPrefs.isAnimeSkipDisabled(Anime.currentAnime.id) : false
+                        visible: Anime.currentAnime !== null && UiPrefs.animeSkipMode !== "off"
+                        width: skipToggleLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
+                        height: Style.space(22)
+                        radius: Style.cornerRadius
+                        color: skipToggleArea.containsMouse
+                            ? Colors.surface_container_high : Colors.surface_container
+                        border.color: _skipDisabled ? Colors.outline_variant : Colors.primary
+                        border.width: Style.spacing.hairline
 
-                HideSwitch {
-                    visible: Privacy.configured && detailView._rawEntry !== null
-                    checked: detailView._hideView.checked
-                    note: detailView._hideNote
-                    interactive: detailView._hideView.noteFolder === ""
-                    bodyFont: detailView.fontBody
-                    onClicked: detailView._toggleHiddenTitle()
-                }
-
-                // Last-watched badge
-                Rectangle {
-                    readonly property var _entry: Anime.visibleEntry()
-                    visible: _entry !== null && _entry !== undefined
-                        && _entry.lastWatchedEpNum !== ""
-                        && _entry.lastWatchedEpNum !== undefined
-                    height: 20; width: lastWatchedText.implicitWidth + 18; radius: Style.cornerRadius
-                    color: Style.selectedFillFor(Colors.primary)
-                    border.color: Colors.primary; border.width: 1
-
-                    Text {
-                        id: lastWatchedText; anchors.centerIn: parent
-                        text: {
-                            var e = Anime.visibleEntry()
-                            return e ? KisaruI18n.t("last.ep", { 1: e.lastWatchedEpNum }) : ""
+                        StyledText {
+                            id: skipToggleLabel
+                            anchors.centerIn: parent
+                            text: skipToggleButton._skipDisabled
+                                ? KisaruI18n.t("anime.skip.off")
+                                : KisaruI18n.t("anime.skip.on")
+                            font.family: detailView.fontBody
+                            font.pixelSize: Style.font.caption
+                            color: skipToggleButton._skipDisabled ? Colors.on_surface_variant : Colors.primary
                         }
-                        font.family: detailView.fontBody
-                        font.pixelSize: 9; font.letterSpacing: 0.8; color: Colors.primary // style-ignore — bespoke size
+                        MouseArea {
+                            id: skipToggleArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (Anime.currentAnime)
+                                    UiPrefs.toggleAnimeSkipShow(Anime.currentAnime.id)
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        id: folderButton
+                        visible: Anime.currentAnime !== null && Anime.visibleEntryId() !== ""
+                        width: folderLabel.implicitWidth + 2 * Style.spacing.controlPaddingX
+                        height: Style.space(22)
+                        radius: Style.cornerRadius
+                        color: folderArea.containsMouse
+                            ? Colors.surface_container_high : Colors.surface_container
+                        border.color: Colors.outline_variant
+                        border.width: Style.spacing.hairline
+
+                        StyledText {
+                            id: folderLabel
+                            anchors.centerIn: parent
+                            text: KisaruI18n.t("folder.current", { 1: detailView._folderValue === ""
+                                ? KisaruI18n.t("folder.none") : detailView._folderName })
+                            font.family: detailView.fontBody
+                            font.pixelSize: Style.font.caption
+                            color: Colors.on_surface
+                        }
+                        MouseArea {
+                            id: folderArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: folderPicker.opened = true
+                        }
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    HideSwitch {
+                        id: hideSwitch
+                        visible: Privacy.configured && detailView._rawEntry !== null
+                        checked: detailView._hideView.checked
+                        note: detailView._hideNote
+                        interactive: detailView._hideView.noteFolder === ""
+                        bodyFont: detailView.fontBody
+                        onClicked: detailView._toggleHiddenTitle()
                     }
                 }
             }
