@@ -146,7 +146,7 @@ Rectangle {
             anchors.fill: parent
             visible: root.hasText
             cursorShape: Qt.PointingHandCursor
-            color: clearCell.hovered ? Colors.surface_container_high : "transparent"
+            color: clearCell.hovered ? Colors.surface_container_high : Colors.clear(Colors.surface_container_high)
             radius: Style.cornerRadius
             onClicked: root.userClear()
 

@@ -192,7 +192,7 @@ Item {
 
                     Rectangle {
                         anchors.centerIn: parent; width: 34; height: 34; radius: Style.cornerRadius
-                        color: backArea.containsMouse ? Colors.surface_container : "transparent"
+                        color: backArea.containsMouse ? Colors.surface_container : Colors.clear(Colors.surface_container)
                         Behavior on color { ColorAnimation { duration: Motion.base } }
                     }
                     Text {
@@ -496,7 +496,7 @@ Item {
                         ? Style.selectedFillFor(Colors.primary)
                         : (epRowAreaRect.pressed
                             ? Colors.surface_container_high
-                            : (epRowAreaRect.hovered ? Colors.surface_container : "transparent"))
+                            : (epRowAreaRect.hovered ? Colors.surface_container : Colors.clear(Colors.surface_container)))
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                     Rectangle {

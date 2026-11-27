@@ -95,7 +95,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: mouse.containsMouse || root.open
-            ? Style.hoverFillFor(Colors.muted, Colors.primary) : "transparent"
+            ? Style.hoverFillFor(Colors.muted, Colors.primary) : Colors.clear(Style.hoverFillFor(Colors.muted, Colors.primary))
         Behavior on color { ColorAnimation { duration: Motion.fast } }
     }
 
@@ -178,7 +178,7 @@ Item {
                     height: Style.space(26)
                     color: current ? Colors.primary
                         : (highlighted || hovered ? Style.hoverFillFor(Colors.muted, Colors.primary)
-                                                  : "transparent")
+                                                  : Colors.clear(Style.hoverFillFor(Colors.muted, Colors.primary)))
                     cursorShape: Qt.PointingHandCursor
 
                     StyledText {

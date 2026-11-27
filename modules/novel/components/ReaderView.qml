@@ -183,7 +183,7 @@ Item {
                 width: 44; height: 44
                 Rectangle {
                     anchors.centerIn: parent; width: 34; height: 34; radius: Style.cornerRadius
-                    color: backHover.containsMouse ? Util.alpha(Colors.text, 0.06) : "transparent"
+                    color: backHover.containsMouse ? Util.alpha(Colors.text, 0.06) : Colors.clear(Util.alpha(Colors.text, 0.06))
                     Behavior on color { ColorAnimation { duration: Motion.base } }
                 }
                 Text { anchors.centerIn: parent; text: "←"; font.pixelSize: Style.font.iconLarge; color: Colors.text }
@@ -213,7 +213,7 @@ Item {
                 width: 34; height: 34
                 Rectangle {
                     anchors.centerIn: parent; width: 30; height: 30; radius: Style.cornerRadius
-                    color: fsMinusHover.containsMouse ? Util.alpha(Colors.text, 0.06) : "transparent"
+                    color: fsMinusHover.containsMouse ? Util.alpha(Colors.text, 0.06) : Colors.clear(Util.alpha(Colors.text, 0.06))
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                 }
                 Text { anchors.centerIn: parent; text: "A−"; font.pixelSize: Style.font.caption; color: Colors.text }
@@ -227,7 +227,7 @@ Item {
                 width: 34; height: 34
                 Rectangle {
                     anchors.centerIn: parent; width: 30; height: 30; radius: Style.cornerRadius
-                    color: fsPlusHover.containsMouse ? Util.alpha(Colors.text, 0.06) : "transparent"
+                    color: fsPlusHover.containsMouse ? Util.alpha(Colors.text, 0.06) : Colors.clear(Util.alpha(Colors.text, 0.06))
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                 }
                 Text { anchors.centerIn: parent; text: "A+"; font.pixelSize: Style.font.bodySmall; color: Colors.text }
@@ -241,7 +241,7 @@ Item {
                 width: 34; height: 34
                 Rectangle {
                     anchors.centerIn: parent; width: 30; height: 30; radius: Style.cornerRadius
-                    color: fullscreenHover.containsMouse ? Util.alpha(Colors.text, 0.06) : "transparent"
+                    color: fullscreenHover.containsMouse ? Util.alpha(Colors.text, 0.06) : Colors.clear(Util.alpha(Colors.text, 0.06))
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
                 }
                 Text {
