@@ -104,6 +104,10 @@ Singleton {
         return preference ? (preference.generation || "") : ""
     }
 
+    // The generation the picker paints as already applied to the series ("" when
+    // the reader has not chosen one yet).
+    readonly property string seriesGeneration: root._seriesGeneration()
+
     function setSeriesVersion(chapter, versionId) {
         var groups = root.chapterGroups
         var group = null

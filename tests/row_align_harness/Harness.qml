@@ -65,13 +65,14 @@ ShellRoot {
             { id: "row-align-n122", chapter: "12.2", title: "Extra" }
         ]
 
-        // The picker scenario: one chapter the source listed twice (a re-upload),
-        // so the row shows the versions chip and the card has two rows whose
-        // dates must not be cut.
+        // The picker scenario: one chapter the source listed twice from two
+        // upload groups (a re-upload from another group), so the row shows the
+        // versions chip and the card has two rows whose dates must not be cut.
+        // Distinct groups give distinct generations: one can be applied to the
+        // whole series while the other is the newest and marked as read.
         readonly property var versionedChapters: [
-            { id: "row-align-v1", chapter: "1234.12", title: "Capítulo 1234.12", publishAt: "2026-04-09" },
-            { id: "row-align-v2", chapter: "1234.12", title: "Capítulo 1234.12 (re-subida)", publishAt: "2026-04-21" },
-            { id: "row-align-v0", chapter: "1234", title: "Capítulo 1234", publishAt: "2026-03-28" }
+            { id: "row-align-v66a", chapter: "66", title: "Capítulo 66", group: "Grupo A", publishAt: "2026-04-09" },
+            { id: "row-align-v66b", chapter: "66", title: "Capítulo 66", group: "Grupo B", publishAt: "2026-04-21" }
         ]
 
         property var chipFields: ({})
@@ -193,6 +194,11 @@ ShellRoot {
                     description: "",
                     chapters: win.versionedChapters
                 }
+                // One upload group is already applied to the whole series; the
+                // picker must light its icon up on that row only.
+                const group = Manga.chapterGroups.find(g => g.chapter === "66")
+                const base = group && group.versions.find(v => v.chapter === "66")
+                if (base) Manga.setSeriesVersion("66", base.id)
             } else if (win.scenario === "anime") {
                 Anime.currentAnime = {
                     id: "row-align-anime",
@@ -350,13 +356,19 @@ ShellRoot {
             const seriesLabel = KisaruI18n.t("versions.wholeSeries")
 
             const labels = []
-            const actions = []
+            const checks = []
+            const downloads = []
+            const series = []
+            let readChips = 0
             walk(card, function (child) {
                 if (child.text === undefined) return
                 if (win.typeName(child).indexOf("Text") < 0) return
                 const text = String(child.text)
                 if (text.indexOf(chapterPrefix) === 0) labels.push(child)
-                if (text === readLabel || text === seriesLabel) actions.push(text)
+                if (text === "✓" && child.visible === true) checks.push(child)
+                if (text === "↓") downloads.push(child)
+                if (text === "󰂻") series.push(child)
+                if (text === readLabel || text === seriesLabel) readChips += 1
             })
 
             let truncated = 0
@@ -368,14 +380,18 @@ ShellRoot {
                 if (String(item.text).indexOf("/2026") >= 0) dated += 1
             }
             const cardFits = card.width <= view.width - 2 * Gutter.left + 0.5
-            const readCount = actions.filter(text => text === readLabel).length
-            const seriesCount = actions.filter(text => text === seriesLabel).length
+            let seriesActive = 0
+            for (const item of series)
+                if (item.parent && String(item.parent.color) === String(Colors.primary)) seriesActive += 1
 
             const pass = labels.length === 2
                 && truncated === 0
                 && dated === labels.length
-                && readCount === 2
-                && seriesCount === 2
+                && checks.length === 1
+                && downloads.length === 2
+                && series.length === 2
+                && seriesActive === 1
+                && readChips === 0
                 && cardFits
                 && win.chipFields.chipLabel === 1
                 && win.chipFields.chipHand === 1
@@ -387,7 +403,11 @@ ShellRoot {
             if (labels.length !== 2) why = "picker-rows"
             else if (truncated !== 0) why = "date-truncated"
             else if (dated !== labels.length) why = "date-missing"
-            else if (readCount !== 2 || seriesCount !== 2) why = "picker-actions"
+            else if (checks.length !== 1) why = "current-check"
+            else if (downloads.length !== 2) why = "download-controls"
+            else if (series.length !== 2) why = "series-icons"
+            else if (seriesActive !== 1) why = "series-active"
+            else if (readChips !== 0) why = "read-chip-still-there"
             else if (!cardFits) why = "card-wider-than-panel"
             else if (win.chipFields.chipLabel !== 1) why = "chip-label"
             else if (win.chipFields.chipHand !== 1) why = "chip-cursor"
@@ -404,8 +424,11 @@ ShellRoot {
                 labelW: win.rounded(labels.length ? labels[0].width : 0),
                 labelNeeds: win.rounded(labels.length ? labels[0].implicitWidth : 0),
                 truncated: truncated,
-                read: readCount,
-                series: seriesCount,
+                checks: checks.length,
+                downloads: downloads.length,
+                series: series.length,
+                seriesActive: seriesActive,
+                readChips: readChips,
                 chipH: win.chipFields.chipH,
                 chipRadius: win.chipFields.chipRadius,
                 chipBorder: win.chipFields.chipBorder,

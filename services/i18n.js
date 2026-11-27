@@ -102,6 +102,7 @@ var tables = {
         "versions.count": { one: "%1 versión", other: "%1 versiones" },
         "versions.read": "Leer",
         "versions.wholeSeries": "Usar en toda la serie",
+        "versions.wholeSeriesTooltip": "Usar esta versión para toda la serie",
 
         // ── List controls (shared) ──────────────────────────────────────
         "filterChapters": "Filtrar capítulos…",
@@ -252,6 +253,7 @@ var tables = {
         "versions.count": { one: "%1 version", other: "%1 versions" },
         "versions.read": "Read",
         "versions.wholeSeries": "Use for whole series",
+        "versions.wholeSeriesTooltip": "Use this version for the whole series",
 
         // ── List controls (shared) ──────────────────────────────────────
         "filterChapters": "Filter chapters…",

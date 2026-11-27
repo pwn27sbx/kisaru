@@ -668,13 +668,14 @@ test("manga chapter navigation shares Manga.openChapter and lives in the status 
     assert.match(detail, /Manga\.openChapter\(chapterRowAreaRect\._version\)/,
         "DetailView must open the row's default version through Manga.openChapter");
 
-    // "Use this version for the whole series": the picker flips a flag and the
-    // Detail routes the pick to the series setter, never to the chapter one.
+    // "Use this version for the whole series" (owner, 2026-11-27): the picker's
+    // trailing icon flips the flag and the Detail routes the pick to the series
+    // setter, never to the chapter one.
     const picker = read("components/VersionPicker.qml");
     assert.match(picker, /property bool wholeSeries:\s*false/,
         "VersionPicker must expose the whole-series flag off by default");
-    assert.match(picker, /versions\.wholeSeries/,
-        "VersionPicker must label the whole-series action");
+    assert.match(picker, /versions\.wholeSeriesTooltip/,
+        "VersionPicker must explain the whole-series icon");
     assert.match(detail, /versionPicker\.wholeSeries/,
         "DetailView must read the whole-series flag when a version is chosen");
     assert.doesNotMatch(detail, /Manga\.fetchChapterPages\(/,

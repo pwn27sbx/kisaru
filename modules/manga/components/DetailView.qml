@@ -207,6 +207,7 @@ Item {
         detailView._pickerGroup = group
         versionPicker.rows = detailView.versionRows(group)
         versionPicker.currentId = group.primary.id
+        versionPicker.seriesGeneration = Manga.seriesGeneration
         versionPicker.wholeSeries = false
         versionPicker.opened = true
     }

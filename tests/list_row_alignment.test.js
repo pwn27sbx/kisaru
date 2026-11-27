@@ -130,14 +130,33 @@ test("the picker sizes itself from its rows and acts per row, not by a tick", ()
     assert.match(picker, /root\._labelWidth/, "the card width must be measured from the labels");
     assert.match(picker, /parent\.width\s*-\s*2 \* Gutter\.left/, "the card must stay inside the panel");
 
-    // Explicit per-row actions: read this chapter, or settle the upload for the
-    // whole series (the caller routes the pick through Manga.setSeriesVersion).
-    assert.match(picker, /versions\.read/, "the row needs the Read action label");
-    assert.match(picker, /versions\.wholeSeries/, "the row needs the whole-series action label");
+    // Option B (owner, 2026-11-27): the row is the action. Clicking it reads
+    // that upload; the trailing icons carry the whole-series generation and the
+    // download. No chip inside a row, and no "Read" chip duplicating the row.
     assert.match(picker, /onClicked:\s*root\._read\(row\.modelData\.id, false\)/,
-        "Read must read that upload for this chapter");
+        "the row itself must read that upload for this chapter");
     assert.match(picker, /onClicked:\s*root\._read\(row\.modelData\.id, true\)/,
-        "the whole-series action must settle that upload for the series");
+        "the whole-series icon must settle that upload for the series");
+    assert.match(picker, /versions\.wholeSeriesTooltip/,
+        "the whole-series icon needs its explanatory tooltip");
+    assert.doesNotMatch(picker, /versions\.read/,
+        "the Read chip is gone: the row is the action");
+    assert.doesNotMatch(picker, /versions\.wholeSeries\)/,
+        "the whole-series chip label is gone: the icon replaces it");
+    assert.doesNotMatch(picker, /Chip\s*\{/, "no chips inside the picker rows");
+    assert.match(picker, /text:\s*"✓"/, "a ✓ must mark the version being read");
+    assert.match(picker, /property string seriesGeneration/, "the card needs the generation applied to the series");
+    assert.match(picker, /modelData\.generation === root\.seriesGeneration/,
+        "the whole-series icon must light up on the applied generation");
+    assert.match(picker, /text:\s*"󰂻"/, "the whole-series icon is the books glyph");
+
+    // The card is told which generation the series already uses.
+    assert.match(read("modules/manga/components/DetailView.qml"),
+        /versionPicker\.seriesGeneration = Manga\.seriesGeneration/,
+        "the Detail must pass the series generation into the picker");
+    assert.match(read("services/Manga.qml"),
+        /readonly property string seriesGeneration/,
+        "Manga must expose the series generation for the picker");
     assert.match(read("modules/manga/components/DetailView.qml"),
         /if \(versionPicker\.wholeSeries\) Manga\.setSeriesVersion/,
         "the Detail must still route a whole-series pick to Manga.setSeriesVersion");
@@ -153,7 +172,7 @@ test("the picker sizes itself from its rows and acts per row, not by a tick", ()
     assert.match(picker, /Keys\.onReturnPressed/, "Enter must read the highlighted row");
 });
 
-test("render: the chip's box, the picker's width and its per-row actions", async (t) => {
+test("render: the chip's box, the picker's width and its per-row icons", async (t) => {
     if (!hasQs()) return t.skip("qs not installed");
     const r = await runHarness({ scenario: "picker" });
     assert.ok(r.result, `no RESULT line (qs exit ${r.code}):\n${r.log.slice(-25).join("\n")}`);
@@ -165,8 +184,12 @@ test("render: the chip's box, the picker's width and its per-row actions", async
         `the label is narrower than its own text: ${r.result}`);
     assert.ok(Number(f.cardW) <= Number(f.panelW) - 2 * Number(f.gutter) + 0.5,
         `the card overflows the panel: ${r.result}`);
-    assert.equal(f.read, "2", `every version row needs its Read action: ${r.result}`);
-    assert.equal(f.series, "2", `every version row needs its whole-series action: ${r.result}`);
+    assert.equal(f.checks, "1", `exactly one version must carry the ✓: ${r.result}`);
+    assert.equal(f.series, "2", `every version row needs its whole-series icon: ${r.result}`);
+    assert.equal(f.seriesActive, "1",
+        `the icon must light up only on the generation applied to the series: ${r.result}`);
+    assert.equal(f.downloads, "2", `every version row needs its download control: ${r.result}`);
+    assert.equal(f.readChips, "0", `the Read chip must be gone: ${r.result}`);
 
     // The chip renders as the Folder button's box: same height, radius, border.
     assert.equal(f.chipLabel, "1", `the chip label is not "2 versions ▾": ${r.result}`);
