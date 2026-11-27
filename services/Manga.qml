@@ -66,10 +66,54 @@ Singleton {
     property string pagesError: ""
     property string currentChapterId: ""
     property bool dataSaverMode: false
+
+    // ── Chapter versions ────────────────────────────────────────────────────
+    // A source can list the same chapter twice ("1" and "1.1", a later
+    // re-upload). services/chapters.js groups the rows that belong together;
+    // the list, the counter, the progress badge and "next" read these groups,
+    // so a sibling version is never a step and a re-upload never adds a chapter.
+    readonly property var chapterGroups: Chapters.groupChapters(
+        currentManga ? currentManga.chapters : [],
+        {
+            lastReadId: root.visibleEntry() ? (root.visibleEntry().lastReadChapterId || "") : "",
+            choices: root._versionChoices()
+        }
+    )
+    readonly property int chapterCount: chapterGroups.length
+
+    // Choices made for titles that are not in the library yet: no entry to
+    // persist them to, so they live until the panel shows another series.
+    property var _sessionVersions: ({})
+
+    function _versionChoices() {
+        var entry = root.visibleEntry()
+        var stored = entry && entry.versionChoice ? entry.versionChoice : ({})
+        return Object.assign({}, stored, root._sessionVersions)
+    }
+
+    // Remember "this chapter, read this upload" per series (E8: the picker).
+    function setChapterVersion(chapter, versionId) {
+        var key = String(chapter || "")
+        if (key === "" || !versionId) return
+        var entryId = root.libraryEntryId()
+        if (entryId !== "") {
+            root.libraryList = root.libraryList.map(function(e) {
+                if (e.id !== entryId) return e
+                var choices = Object.assign({}, e.versionChoice || {})
+                choices[key] = versionId
+                return Object.assign({}, e, { versionChoice: choices })
+            })
+            _saveLibrary()
+        }
+        var session = Object.assign({}, root._sessionVersions)
+        session[key] = versionId
+        root._sessionVersions = session
+    }
+
     readonly property bool hasPrevChapter:
-        Chapters.adjacentChapter(currentManga ? currentManga.chapters : [], currentChapterId, -1) !== null
+        Chapters.adjacentGroup(root.chapterGroups, root.currentChapterId, -1) !== null
     readonly property bool hasNextChapter:
-        Chapters.adjacentChapter(currentManga ? currentManga.chapters : [], currentChapterId, 1) !== null
+        Chapters.adjacentGroup(root.chapterGroups, root.currentChapterId, 1) !== null
 
     // ── Favorites ────────────────────────────────────────────────────────────
     property list<var> favoritesList: []
@@ -529,6 +573,7 @@ Singleton {
     }
 
     function _parseMangaDetail(json) {
+        root._sessionVersions = ({})
         try {
             const data = JSON.parse(json)
             if (data.error) {
@@ -571,19 +616,22 @@ Singleton {
         if (!ch || !ch.id || isFetchingPages) return false
         fetchChapterPages(ch.id)
         if (currentManga && isInLibrary(libraryWriteKey())) {
-            updateLastRead(libraryWriteKey(), ch.id, ch.chapter)
+            // Progress belongs to the chapter, not to the upload: the picker
+            // can switch versions without "Last: Ch. 1.1" ever existing again.
+            updateLastRead(libraryWriteKey(), ch.id,
+                           Chapters.canonicalNumber(root.chapterGroups, ch.chapter))
         }
         return true
     }
 
     function openPrevChapter() {
-        const ch = Chapters.adjacentChapter(currentManga ? currentManga.chapters : [], currentChapterId, -1)
-        return ch ? openChapter(ch) : false
+        const group = Chapters.adjacentGroup(root.chapterGroups, root.currentChapterId, -1)
+        return group ? openChapter(group.primary) : false
     }
 
     function openNextChapter() {
-        const ch = Chapters.adjacentChapter(currentManga ? currentManga.chapters : [], currentChapterId, 1)
-        return ch ? openChapter(ch) : false
+        const group = Chapters.adjacentGroup(root.chapterGroups, root.currentChapterId, 1)
+        return group ? openChapter(group.primary) : false
     }
 
     function fetchChapterPages(chapterId) {
@@ -708,6 +756,13 @@ Singleton {
 
     function chapterDownloadState(chapterId) {
         return DownloadsJs.chapterState(chapterId, root.downloadedChapterIndex, root.downloadJobs)
+    }
+
+    // One row, many uploads: downloaded when any version is complete, and the
+    // running job is shown while a version downloads.
+    function chapterGroupDownloadState(group) {
+        return DownloadsJs.groupState(group ? group.versions : [],
+                                      root.downloadedChapterIndex, root.downloadJobs)
     }
 
     function _setDownloadJob(chapterId, job) {

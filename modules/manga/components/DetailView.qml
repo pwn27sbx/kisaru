@@ -157,33 +157,95 @@ Item {
 
     function _applyPendingJump() {
         if (detailView._pendingJumpNum === "") return
-        const index = Chapters.chapterIndex(detailView._processedChapters, detailView._pendingJumpNum)
+        // A stored "2.1" belongs to the grouped "2" row.
+        const number = Chapters.canonicalNumber(Manga.chapterGroups, detailView._pendingJumpNum)
+        const index = Chapters.chapterIndex(detailView._processedGroups, number)
         if (index < 0) return          // still loading: onCountChanged retries
         detailView._pendingJumpNum = ""
         chapterList.positionViewAtIndex(index, ListView.Beginning)
     }
 
     // ── Processed (filtered + sorted) chapter list ────────────────────────────
-    readonly property var _processedChapters: {
+    // One row per chapter, not per upload: a re-uploaded "1.1" lives inside
+    // the "1" row behind the version picker (services/chapters.js).
+    readonly property var _processedGroups: {
         if (!Manga.currentManga) return []
-        let chapters = Manga.currentManga.chapters.slice()
+        let groups = Manga.chapterGroups.slice()
 
         if (detailView._chapterFilter.trim() !== "") {
             const f = detailView._chapterFilter.trim().toLowerCase()
-            chapters = chapters.filter(ch => {
-                const num   = detailView.formatChapter(ch.chapter).toLowerCase()
-                const title = (ch.title || "").toLowerCase()
-                return num.includes(f) || title.includes(f)
+            groups = groups.filter(group => {
+                if (detailView.formatChapter(group.chapter).toLowerCase().includes(f)) return true
+                return group.versions.some(v =>
+                    detailView.formatChapter(v.chapter).toLowerCase().includes(f)
+                    || (v.title || "").toLowerCase().includes(f)
+                    || (v.group || "").toLowerCase().includes(f))
             })
         }
 
-        chapters.sort((a, b) => {
+        groups.sort((a, b) => {
             const numA = parseFloat(detailView.formatChapter(a.chapter)) || 0
             const numB = parseFloat(detailView.formatChapter(b.chapter)) || 0
             return detailView._sortAscending ? numA - numB : numB - numA
         })
 
-        return chapters
+        return groups
+    }
+
+    // ── Version picker ────────────────────────────────────────────────────────
+    property var _pickerGroup: null
+
+    function openVersions(group) {
+        if (!group || group.versions.length < 2) return
+        detailView._pickerGroup = group
+        versionPicker.rows = detailView.versionRows(group)
+        versionPicker.currentId = group.primary.id
+        versionPicker.opened = true
+    }
+
+    // Rows the picker draws: the source number with its own date (owner,
+    // 2026-11-27: "Capítulo 1.1 · 21/04/2026"), the group when the source
+    // names one, and the download state of that exact upload.
+    function versionRows(group) {
+        const rows = []
+        for (let i = 0; i < group.versions.length; i++) {
+            const version = group.versions[i]
+            const state = Manga.chapterDownloadState(version.id)
+            rows.push({
+                id:     version.id,
+                number: version.chapter,
+                group:  version.group || "",
+                date:   Chapters.chapterDateLabel(version.publishAt),
+                state:  state.kind,
+                done:   state.done,
+                total:  state.total
+            })
+        }
+        return rows
+    }
+
+    function chooseVersion(versionId) {
+        const group = detailView._pickerGroup
+        if (!group) return
+        for (let i = 0; i < group.versions.length; i++) {
+            const version = group.versions[i]
+            if (version.id !== versionId) continue
+            Manga.setChapterVersion(group.chapter, version.id)
+            if (Manga.openChapter(version)) detailView.chapterSelected(version.id)
+            return
+        }
+    }
+
+    function downloadVersion(versionId) {
+        const group = detailView._pickerGroup
+        if (!group) return
+        for (let i = 0; i < group.versions.length; i++) {
+            if (group.versions[i].id === versionId) {
+                Manga.startDownload(group.versions[i])
+                versionPicker.rows = detailView.versionRows(group)
+                return
+            }
+        }
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -472,7 +534,7 @@ Item {
                 anchors { fill: parent; leftMargin: Style.space(16); rightMargin: Style.space(16) }
 
                 StyledText {
-                    text: Manga.currentManga ? KisaruI18n.tn("count.chapter", Manga.currentManga.chapters.length) : ""
+                    text: Manga.currentManga ? KisaruI18n.tn("count.chapter", Manga.chapterCount) : ""
                     font.family: detailView.fontBody
                     font.pixelSize: Style.font.bodySmall; font.letterSpacing: 1
                     color: Colors.on_surface_variant; opacity: 0.75
@@ -696,7 +758,7 @@ Item {
                 anchors.leftMargin: Gutter.left
                 anchors.rightMargin: Gutter.right
                 boundsBehavior: Flickable.StopAtBounds
-                model: detailView._processedChapters   // ← filtered + sorted
+                model: detailView._processedGroups   // ← filtered + sorted
 
                 // The model arrives after the click that asked for a jump.
                 onCountChanged: detailView._applyPendingJump()
@@ -706,16 +768,23 @@ Item {
                     id: chapterRowAreaRect
                     width: chapterList.width; height: 58
 
+                    // One row per chapter: `_group` is the chapter and
+                    // `_version` the upload it opens by default.
+                    readonly property var _group: modelData
+                    readonly property var _version: modelData.primary
+                    readonly property bool _hasVersions: modelData.versions.length > 1
                     readonly property var _libEntry: Manga.visibleEntry()
                     readonly property bool isLastRead:
                         _libEntry !== null && _libEntry !== undefined
-                        && (_libEntry.lastReadChapterId === modelData.id
-                            || Chapters.sameChapter(modelData.chapter, _libEntry.lastReadChapterNum))
+                        && (_libEntry.lastReadChapterId === _version.id
+                            || Chapters.sameChapter(_group.chapter,
+                                 Chapters.canonicalNumber(Manga.chapterGroups,
+                                                          _libEntry.lastReadChapterNum)))
                     readonly property bool _hideDownloads:
                         Privacy.locked && Manga.isHiddenLibraryEntry(Manga.libraryEntryId())
                     readonly property var _dlState: _hideDownloads
                         ? ({ kind: "idle", done: 0, total: 0, error: "" })
-                        : Manga.chapterDownloadState(modelData.id)
+                        : Manga.chapterGroupDownloadState(_group)
 
                     color: isLastRead
                         ? Style.selectedFillFor(Colors.primary)
@@ -745,7 +814,7 @@ Item {
 
                             StyledText {
                                 id: chapterPillText; anchors.centerIn: parent
-                                text: KisaruI18n.t("ch", { 1: detailView.formatChapter(modelData.chapter) })
+                                text: KisaruI18n.t("ch", { 1: detailView.formatChapter(chapterRowAreaRect._group.chapter) })
                                 font.family: detailView.fontBody
                                 font.pixelSize: 9; font.bold: true; font.letterSpacing: 0.5 // style-ignore — bespoke size
                                 color: isLastRead ? Colors.on_primary : Colors.on_primary_container
@@ -757,15 +826,57 @@ Item {
 
                             Text {
                                 width: parent.width
-                                text: modelData.title || KisaruI18n.t("chapter", { 1: detailView.formatChapter(modelData.chapter) })
+                                text: chapterRowAreaRect._version.title
+                                    || KisaruI18n.t("chapter", { 1: detailView.formatChapter(chapterRowAreaRect._version.chapter) })
                                 font.family: detailView.fontBody
                                 font.pixelSize: Style.font.body; color: Colors.on_surface; elide: Text.ElideRight
                             }
+                            // With versions the line names the upload that will
+                            // open: its own number and its day-first date.
                             Text {
-                                text: detailView.formatDate(modelData.publishAt)
+                                text: chapterRowAreaRect._hasVersions
+                                    ? KisaruI18n.t("chapter", { 1: detailView.formatChapter(chapterRowAreaRect._version.chapter) })
+                                      + (Chapters.chapterDateLabel(chapterRowAreaRect._version.publishAt) !== ""
+                                          ? " · " + Chapters.chapterDateLabel(chapterRowAreaRect._version.publishAt)
+                                          : "")
+                                    : detailView.formatDate(chapterRowAreaRect._version.publishAt)
                                 font.family: detailView.fontBody
                                 font.pixelSize: Style.font.caption; color: Colors.on_surface_variant
                                 opacity: 0.55; font.letterSpacing: 0.3
+                                elide: Text.ElideRight
+                                width: parent.width
+                            }
+                        }
+
+                        // Versions chip: only when the source listed the same
+                        // chapter twice. Opens the picker for this row.
+                        ClickableRect {
+                            visible: chapterRowAreaRect._hasVersions
+                            width: versionChipLabel.implicitWidth + 2 * Style.spacing.xs
+                            height: Style.space(22)
+                            radius: Style.cornerRadius
+                            color: versionChipArea.containsMouse
+                                ? Colors.surface_container_high
+                                : Colors.withAlpha(Colors.primary, 0.12)
+
+                            StyledText {
+                                id: versionChipLabel
+                                anchors.centerIn: parent
+                                text: KisaruI18n.tn("versions.count", chapterRowAreaRect._group.versions.length)
+                                font.family: detailView.fontBody
+                                font.pixelSize: Style.font.caption
+                                font.bold: true
+                                color: Colors.primary
+                            }
+                            MouseArea {
+                                id: versionChipArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: function(mouse) {
+                                    mouse.accepted = true
+                                    detailView.openVersions(chapterRowAreaRect._group)
+                                }
                             }
                         }
 
@@ -840,7 +951,7 @@ Item {
                                 onClicked: function(mouse) {
                                     mouse.accepted = true
                                     if ((dlControl.kind === "idle" || dlControl.kind === "error") && !dlControl.busyOther)
-                                        Manga.startDownload(modelData)
+                                        Manga.startDownload(chapterRowAreaRect._version)
                                 }
 
                                 ToolTip.visible: containsMouse
@@ -870,8 +981,8 @@ Item {
                     }
 
                     onClicked: {
-                        if (Manga.openChapter(modelData))
-                            detailView.chapterSelected(modelData.id)
+                        if (Manga.openChapter(chapterRowAreaRect._version))
+                            detailView.chapterSelected(chapterRowAreaRect._version.id)
                     }
                 }
             }
@@ -898,6 +1009,14 @@ Item {
         bodyFont: detailView.fontBody
         onChosen: function(folderId) { Manga.setFolder(Manga.libraryEntryId(), folderId) }
         onCreateRequested: folderPrompt.openText(KisaruI18n.t("folder.create"), "")
+    }
+
+    VersionPicker {
+        id: versionPicker
+        anchors.fill: parent
+        bodyFont: detailView.fontBody
+        onChosen: function(versionId) { detailView.chooseVersion(versionId) }
+        onDownloadRequested: function(versionId) { detailView.downloadVersion(versionId) }
     }
 
     FolderPrompt {

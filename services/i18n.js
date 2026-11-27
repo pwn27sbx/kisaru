@@ -98,6 +98,8 @@ var tables = {
         "words": "%1 mil palabras",
         "count.episode": { one: "%1 episodio", other: "%1 episodios" },
         "count.chapter": { one: "%1 capítulo", other: "%1 capítulos" },
+        "versions.title": "Versiones",
+        "versions.count": { one: "%1 versión", other: "%1 versiones" },
 
         // ── List controls (shared) ──────────────────────────────────────
         "filterChapters": "Filtrar capítulos…",
@@ -247,6 +249,8 @@ var tables = {
         "words": "%1k words",
         "count.episode": { one: "%1 episode", other: "%1 episodes" },
         "count.chapter": { one: "%1 chapter", other: "%1 chapters" },
+        "versions.title": "Versions",
+        "versions.count": { one: "%1 version", other: "%1 versions" },
 
         // ── List controls (shared) ──────────────────────────────────────
         "filterChapters": "Filter chapters…",
