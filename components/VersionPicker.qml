@@ -206,7 +206,7 @@ Item {
                         id: wholeSeriesRow
                         width: list.width
                         height: Math.max(Style.space(26), wholeSeriesLabel.implicitHeight + Style.spacing.xs)
-                        color: hovered ? Colors.surface_container : "transparent"
+                        color: hovered ? Colors.surface_container : Colors.clear(Colors.surface_container)
 
                         Row {
                             anchors {
@@ -222,7 +222,7 @@ Item {
                                 radius: Style.spacing.hairline
                                 border.color: root.wholeSeries ? Colors.primary : Colors.outline_variant
                                 border.width: Style.spacing.hairline
-                                color: root.wholeSeries ? Colors.primary : "transparent"
+                                color: root.wholeSeries ? Colors.primary : Colors.clear(Colors.primary)
 
                                 StyledText {
                                     anchors.centerIn: parent
