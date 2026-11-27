@@ -200,6 +200,7 @@ Item {
         detailView._pickerGroup = group
         versionPicker.rows = detailView.versionRows(group)
         versionPicker.currentId = group.primary.id
+        versionPicker.wholeSeries = false
         versionPicker.opened = true
     }
 
@@ -222,7 +223,10 @@ Item {
         if (!group) return
         const version = Chapters.pickVersion(group, versionId)
         if (!version) return
-        Manga.setChapterVersion(group.chapter, version.id)
+        // "Use this version for the whole series" stores the upload batch; the
+        // plain choice stays per chapter.
+        if (versionPicker.wholeSeries) Manga.setSeriesVersion(group.chapter, version.id)
+        else Manga.setChapterVersion(group.chapter, version.id)
         if (Manga.openChapter(version)) detailView.chapterSelected(version.id)
     }
 

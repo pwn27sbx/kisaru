@@ -52,15 +52,18 @@ function parseChapterDate(value) {
     return date;
 }
 
-// "09/04/2026" for every format we can read, "" otherwise. The raw day-first
-// string is what the owner reads on the site, so the picker shows it as-is.
-function chapterDateLabel(value) {
-    var date = parseChapterDate(value);
-    if (date === null) return "";
+function _dayLabel(date) {
     var day = String(date.getDate());
     var month = String(date.getMonth() + 1);
     return (day.length < 2 ? "0" + day : day) + "/" +
            (month.length < 2 ? "0" + month : month) + "/" + date.getFullYear();
+}
+
+// "09/04/2026" for every format we can read, "" otherwise. The raw day-first
+// string is what the owner reads on the site, so the picker shows it as-is.
+function chapterDateLabel(value) {
+    var date = parseChapterDate(value);
+    return date === null ? "" : _dayLabel(date);
 }
 
 // One chapter row as the UI wants it. Every source fills what it has; `group`
@@ -163,7 +166,7 @@ function _generationFamilies(byKey, order) {
     // One generation = candidates chained by upload date, each within a week
     // of the previous one.
     facts.sort(function(a, b) { return a.date - b.date; });
-    var families = Object.create(null);
+    var families = Object.create(null);   // candidate key -> {base, generation}
     var cluster = [facts[0]];
     function close(family) {
         if (family.length < MIN_GENERATION) return;
@@ -181,7 +184,12 @@ function _generationFamilies(byKey, order) {
             // not from a later one, so they are not a re-upload generation.
             if (minCandidate <= maxBase && maxCandidate >= minBase) return;
         }
-        for (var c = 0; c < family.length; c++) families[family[c].key] = family[c].base;
+        // One cluster is one upload batch: every candidate of the batch shares
+        // this key, which is what "use this version for the whole series" stores.
+        var generation = "reupload:" + _dayLabel(new Date(family[0].date));
+        for (var c = 0; c < family.length; c++) {
+            families[family[c].key] = { base: family[c].base, generation: generation };
+        }
     }
     for (var f = 1; f < facts.length; f++) {
         if (facts[f].date - cluster[cluster.length - 1].date <= GENERATION_WINDOW_MS) {
@@ -199,16 +207,24 @@ function _generationFamilies(byKey, order) {
 // the picker, then the newest upload, then the last row in source order.
 function _primaryVersion(versions, chapter, preferences) {
     var prefs = preferences || {};
-    if (prefs.lastReadId) {
-        for (var a = 0; a < versions.length; a++) {
-            if (versions[a].id === prefs.lastReadId) return versions[a];
-        }
-    }
+    // What the user asked for wins: the chapter's own pick, then the version
+    // chosen for the whole series. Last read only decides when nobody asked.
     var choices = prefs.choices || {};
     var chosen = Object.prototype.hasOwnProperty.call(choices, chapter) ? choices[chapter] : "";
     if (chosen) {
         for (var b = 0; b < versions.length; b++) {
             if (versions[b].id === chosen) return versions[b];
+        }
+    }
+    var series = _chapterText(prefs.seriesGeneration);
+    if (series) {
+        for (var s = 0; s < versions.length; s++) {
+            if (versions[s].generation === series) return versions[s];
+        }
+    }
+    if (prefs.lastReadId) {
+        for (var a = 0; a < versions.length; a++) {
+            if (versions[a].id === prefs.lastReadId) return versions[a];
         }
     }
     var newest = versions[versions.length - 1];
@@ -248,9 +264,11 @@ function groupChapters(chapters, preferences) {
     for (var g = 0; g < order.length; g++) {
         var chapter = order[g];
         if (families[chapter]) continue;    // attached to its base below
-        var versions = byKey[chapter].slice();
+        var versions = _withGeneration(byKey[chapter], "");
         for (var h = 0; h < order.length; h++) {
-            if (families[order[h]] === chapter) versions.push(byKey[order[h]][0]);
+            var family = families[order[h]];
+            if (!family || family.base !== chapter) continue;
+            versions.push(_withGeneration([byKey[order[h]][0]], family.generation)[0]);
         }
         if (versions.length > 1) {
             versions.sort(function(a, b) {
@@ -267,6 +285,32 @@ function groupChapters(chapters, preferences) {
         });
     }
     return groups;
+}
+
+// A version copy carrying the upload batch it belongs to. A chapter listed
+// once by MangaDex keeps its scanlator, so "read group B for the whole series"
+// is expressible too.
+function _withGeneration(entries, generation) {
+    var out = [];
+    for (var i = 0; i < entries.length; i++) {
+        var entry = entries[i] || {};
+        var copy = Object.assign({}, entry);
+        var key = _chapterText(generation);
+        if (key === "") {
+            var group = _chapterText(entry.group);
+            key = group ? "group:" + group : "original";
+        }
+        copy.generation = key;
+        out.push(copy);
+    }
+    return out;
+}
+
+// The generation key stored when the user says "use this version for the whole
+// series", or "" when the version is not there.
+function preferenceFor(group, versionId) {
+    var version = pickVersion(group, versionId);
+    return version ? _chapterText(version.generation) : "";
 }
 
 // The upload the user pointed at, or null.
@@ -295,6 +339,7 @@ function versionRows(group, stateFor, hiddenDownloads) {
             id: version.id || "",
             number: _chapterText(version.chapter),
             group: _chapterText(version.group),
+            generation: _chapterText(version.generation),
             date: chapterDateLabel(version.publishAt),
             state: hiddenDownloads ? "idle" : (state.kind || "idle"),
             done: hiddenDownloads ? 0 : (Number(state.done) || 0),
@@ -447,6 +492,7 @@ if (typeof module !== "undefined" && module.exports) {
         groupChapters: groupChapters,
         versionRows: versionRows,
         pickVersion: pickVersion,
+        preferenceFor: preferenceFor,
         canonicalNumber: canonicalNumber,
         adjacentGroup: adjacentGroup,
         sameChapter: sameChapter,

@@ -17,6 +17,7 @@ Item {
     property bool opened: false
     property var rows: []
     property string currentId: ""
+    property bool wholeSeries: false
     property string bodyFont: Style.font.family
 
     signal chosen(string versionId)
@@ -189,6 +190,63 @@ Item {
 
                             onClicked: root._choose(row.modelData.id)
                         }
+                    }
+
+                    Rectangle {
+                        width: list.width
+                        height: 1
+                        color: Colors.outline_variant
+                        opacity: 0.4
+                    }
+
+                    // "Use this version for the whole series" (owner): the
+                    // pick then applies to every chapter that has this upload
+                    // batch, so switching 66 chapters stops being 66 actions.
+                    ClickableRect {
+                        id: wholeSeriesRow
+                        width: list.width
+                        height: Math.max(Style.space(26), wholeSeriesLabel.implicitHeight + Style.spacing.xs)
+                        color: hovered ? Colors.surface_container : "transparent"
+
+                        Row {
+                            anchors {
+                                left: parent.left; right: parent.right
+                                verticalCenter: parent.verticalCenter
+                                leftMargin: Style.spacing.sm; rightMargin: Style.spacing.sm
+                            }
+                            spacing: Style.spacing.xs
+
+                            Rectangle {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: Style.space(12); height: Style.space(12)
+                                radius: Style.spacing.hairline
+                                border.color: root.wholeSeries ? Colors.primary : Colors.outline_variant
+                                border.width: Style.spacing.hairline
+                                color: root.wholeSeries ? Colors.primary : "transparent"
+
+                                StyledText {
+                                    anchors.centerIn: parent
+                                    visible: root.wholeSeries
+                                    text: "✓"
+                                    font.family: root.bodyFont
+                                    font.pixelSize: Style.font.caption
+                                    font.bold: true
+                                    color: Colors.on_primary
+                                }
+                            }
+
+                            StyledText {
+                                id: wholeSeriesLabel
+                                width: parent.width - Style.space(18)
+                                text: KisaruI18n.t("versions.wholeSeries")
+                                font.family: root.bodyFont
+                                font.pixelSize: Style.font.caption
+                                color: Colors.on_surface
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+
+                        onClicked: root.wholeSeries = !root.wholeSeries
                     }
                 }
             }

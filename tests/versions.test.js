@@ -317,7 +317,7 @@ test("versionRows names each upload with its own number, date and state", () => 
     });
     assert.equal(rows.length, 2);
     assert.deepEqual(rows[0], {
-        id: "old-1", number: "1", group: "", date: "09/04/2026",
+        id: "old-1", number: "1", group: "", generation: "original", date: "09/04/2026",
         state: "idle", done: 0, total: 0, downloadsVisible: true
     });
     assert.equal(rows[1].number, "1.1");
@@ -353,4 +353,90 @@ test("grouping survives a chapter label that collides with Object.prototype", ()
     ];
     const groups = chapters.groupChapters(list);
     assert.deepEqual(numbers(groups), ["constructor", "toString", "hasOwnProperty"]);
+});
+
+// ── Series preference ("use this version for the whole series") ─────────────
+//
+// Owner, 2026-11-27: switching 66 chapters one by one is not acceptable. The
+// picker can apply one upload generation to every chapter of the series; an
+// explicit per-chapter choice still wins, and a chapter without that
+// generation keeps its default.
+
+test("a series preference picks the same generation in every chapter", () => {
+    const list = generation(4);
+    const base = chapters.groupChapters(list);
+
+    const reupload = chapters.preferenceFor(base[2], "new-3");
+    assert.equal(reupload, "reupload:21/04/2026");
+
+    const byReupload = chapters.groupChapters(list, { seriesGeneration: reupload });
+    for (const group of byReupload) {
+        assert.equal(group.primary.id.slice(0, 4), "new-", group.chapter + " takes the re-upload");
+    }
+
+    const original = chapters.preferenceFor(base[2], "old-3");
+    assert.equal(original, "original");
+    const byOriginal = chapters.groupChapters(list, { seriesGeneration: original });
+    for (const group of byOriginal) {
+        assert.equal(group.primary.id.slice(0, 4), "old-", group.chapter + " takes the original");
+    }
+});
+
+test("an explicit per-chapter choice beats the series preference", () => {
+    const list = generation(4);
+    const base = chapters.groupChapters(list);
+    const reupload = chapters.preferenceFor(base[2], "new-3");
+
+    const groups = chapters.groupChapters(list, {
+        seriesGeneration: reupload,
+        choices: { "2": "old-2" }
+    });
+    assert.equal(groups[1].primary.id, "old-2", "the chapter choice wins");
+    assert.equal(groups[0].primary.id, "new-1");
+    assert.equal(groups[2].primary.id, "new-3");
+});
+
+test("a series preference outranks the last-read upload", () => {
+    const list = generation(4);
+    const groups = chapters.groupChapters(list, {
+        seriesGeneration: "original",
+        lastReadId: "new-1"
+    });
+    assert.equal(groups[0].primary.id, "old-1",
+        "asking for a version for the whole series is stronger than the last read");
+});
+
+test("a chapter without that generation keeps its default", () => {
+    const list = generation(4);
+    list.push(chapter("5", "old-5", ORIGINAL_DAY));
+    const groups = chapters.groupChapters(list, { seriesGeneration: "reupload:21/04/2026" });
+    const five = groups.find(group => group.chapter === "5");
+    assert.equal(five.versions.length, 1);
+    assert.equal(five.primary.id, "old-5");
+});
+
+test("groups of the same number from different groups carry their scanlator", () => {
+    const list = [
+        chapter("12", "mangadex:a", ORIGINAL_DAY, { group: "Grupo A" }),
+        chapter("12", "mangadex:b", REUPLOAD_DAY, { group: "Grupo B" })
+    ];
+    const groups = chapters.groupChapters(list);
+    assert.equal(chapters.preferenceFor(groups[0], "mangadex:b"), "group:Grupo B");
+    assert.equal(chapters.preferenceFor(groups[0], "mangadex:a"), "group:Grupo A");
+
+    const byGroup = chapters.groupChapters(list, { seriesGeneration: "group:Grupo B" });
+    assert.equal(byGroup[0].primary.id, "mangadex:b");
+});
+
+test("preferenceFor returns an empty key for an unknown version", () => {
+    const groups = chapters.groupChapters(generation(4));
+    assert.equal(chapters.preferenceFor(groups[0], "missing"), "");
+    assert.equal(chapters.preferenceFor(null, "new-1"), "");
+});
+
+test("versionRows carries the generation the picker applies to the series", () => {
+    const group = chapters.groupChapters(generation(4))[0];
+    const rows = chapters.versionRows(group, function() { return null; });
+    assert.equal(rows[0].generation, "original");
+    assert.equal(rows[1].generation, "reupload:21/04/2026");
 });

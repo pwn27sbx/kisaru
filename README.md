@@ -298,6 +298,12 @@ El contador cuenta capítulos, «Siguiente» y «Anterior» nunca saltan a un he
 progreso es del capítulo aunque cambies de versión. Las descargas siguen siendo por versión:
 cada subida es su propia descarga en disco y nada se mueve ni se borra al agrupar.
 
+Cambiar la versión de toda la serie es una sola acción: en el selector, «Usar esta versión
+para toda la serie» aplica la misma tanda de subida a cada capítulo que la tenga y se
+recuerda por serie (los títulos fuera de la biblioteca, mientras dure el panel). Las
+elecciones hechas capítulo por capítulo siguen ganando, y un capítulo sin esa tanda —67 a
+71 en el ejemplo— conserva su versión por defecto.
+
 ## Cómo se ve
 
 Los tres paneles comparten una sola capa de componentes (`components/`, `services/`): un

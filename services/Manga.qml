@@ -76,7 +76,8 @@ Singleton {
         currentManga ? currentManga.chapters : [],
         {
             lastReadId: root.visibleEntry() ? (root.visibleEntry().lastReadChapterId || "") : "",
-            choices: root._versionChoices()
+            choices: root._versionChoices(),
+            seriesGeneration: root._seriesGeneration()
         }
     )
     readonly property int chapterCount: chapterGroups.length
@@ -89,6 +90,37 @@ Singleton {
         var entry = root.visibleEntry()
         var stored = entry && entry.versionChoice ? entry.versionChoice : ({})
         return Object.assign({}, stored, root._sessionVersions)
+    }
+
+    // "Use this version for the whole series" (owner, 2026-11-27). The store is
+    // the upload batch, not the chapter, so one action covers every chapter of
+    // the generation; a chapter's own pick still wins in groupChapters().
+    property string _sessionSeriesVersion: ""
+
+    function _seriesGeneration() {
+        if (root._sessionSeriesVersion !== "") return root._sessionSeriesVersion
+        var entry = root.visibleEntry()
+        var preference = entry && entry.versionPreference ? entry.versionPreference : null
+        return preference ? (preference.generation || "") : ""
+    }
+
+    function setSeriesVersion(chapter, versionId) {
+        var groups = root.chapterGroups
+        var group = null
+        for (var i = 0; i < groups.length; i++) {
+            if (groups[i].chapter === chapter) { group = groups[i]; break }
+        }
+        var generation = Chapters.preferenceFor(group, versionId)
+        if (generation === "") return
+        var entryId = root.libraryEntryId()
+        if (entryId !== "") {
+            root.libraryList = root.libraryList.map(function(e) {
+                if (e.id !== entryId) return e
+                return Object.assign({}, e, { versionPreference: { generation: generation } })
+            })
+            _saveLibrary()
+        }
+        root._sessionSeriesVersion = generation
     }
 
     // Remember "this chapter, read this upload" per series (E8: the picker).
@@ -574,6 +606,7 @@ Singleton {
 
     function _parseMangaDetail(json) {
         root._sessionVersions = ({})
+        root._sessionSeriesVersion = ""
         try {
             const data = JSON.parse(json)
             if (data.error) {
