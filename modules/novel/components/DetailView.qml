@@ -219,7 +219,7 @@ Item {
                     width: 44; height: 44
                     Rectangle {
                         anchors.centerIn: parent; width: 34; height: 34; radius: Style.cornerRadius
-                        color: backArea.containsMouse ? Colors.surface_container : "transparent"
+                        color: backArea.containsMouse ? Colors.surface_container : Colors.clear(Colors.surface_container)
                         Behavior on color { ColorAnimation { duration: Motion.base } }
                     }
                     Text { anchors.centerIn: parent; text: "←"; font.pixelSize: Style.font.iconLarge; color: Colors.on_surface_variant }
@@ -588,7 +588,7 @@ Item {
                                 anchors.centerIn: parent; width: 22; height: 22; radius: Style.cornerRadius
                                 color: clearArea.containsMouse
                                     ? Style.hoverFillFor(Colors.on_surface)
-                                    : "transparent"
+                                    : Colors.clear(Style.hoverFillFor(Colors.on_surface))
                                 Behavior on color { ColorAnimation { duration: Motion.fast } }
                             }
                             Text {
@@ -716,7 +716,7 @@ Item {
                     color: isLastRead
                         ? Style.selectedFillFor(Colors.primary)
                         : (rowAreaRect.pressed ? Colors.surface_container_high
-                            : (rowAreaRect.hovered ? Colors.surface_container : "transparent"))
+                            : (rowAreaRect.hovered ? Colors.surface_container : Colors.clear(Colors.surface_container)))
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                     Rectangle {

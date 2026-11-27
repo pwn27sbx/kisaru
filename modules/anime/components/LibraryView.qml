@@ -176,7 +176,7 @@ Item {
             ClickableRect {
                 Layout.preferredWidth: Style.space(28)
                 Layout.preferredHeight: Style.space(28)
-                color: hovered ? Colors.surface_container_high : "transparent"
+                color: hovered ? Colors.surface_container_high : Colors.clear(Colors.surface_container_high)
                 radius: Style.cornerRadius
                 StyledText {
                     anchors.centerIn: parent

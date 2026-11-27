@@ -91,7 +91,8 @@ Item {
                         width: list.width
                         height: Style.space(26)
                         color: root.current === ""
-                            ? Colors.primary : (hovered ? Colors.surface_container : "transparent")
+                            ? Colors.primary
+                            : (hovered ? Colors.surface_container : Colors.clear(Colors.surface_container))
 
                         StyledText {
                             anchors {
@@ -115,7 +116,8 @@ Item {
                             width: list.width
                             height: Style.space(26)
                             color: root.current === modelData.id
-                                ? Colors.primary : (hovered ? Colors.surface_container : "transparent")
+                                ? Colors.primary
+                                : (hovered ? Colors.surface_container : Colors.clear(Colors.surface_container))
 
                             StyledText {
                                 anchors {
@@ -145,7 +147,7 @@ Item {
                     ClickableRect {
                         width: list.width
                         height: Style.space(26)
-                        color: hovered ? Colors.surface_container : "transparent"
+                        color: hovered ? Colors.surface_container : Colors.clear(Colors.surface_container)
 
                         Row {
                             anchors {

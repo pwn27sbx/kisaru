@@ -267,7 +267,7 @@ Item {
                     Rectangle {
                         anchors.centerIn: parent
                         width: 34; height: 34; radius: Style.cornerRadius
-                        color: backArea.containsMouse ? Colors.surface_container : "transparent"
+                        color: backArea.containsMouse ? Colors.surface_container : Colors.clear(Colors.surface_container)
                         Behavior on color { ColorAnimation { duration: Motion.base } }
                     }
                     Text {
@@ -675,7 +675,7 @@ Item {
                                 width: 22; height: 22; radius: Style.cornerRadius
                                 color: clearArea.containsMouse
                                     ? Style.hoverFillFor(Colors.on_surface)
-                                    : "transparent"
+                                    : Colors.clear(Style.hoverFillFor(Colors.on_surface))
                                 Behavior on color { ColorAnimation { duration: Motion.fast } }
                             }
                             StyledText {
@@ -781,7 +781,7 @@ Item {
                         ? Style.selectedFillFor(Colors.primary)
                         : (chapterRowAreaRect.pressed
                             ? Colors.surface_container_high
-                            : (chapterRowAreaRect.hovered ? Colors.surface_container : "transparent"))
+                            : (chapterRowAreaRect.hovered ? Colors.surface_container : Colors.clear(Colors.surface_container)))
                     Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                     Rectangle {
@@ -893,7 +893,7 @@ Item {
                                     : (dlControl.kind === "error"
                                         ? Colors.withAlpha(Colors.error, 0.14)
                                         : (dlArea.containsMouse && !dlControl.busyOther
-                                            ? Colors.surface_container_high : "transparent"))
+                                            ? Colors.surface_container_high : Colors.clear(Colors.surface_container_high)))
                                 Behavior on color { ColorAnimation { duration: Motion.fast } }
                             }
 

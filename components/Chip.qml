@@ -39,7 +39,7 @@ ClickableRect {
             ? Style.pressedFillFor(chip._fillBase, Colors.primary)
             : chip._style.fill === HeaderCell.FILL.HOVER
                 ? Style.hoverFillFor(chip._fillBase, Colors.primary)
-                : "transparent"
+                : Colors.clear(Style.hoverFillFor(chip._fillBase, Colors.primary))
     // No border: the solid fill is the selected state (owner, round 6).
     border.width: 0
     Behavior on color { ColorAnimation { duration: Motion.fast } }

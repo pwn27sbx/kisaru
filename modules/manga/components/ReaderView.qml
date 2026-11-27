@@ -83,7 +83,7 @@ Item {
                     width: 34; height: 34; radius: Style.cornerRadius
                     color: readerBackArea.containsMouse
                         ? Util.alpha(Colors.text, 0.1)
-                        : "transparent"
+                        : Colors.clear(Util.alpha(Colors.text, 0.1))
                     Behavior on color { ColorAnimation { duration: Motion.base } }
                 }
                 StyledText {

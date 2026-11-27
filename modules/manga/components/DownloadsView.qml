@@ -54,7 +54,7 @@ Item {
                     Rectangle {
                         anchors.centerIn: parent
                         width: Style.space(34); height: Style.space(34); radius: Style.cornerRadius
-                        color: backArea.containsMouse ? Colors.surface_container : "transparent"
+                        color: backArea.containsMouse ? Colors.surface_container : Colors.clear(Colors.surface_container)
                         Behavior on color { ColorAnimation { duration: Motion.base } }
                     }
                     StyledText {
@@ -230,7 +230,7 @@ Item {
                             radius: Style.cornerRadius
                             color: dlChapterRow.pressed
                                 ? Colors.surface_container_high
-                                : (dlChapterRow.hovered ? Colors.surface_container_low : "transparent")
+                                : (dlChapterRow.hovered ? Colors.surface_container_low : Colors.clear(Colors.surface_container_low))
                             Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                             RowLayout {
@@ -292,7 +292,7 @@ Item {
                                         radius: Style.cornerRadius
                                         color: delArea.containsMouse
                                             ? Colors.withAlpha(Colors.error, 0.15)
-                                            : "transparent"
+                                            : Colors.clear(Colors.withAlpha(Colors.error, 0.15))
                                         Behavior on color { ColorAnimation { duration: Motion.fast } }
                                     }
 
