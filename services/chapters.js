@@ -127,10 +127,10 @@ function _dateOf(entry) {
 
 // Integer base chapter -> keys of its ".1" candidates, plus the facts that
 // decide whether they form a generation.
-function _generationFamilies(list, byKey, order) {
+function _generationFamilies(byKey, order) {
     var bases = order.filter(function(key) { return _isIntegerText(key); });
     var integerCount = bases.length;
-    if (integerCount === 0) return {};
+    if (integerCount === 0) return Object.create(null);
 
     var baseDates = {};
     var baseIds = [];
@@ -158,12 +158,12 @@ function _generationFamilies(list, byKey, order) {
         if (date === null || date.getTime() <= baseDates[baseKey]) continue;
         facts.push({ key: key, base: baseKey, date: date.getTime(), id: entry.id });
     }
-    if (facts.length < MIN_GENERATION) return {};
+    if (facts.length < MIN_GENERATION) return Object.create(null);
 
     // One generation = candidates chained by upload date, each within a week
     // of the previous one.
     facts.sort(function(a, b) { return a.date - b.date; });
-    var families = {};
+    var families = Object.create(null);
     var cluster = [facts[0]];
     function close(family) {
         if (family.length < MIN_GENERATION) return;
@@ -205,7 +205,7 @@ function _primaryVersion(versions, chapter, preferences) {
         }
     }
     var choices = prefs.choices || {};
-    var chosen = choices[chapter];
+    var chosen = Object.prototype.hasOwnProperty.call(choices, chapter) ? choices[chapter] : "";
     if (chosen) {
         for (var b = 0; b < versions.length; b++) {
             if (versions[b].id === chosen) return versions[b];
@@ -228,7 +228,9 @@ function _primaryVersion(versions, chapter, preferences) {
 // every chapter the source listed once, so consumers need no special case.
 function groupChapters(chapters, preferences) {
     var list = Array.isArray(chapters) ? chapters : [];
-    var byKey = {};
+    // A source label is untrusted text: "constructor" or "toString" would hit
+    // Object.prototype and throw on push, blanking the whole list.
+    var byKey = Object.create(null);
     var order = [];
     for (var i = 0; i < list.length; i++) {
         var entry = list[i];
@@ -241,7 +243,7 @@ function groupChapters(chapters, preferences) {
         byKey[key].push(entry);
     }
 
-    var families = _generationFamilies(list, byKey, order);
+    var families = _generationFamilies(byKey, order);
     var groups = [];
     for (var g = 0; g < order.length; g++) {
         var chapter = order[g];
@@ -265,6 +267,42 @@ function groupChapters(chapters, preferences) {
         });
     }
     return groups;
+}
+
+// The upload the user pointed at, or null.
+function pickVersion(group, versionId) {
+    var versions = (group && group.versions) || [];
+    for (var i = 0; i < versions.length; i++) {
+        if (versions[i] && versions[i].id === versionId) return versions[i];
+    }
+    return null;
+}
+
+// Rows the version picker draws: the source number with its own day-first
+// date, the group when the source names one, and the state of that exact
+// upload. `hiddenDownloads` masks every state while the entry hides behind the
+// private mode, exactly like the chapter row does; the picker must not become
+// a side channel for which upload is on disk.
+function versionRows(group, stateFor, hiddenDownloads) {
+    var versions = (group && group.versions) || [];
+    var stateOf = typeof stateFor === "function" ? stateFor : function() { return null; };
+    var rows = [];
+    for (var i = 0; i < versions.length; i++) {
+        var version = versions[i] || {};
+        var state = hiddenDownloads ? null : stateOf(version.id);
+        state = state || {};
+        rows.push({
+            id: version.id || "",
+            number: _chapterText(version.chapter),
+            group: _chapterText(version.group),
+            date: chapterDateLabel(version.publishAt),
+            state: hiddenDownloads ? "idle" : (state.kind || "idle"),
+            done: hiddenDownloads ? 0 : (Number(state.done) || 0),
+            total: hiddenDownloads ? 0 : (Number(state.total) || 0),
+            downloadsVisible: !hiddenDownloads
+        });
+    }
+    return rows;
 }
 
 // The chapter number a stored progress value belongs to: "2.1" (a version)
@@ -407,6 +445,8 @@ if (typeof module !== "undefined" && module.exports) {
         chapterDateLabel: chapterDateLabel,
         mapChapter: mapChapter,
         groupChapters: groupChapters,
+        versionRows: versionRows,
+        pickVersion: pickVersion,
         canonicalNumber: canonicalNumber,
         adjacentGroup: adjacentGroup,
         sameChapter: sameChapter,

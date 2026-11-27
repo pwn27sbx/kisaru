@@ -19,9 +19,8 @@ import chapter_versions  # noqa: E402
 
 try:
     import manga_server
-    HAVE_SERVER = True
-except Exception:  # noqa: BLE001 — curl_cffi/requests not installed
-    HAVE_SERVER = False
+except ImportError:      # a CI image without curl_cffi/requests: only this class skips
+    manga_server = None
 
 CORPUS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "chapter_versions.json")
 
@@ -77,7 +76,7 @@ class RuleTest(unittest.TestCase):
         self.assertIsNone(chapter_versions.parse_date("hace 2 días"))
 
 
-@unittest.skipUnless(HAVE_SERVER, "backend dependencies missing")
+@unittest.skipUnless(manga_server is not None, "backend dependencies missing")
 class FavCheckTest(unittest.TestCase):
     """A re-upload must not announce itself as new chapters on a favourite."""
 
@@ -98,6 +97,33 @@ class FavCheckTest(unittest.TestCase):
         self.assertEqual(result["updated"], [], "12 rows are still 6 chapters")
         self.assertFalse(favs[0]["hasNewChapters"])
         self.assertEqual(favs[0]["lastKnownChapterCount"], 6)
+
+    def test_fav_check_reconciles_a_stale_raw_count(self):
+        # A favourite saved while the badge counted rows keeps the raw number
+        # (137 for 71 chapters), and it can already carry a pending badge. The
+        # old code only reconciled the counter when the badge was off, so the
+        # inflated number outlived a cleared badge and hid the next chapter.
+        favs = [{
+            "id": "zonatmo_org:series", "title": "T",
+            "hasNewChapters": True, "lastKnownChapterCount": 12,
+        }]
+        payloads = [
+            {"chapters": generation(6)},
+            {"chapters": generation(6) + [row(7, "new-7", "22/04/2026")]},
+        ]
+
+        with mock.patch.object(manga_server, "_load_favs", return_value=favs), \
+             mock.patch.object(manga_server, "_save_favs", side_effect=lambda data: None), \
+             mock.patch.object(manga_server, "info", side_effect=payloads):
+            first = manga_server.fav_check()
+            self.assertEqual(first["updated"], [], "a stale raw count is not a new chapter")
+            self.assertEqual(favs[0]["lastKnownChapterCount"], 6,
+                             "the stale raw count is reconciled even with a pending badge")
+
+            second = manga_server.fav_check()
+            self.assertEqual(second["updated"],
+                             [{"id": "zonatmo_org:series", "title": "T", "newCount": 7}])
+            self.assertTrue(favs[0]["hasNewChapters"])
 
     def test_fav_check_still_reports_a_real_new_chapter(self):
         chapters = generation(6) + [row(7, "new-7", "22/04/2026")]

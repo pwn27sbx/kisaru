@@ -26,9 +26,20 @@ Item {
     visible: opened
     z: 400
 
-    function _blank() {
+    // Dismiss without choosing: the caller clears its own state on `closed`.
+    function _dismiss() {
         root.opened = false
         root.closed()
+    }
+
+    // One branch per state, so the glyph and the progress text stay readable.
+    function _glyph(row) {
+        if (row.state === "downloaded") return "✓"
+        if (row.state === "error") return "!"
+        if (row.state === "downloading") {
+            return row.total > 0 ? row.done + "/" + row.total : "…"
+        }
+        return "↓"
     }
 
     function _choose(id) {
@@ -43,7 +54,7 @@ Item {
         color: Colors.withAlpha(Colors.background, 0.86)
         MouseArea {
             anchors.fill: parent
-            onClicked: root._blank()
+            onClicked: root._dismiss()
         }
     }
 
@@ -57,7 +68,7 @@ Item {
         border.width: Style.spacing.hairline
         radius: Style.cornerRadius
         focus: true
-        Keys.onEscapePressed: root._blank()
+        Keys.onEscapePressed: root._dismiss()
 
         Column {
             id: content
@@ -129,6 +140,7 @@ Item {
                                         width: parent.width
                                         visible: row.modelData.group !== ""
                                         text: row.modelData.group
+                                        textFormat: Text.PlainText
                                         font.family: root.bodyFont
                                         font.pixelSize: Style.font.caption
                                         color: row.current ? Colors.on_primary : Colors.on_surface_variant
@@ -141,19 +153,13 @@ Item {
                                 Rectangle {
                                     id: downloadControl
                                     anchors.verticalCenter: parent.verticalCenter
+                                    visible: row.modelData.downloadsVisible !== false
                                     width: Style.space(28); height: Style.space(24)
                                     radius: Style.cornerRadius
                                     color: downloadArea.containsMouse && !row.current
                                         ? Colors.surface_container_high : "transparent"
                                     readonly property string kind: row.modelData.state
-                                    readonly property string glyph:
-                                        kind === "downloaded" ? "✓"
-                                        : (kind === "error" ? "!"
-                                        : (kind === "downloading"
-                                            ? (row.modelData.total > 0
-                                                ? row.modelData.done + "/" + row.modelData.total
-                                                : "…")
-                                            : "↓"))
+                                    readonly property string glyph: root._glyph(row.modelData)
 
                                     StyledText {
                                         anchors.centerIn: parent

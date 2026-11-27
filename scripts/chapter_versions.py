@@ -13,7 +13,7 @@ chapters, with ids from another block, and no ".2" sibling on the same base
 """
 
 import re
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 REUPLOAD_FRACTION = "1"
 SPLIT_FRACTION = "2"
@@ -58,16 +58,13 @@ def parse_date(value):
     match = _ISO.match(text)
     if not match:
         return None
+    # The written calendar day is the chapter's day, exactly like the JS side
+    # (services/chapters.js): converting an offset stamp to UTC would move a
+    # late-evening upload to the next day and the two counts could disagree.
     try:
-        moment = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        return datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
     except ValueError:
-        try:
-            return datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
-        except ValueError:
-            return None
-    if moment.tzinfo is not None:
-        moment = moment.astimezone(timezone.utc).replace(tzinfo=None)
-    return moment
+        return None
 
 
 def _id_block(value):

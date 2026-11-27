@@ -203,49 +203,36 @@ Item {
         versionPicker.opened = true
     }
 
+    // The row masks a hidden title's download state; the picker must not become
+    // a side channel for it, so the same gate covers every upload there.
+    readonly property bool _pickerHidesDownloads:
+        Privacy.locked && Manga.isHiddenLibraryEntry(Manga.libraryEntryId())
+
     // Rows the picker draws: the source number with its own date (owner,
     // 2026-11-27: "Capítulo 1.1 · 21/04/2026"), the group when the source
-    // names one, and the download state of that exact upload.
+    // names one, and the state of that exact upload.
     function versionRows(group) {
-        const rows = []
-        for (let i = 0; i < group.versions.length; i++) {
-            const version = group.versions[i]
-            const state = Manga.chapterDownloadState(version.id)
-            rows.push({
-                id:     version.id,
-                number: version.chapter,
-                group:  version.group || "",
-                date:   Chapters.chapterDateLabel(version.publishAt),
-                state:  state.kind,
-                done:   state.done,
-                total:  state.total
-            })
-        }
-        return rows
+        return Chapters.versionRows(group, function(versionId) {
+            return Manga.chapterDownloadState(versionId)
+        }, detailView._pickerHidesDownloads)
     }
 
     function chooseVersion(versionId) {
         const group = detailView._pickerGroup
         if (!group) return
-        for (let i = 0; i < group.versions.length; i++) {
-            const version = group.versions[i]
-            if (version.id !== versionId) continue
-            Manga.setChapterVersion(group.chapter, version.id)
-            if (Manga.openChapter(version)) detailView.chapterSelected(version.id)
-            return
-        }
+        const version = Chapters.pickVersion(group, versionId)
+        if (!version) return
+        Manga.setChapterVersion(group.chapter, version.id)
+        if (Manga.openChapter(version)) detailView.chapterSelected(version.id)
     }
 
     function downloadVersion(versionId) {
         const group = detailView._pickerGroup
         if (!group) return
-        for (let i = 0; i < group.versions.length; i++) {
-            if (group.versions[i].id === versionId) {
-                Manga.startDownload(group.versions[i])
-                versionPicker.rows = detailView.versionRows(group)
-                return
-            }
-        }
+        const version = Chapters.pickVersion(group, versionId)
+        if (!version) return
+        Manga.startDownload(version)
+        versionPicker.rows = detailView.versionRows(group)
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -1017,6 +1004,10 @@ Item {
         bodyFont: detailView.fontBody
         onChosen: function(versionId) { detailView.chooseVersion(versionId) }
         onDownloadRequested: function(versionId) { detailView.downloadVersion(versionId) }
+        onClosed: {
+            versionPicker.rows = []
+            detailView._pickerGroup = null
+        }
     }
 
     FolderPrompt {

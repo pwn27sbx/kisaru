@@ -305,3 +305,52 @@ test("the shared corpus pins the JS grouping", () => {
         assert.equal(chapters.groupChapters(item.chapters).length, item.groups, item.name);
     }
 });
+
+// ── Picker rows and the chosen version (behaviour, not source text) ─────────
+
+test("versionRows names each upload with its own number, date and state", () => {
+    const group = chapters.groupChapters(generation(4))[0];
+    const rows = chapters.versionRows(group, function(id) {
+        return id === "new-1"
+            ? { kind: "downloading", done: 3, total: 8 }
+            : { kind: "idle", done: 0, total: 0 };
+    });
+    assert.equal(rows.length, 2);
+    assert.deepEqual(rows[0], {
+        id: "old-1", number: "1", group: "", date: "09/04/2026",
+        state: "idle", done: 0, total: 0, downloadsVisible: true
+    });
+    assert.equal(rows[1].number, "1.1");
+    assert.equal(rows[1].date, "21/04/2026");
+    assert.equal(rows[1].state, "downloading");
+    assert.equal(rows[1].done, 3);
+    assert.equal(rows[1].total, 8);
+});
+
+test("versionRows masks every download state while the entry is hidden", () => {
+    const group = chapters.groupChapters(generation(4))[0];
+    const rows = chapters.versionRows(group, function() {
+        return { kind: "downloaded", done: 0, total: 0 };
+    }, true);
+    for (const row of rows) {
+        assert.equal(row.state, "idle", "a locked hidden entry never shows on-disk state");
+        assert.equal(row.downloadsVisible, false);
+    }
+});
+
+test("pickVersion finds the upload the user chose, or nothing", () => {
+    const group = chapters.groupChapters(generation(4))[0];
+    assert.equal(chapters.pickVersion(group, "new-1").chapter, "1.1");
+    assert.equal(chapters.pickVersion(group, "missing"), null);
+    assert.equal(chapters.pickVersion(null, "new-1"), null);
+});
+
+test("grouping survives a chapter label that collides with Object.prototype", () => {
+    const list = [
+        chapter("constructor", "proto", ""),
+        chapter("toString", "proto2", ""),
+        chapter("hasOwnProperty", "proto3", "")
+    ];
+    const groups = chapters.groupChapters(list);
+    assert.deepEqual(numbers(groups), ["constructor", "toString", "hasOwnProperty"]);
+});
