@@ -272,11 +272,13 @@ Item {
                                     Chip {
                                         text: KisaruI18n.t("versions.read")
                                         bodyFont: root.bodyFont
+                                        onAccent: row.current
                                         onClicked: root._read(row.modelData.id, false)
                                     }
                                     Chip {
                                         text: KisaruI18n.t("versions.wholeSeries")
                                         bodyFont: root.bodyFont
+                                        onAccent: row.current
                                         onClicked: root._read(row.modelData.id, true)
                                     }
                                 }

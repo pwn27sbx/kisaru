@@ -21,15 +21,20 @@ ClickableRect {
     property string text: ""
     property bool current: false
     property string bodyFont: ""
+    // Set when the chip sits on an accent-filled surface (e.g. the selected
+    // row of the version picker): the label then uses the on-accent colour so
+    // it stays readable instead of the muted grey.
+    property bool onAccent: false
 
     readonly property var _style: HeaderCell.cellStyle({
         current: chip.current,
         hovered: chip.hovered,
         pressed: chip.pressed
     })
-    readonly property color _fillBase: chip.current ? Colors.on_primary : Colors.muted
+    readonly property color _fillBase: (chip.current || chip.onAccent) ? Colors.on_primary : Colors.muted
     readonly property color _foreground:
-        chip._style.label === HeaderCell.LABEL.ON ? Colors.on_primary : Colors.muted
+        chip.onAccent ? Colors.on_primary
+            : (chip._style.label === HeaderCell.LABEL.ON ? Colors.on_primary : Colors.muted)
 
     implicitWidth: label.implicitWidth + 2 * Style.spacing.controlPaddingX
     implicitHeight: label.implicitHeight + 2 * Style.spacing.controlPaddingY
